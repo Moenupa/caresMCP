@@ -11,12 +11,16 @@ from caresmcp.util.adapter import skip_undefined_kwargs
 from caresmcp.util.io import save_results
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "xray"
-SAMPLE_PATHS = tuple(
-    sorted(
-        path
-        for path in SAMPLE_DIRECTORY.iterdir()
-        if path.suffix.lower() in {".jpg", ".jpeg", ".png"}
+SAMPLE_PATHS = (
+    tuple(
+        sorted(
+            path
+            for path in SAMPLE_DIRECTORY.iterdir()
+            if path.suffix.lower() in {".jpg", ".jpeg", ".png"}
+        )
     )
+    if SAMPLE_DIRECTORY.exists()
+    else ()
 )
 XRAY_TOOLS = tuple(sorted(TAG_XRAY.get_all().items()))
 

@@ -10,26 +10,19 @@ R = TypeVar("R")
 
 
 def get_torch_device() -> str:
-    return get_cuda_device() or get_npu_device() or "cpu"
+    return get_cuda_device() or "cpu"
 
 
 def get_cuda_device() -> str | None:
     try:
         import torch  # ty: ignore
+        if torch.cuda.is_available():
+            return "cuda"
+
     except ImportError:
         return None
 
-    return "cuda" if torch.cuda.is_available() else None
-
-
-def get_npu_device() -> str | None:
-    try:
-        import torch
-        import torch_npu  # ty: ignore  # noqa: F401
-    except ImportError:
-        return None
-
-    return "npu" if torch.npu.is_available() else None  # ty: ignore
+    return None
 
 
 def requires(
