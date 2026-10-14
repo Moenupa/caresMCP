@@ -1,0 +1,121 @@
+"""Command-line entry point for listing registries and running the MCP server."""
+
+import re
+from itertools import zip_longest
+from pathlib import Path
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from caresmcp.mcpserver import mcp
+from caresmcp.registry import REGISTRIES, TAGS
+from caresmcp.util.adapter import adapt_byte_inputs
+from caresmcp.util.io import get_kwargs_from_file, save_results
+
+app = typer.Typer(add_completion=False)
+console = Console()
+
+# Cycle of row styles assigned to categories (by sorted index)
+COLORS = [
+    "cyan",
+    "yellow",
+    "magenta",
+    "green",
+    "blue",
+]
+TAG_COLORS = {
+    tag_name: color
+    for tag_name, color in zip_longest(
+        sorted(TAGS),
+        [
+            "purple4",
+            "dark_red",
+            "dark_magenta",
+            "orange4",
+            "deep_pink4",
+            "dark_goldenrod",
+            "dark_khaki",
+            "dark_orange3",
+            "indian_red",
+            "gold3",
+        ],
+    )
+    if tag_name is not None
+}
+
+
+def _is_todo(description: str) -> bool:
+    """Return True if the description looks like a TODO item."""
+    return bool(re.search(r"\b[Tt][Oo][Dd][Oo]\b", description))
+
+
+@app.command("list")
+def list_functions(category: str | None = typer.Argument(None)) -> None:
+    """Print registered tools and prompts grouped by catalogue category."""
+    if category is not None and category not in REGISTRIES:
+        valid_categories = ", ".join(REGISTRIES)
+        raise typer.BadParameter(
+            f"Choose one of: {valid_categories}", param_hint="category"
+        )
+
+    categories = [category] if category is not None else sorted(REGISTRIES)
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Category")
+    table.add_column("Name")
+    table.add_column("Tags")
+    table.add_column("Description")
+
+    for cat_name, color in zip_longest(categories, COLORS):
+        if cat_name is None:
+            break
+
+        registry = REGISTRIES[cat_name]
+        table.add_section()
+        for name, function in sorted(registry.get_all().items()):
+            summary = (function.__doc__ or "").strip().splitlines()
+            description = summary[0] if summary else ""
+            tags = ", ".join(
+                f"[white on {TAG_COLORS[tag_name]}] {tag_name.removeprefix('TAG_').lower()} [/]"
+                for tag_name, tag_registry in sorted(TAGS.items())
+                if name in tag_registry.get_all()
+            )
+            table.add_row(
+                f"[{color}]{cat_name}[/]",
+                f"[{color}]{name}[/]",
+                tags,
+                description,
+                style="dim" if _is_todo(description) else None,
+            )
+
+    console.print(table)
+
+
+@app.command("debug")
+def debug_function(category: str, name: str, kwarg_file: Path) -> None:
+    """Run a registry function with JSON kwargs and adapted byte inputs.
+
+    Byte inputs may be paths, base64 data URIs, or HTTP URLs.
+    """
+    kwargs = get_kwargs_from_file(kwarg_file)
+    fn = REGISTRIES.get(category, {}).get(name)
+    if fn is None:
+        raise typer.BadParameter(
+            f"Function '{name}' not found in category '{category}'",
+            param_hint="name",
+        )
+    fn = adapt_byte_inputs(fn)
+
+    for kwarg in kwargs:
+        console.print(
+            f"Debugging function {name!r} from category {category!r} with kwargs: {kwarg}"
+        )
+        output = fn(**kwarg)
+        # if output is bytes, save to .cache
+        save_results(output, Path(".cache") / category / f"{name}", console.print)
+
+
+@app.command("mcp")
+def mcpserve() -> None:
+    """Start the FastMCP server."""
+    mcp.run(transport="streamable-http", show_banner=False)
