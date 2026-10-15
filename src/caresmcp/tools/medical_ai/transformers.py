@@ -11,14 +11,17 @@ from ..image_processing import decode_rgb
 @lru_cache(maxsize=LRU_MAX_SIZE)
 def get_hf_model_and_processor(
     model_id: str,
-    model_type: Literal["image_classification", "auto"] = "image_classification",
+    model_type: Literal[
+        "image_classification", "image_encoder", "auto"
+    ] = "image_classification",
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
 ) -> tuple[Any, Any]:
     """Load and cache a Transformers model and its processor.
 
     Image-classification checkpoints use their task-specific model and image
-    processor classes by default. ``model_type="auto"`` uses ``AutoModel`` and
+    processor classes by default. Image encoders use ``AutoModel`` with
+    ``AutoImageProcessor``. ``model_type="auto"`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
     """
     if model_type == "image_classification":
@@ -26,13 +29,20 @@ def get_hf_model_and_processor(
 
         model_class = AutoModelForImageClassification
         processor_class = AutoImageProcessor
+    elif model_type == "image_encoder":
+        from transformers import AutoImageProcessor, AutoModel
+
+        model_class = AutoModel
+        processor_class = AutoImageProcessor
     elif model_type == "auto":
         from transformers import AutoModel, AutoProcessor
 
         model_class = AutoModel
         processor_class = AutoProcessor
     else:
-        raise ValueError("model_type must be 'image_classification' or 'auto'")
+        raise ValueError(
+            "model_type must be 'image_classification', 'image_encoder', or 'auto'"
+        )
 
     model_kwargs: dict[str, Any] = {}
     processor_kwargs: dict[str, Any] = {}
@@ -65,8 +75,6 @@ def hf_classifier(
     Args:
         image: Chest radiograph image bytes.
         model_id: Local model directory or Hugging Face model ID.
-        revision: Optional model revision or commit identifier.
-        local_files_only: Whether to use only locally cached checkpoint files.
         score_mode: Apply sigmoid for independent labels or softmax for
             mutually exclusive classes.
 
