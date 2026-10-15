@@ -1,15 +1,56 @@
+from functools import lru_cache
 from typing import Any, Literal
 
-from caresmcp.constants import DEVICE
+from caresmcp.constants import DEVICE, LRU_MAX_SIZE
 from caresmcp.registry import MEDAI
 from caresmcp.util.moduleloader import requires
 
 from ..image_processing import decode_rgb
 
 
-@MEDAI.register("classify_with_transformers")
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def get_hf_model_and_processor(
+    model_id: str,
+    model_type: Literal["image_classification", "auto"] = "image_classification",
+    trust_remote_code: bool = False,
+    torch_dtype: str | None = None,
+) -> tuple[Any, Any]:
+    """Load and cache a Transformers model and its processor.
+
+    Image-classification checkpoints use their task-specific model and image
+    processor classes by default. ``model_type="auto"`` uses ``AutoModel`` and
+    ``AutoProcessor`` for checkpoints with custom model interfaces.
+    """
+    if model_type == "image_classification":
+        from transformers import AutoImageProcessor, AutoModelForImageClassification
+
+        model_class = AutoModelForImageClassification
+        processor_class = AutoImageProcessor
+    elif model_type == "auto":
+        from transformers import AutoModel, AutoProcessor
+
+        model_class = AutoModel
+        processor_class = AutoProcessor
+    else:
+        raise ValueError("model_type must be 'image_classification' or 'auto'")
+
+    model_kwargs: dict[str, Any] = {}
+    processor_kwargs: dict[str, Any] = {}
+    if trust_remote_code:
+        model_kwargs["trust_remote_code"] = True
+        processor_kwargs["trust_remote_code"] = True
+    if torch_dtype is not None:
+        model_kwargs["torch_dtype"] = torch_dtype
+
+    processor = processor_class.from_pretrained(model_id, **processor_kwargs)
+    model = model_class.from_pretrained(model_id, **model_kwargs).to(DEVICE)
+    model.eval()
+    return model, processor
+
+
+@MEDAI.register("hf_classifier")
 @requires(["torch", "transformers"], extra="hf")
-def classify_with_transformers(
+def hf_classifier(
     image: bytes,
     model_id: str,
     score_mode: Literal["sigmoid", "softmax"] = "sigmoid",
@@ -36,20 +77,13 @@ def classify_with_transformers(
         https://huggingface.co/docs/transformers/tasks/image_classification
     """
     import torch
-    from transformers import (
-        AutoImageProcessor,
-        AutoModelForImageClassification,
-        ProcessorMixin,
-    )
 
     if not model_id.strip():
         raise ValueError("model_id must not be empty")
     if score_mode not in ("sigmoid", "softmax"):
         raise ValueError("score_mode must be 'sigmoid' or 'softmax'")
 
-    processor: ProcessorMixin = AutoImageProcessor.from_pretrained(model_id)
-    model = AutoModelForImageClassification.from_pretrained(model_id).to(DEVICE)
-    model.eval()
+    model, processor = get_hf_model_and_processor(model_id)
 
     inputs = processor(images=decode_rgb(image), return_tensors="pt")
     inputs = {name: value.to(DEVICE) for name, value in inputs.items()}
@@ -70,10 +104,5 @@ def classify_with_transformers(
     if len(set(labels)) != len(labels):
         raise ValueError("checkpoint id2label contains duplicate labels")
     return {
-        "model_id": model_id,
-        "score_mode": score_mode,
-        "scores": {
-            label: float(score)
-            for label, score in zip(labels, score_values, strict=True)
-        },
+        label: float(score) for label, score in zip(labels, score_values, strict=True)
     }

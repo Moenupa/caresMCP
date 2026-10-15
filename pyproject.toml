@@ -33,11 +33,15 @@ xray = [
 ]
 hf = [
     "caresmcp[torch]",
-    "transformers>=4.57,<5",
+    "transformers[torchhub]>=4.57,<5",
 ]
 pathology = [
     "caresmcp[torch]",
     "cellpose>=4,<5",
+]
+prism2 = [
+    "caresmcp[torch,hf]",
+    "einops",
 ]
 medical-dicom = [
     "pydicom>=3.0",
