@@ -5,7 +5,7 @@ from functools import lru_cache
 from io import BytesIO
 from typing import Any, Literal
 
-from caresmcp.constants import DEVICE, LRU_MAX_SIZE
+from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY
 from caresmcp.util.moduleloader import requires
 
@@ -14,7 +14,7 @@ from ..image_processing import decode_rgb
 PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
+@lru_cache(maxsize=2)
 def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
     """Load and cache the pretrained Cellpose-SAM model."""
     from cellpose.models import CellposeModel
@@ -25,10 +25,10 @@ def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
     )
 
 
-@MEDAI.register("segment_pathology_cells")
-@TAG_PATHOLOGY.register("segment_pathology_cells")
+@MEDAI.register("cellpose_segment_pathology_cells")
+@TAG_PATHOLOGY.register("cellpose_segment_pathology_cells")
 @requires("cellpose", extra="pathology")
-def segment_pathology_cells(
+def cellpose_segment_pathology_cells(
     image: bytes,
     pretrained_model: PRETRAINED_MODELS = "cpsam",
     diameter: float | None = None,

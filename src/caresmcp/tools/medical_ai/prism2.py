@@ -22,7 +22,6 @@ _PRISM2_REQUIRED_PACKAGES = [
     "transformers",
     "safetensors",
     "einops",
-    "flash_attn",
 ]
 Prism2Operation = Literal[
     "response",
