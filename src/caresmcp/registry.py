@@ -21,5 +21,6 @@ TAG_MONAI = catalogue.create(pkg_name, "tag_monai")
 TAG_MRI = catalogue.create(pkg_name, "tag_mri")
 TAG_XRAY = catalogue.create(pkg_name, "tag_xray")
 TAG_CT = catalogue.create(pkg_name, "tag_ct")
+TAG_PATHOLOGY = catalogue.create(pkg_name, "tag_pathology")
 
 TAGS = {name: value for name, value in locals().items() if name.startswith("TAG_")}

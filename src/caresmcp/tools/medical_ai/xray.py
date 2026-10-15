@@ -119,11 +119,11 @@ def classify_chest_xray_pathologies(
 
     if weights.startswith("resnet"):
         model = xrv.models.ResNet(
-            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR
+            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR.as_posix()
         )
     else:
         model = xrv.models.DenseNet(
-            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR
+            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR.as_posix()
         )
     model = model.to(DEVICE)
     model.eval()
@@ -175,7 +175,7 @@ def segment_chest_xray_anatomy(
 
     image_array = _preprocess_xray(image, xrv, transforms, 512)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
-    model = xrv.baseline_models.chestx_det.PSPNet(cache_dir=MODEL_CACHE_DIR)
+    model = xrv.baseline_models.chestx_det.PSPNet(cache_dir=MODEL_CACHE_DIR.as_posix())
     model = model.to(DEVICE)
     model.eval()
 
@@ -373,10 +373,12 @@ def localize_chest_xray_pathology(
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
     if weights.startswith("resnet"):
-        model = xrv.models.ResNet(weights=weights, cache_dir=MODEL_CACHE_DIR)
+        model = xrv.models.ResNet(weights=weights, cache_dir=MODEL_CACHE_DIR.as_posix())
         target_layer = model.model.layer4
     else:
-        model = xrv.models.DenseNet(weights=weights, cache_dir=MODEL_CACHE_DIR)
+        model = xrv.models.DenseNet(
+            weights=weights, cache_dir=MODEL_CACHE_DIR.as_posix()
+        )
         target_layer = model.features.denseblock4
     model = model.to(DEVICE)
     model.eval()

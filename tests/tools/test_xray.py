@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import TAG_XRAY
 from caresmcp.util.adapter import skip_undefined_kwargs
 from caresmcp.util.io import save_results
@@ -22,7 +23,7 @@ SAMPLE_PATHS = (
     if SAMPLE_DIRECTORY.exists()
     else ()
 )
-XRAY_TOOLS = tuple(sorted(TAG_XRAY.get_all().items()))
+XRAY_TOOLS = [(k, v) for k, v in TAG_XRAY.get_all().items() if "embedding" not in k]
 
 
 @pytest.mark.slow
@@ -40,9 +41,6 @@ def test_xray(
     sample_path: Path,
 ) -> None:
     """Run compatible X-ray tools and save image results for inspection."""
-    if any(keyword in tool_name for keyword in ("embedding", "saliency")):
-        pytest.skip(f"Delibrately skipping {tool_name} in this test")
-
     print(f"Running {tool_name} on {sample_path.name}")
     image = sample_path.read_bytes()
     arguments: dict[str, object] = {
@@ -71,4 +69,4 @@ def test_xray(
     assert isinstance(result, (str, list, dict, bytes)), (
         f"Expected bytes, str, list, or dict, got {type(result)}"
     )
-    save_results(result, Path(".cache") / tool_name / f"{sample_path.stem}")
+    save_results(result, CACHE_ROOT / tool_name / f"{sample_path.stem}")

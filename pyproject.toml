@@ -17,6 +17,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+torch = [
+    "torch>=2.8,<3",
+    "torchvision",
+]
 monai = [
     "monai>=1.3",
 ]
@@ -24,15 +28,15 @@ totalsegmentator = [
     "TotalSegmentator>=2.0",
 ]
 xray = [
-    "torch>=2.0,<3",
-    "torchvision",
+    "caresmcp[torch]",
     "torchxrayvision>=1.2.4",
 ]
 hf = [
-    "torch>=2.0,<3",
+    "caresmcp[torch]",
     "transformers>=4.57,<5",
 ]
 pathology = [
+    "caresmcp[torch]",
     "cellpose>=4,<5",
 ]
 medical-dicom = [
@@ -58,4 +62,5 @@ minversion = "9.0"
 addopts = "--import-mode=importlib"
 markers = [
     "slow: mark tests as slow (pytest -m 'not slow' or set RUN_SLOW=1 to run)",
+    "cuda: mark tests as requiring a CUDA device",
 ]

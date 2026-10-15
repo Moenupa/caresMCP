@@ -16,6 +16,7 @@ def get_torch_device() -> str:
 def get_cuda_device() -> str | None:
     try:
         import torch  # ty: ignore
+
         if torch.cuda.is_available():
             return "cuda"
 

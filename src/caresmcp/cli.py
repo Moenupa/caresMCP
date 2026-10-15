@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from caresmcp.mcpserver import mcp
+from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import REGISTRIES, TAGS
 from caresmcp.util.adapter import adapt_byte_inputs
 from caresmcp.util.io import get_kwargs_from_file, save_results
@@ -112,10 +112,12 @@ def debug_function(category: str, name: str, kwarg_file: Path) -> None:
         )
         output = fn(**kwarg)
         # if output is bytes, save to .cache
-        save_results(output, Path(".cache") / category / f"{name}", console.print)
+        save_results(output, CACHE_ROOT / category / f"{name}", console.print)
 
 
 @app.command("mcp")
 def mcpserve() -> None:
     """Start the FastMCP server."""
+    from caresmcp.mcpserver import mcp
+
     mcp.run(transport="streamable-http", show_banner=False)

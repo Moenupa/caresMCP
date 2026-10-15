@@ -31,4 +31,4 @@ test:
 	$(RUN) pytest tests -n 8
 
 test-slow:
-	RUN_SLOW=1 $(RUN) pytest tests -n 8 -rA
+	RUN_SLOW=1 $(RUN) pytest tests -rA
