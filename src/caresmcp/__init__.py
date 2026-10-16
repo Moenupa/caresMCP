@@ -1,4 +1,3 @@
 """Medical-imaging MCP tools and workflows."""
 
-import caresmcp.prompts
-import caresmcp.tools  # noqa: F401
+from . import medical_ai, prompts, tools  # noqa: F401
