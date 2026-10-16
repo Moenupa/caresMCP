@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -8,12 +9,18 @@ from caresmcp.util.moduleloader import requires
 from ..image_processing import decode_rgb
 
 
+class HFModelType(Enum):
+    """Transformers model and processor class combinations used internally."""
+
+    IMAGE_CLASSIFICATION = "image_classification"
+    IMAGE_ENCODER = "image_encoder"
+    AUTO = "auto"
+
+
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def get_hf_model_and_processor(
+def _get_hf_model_and_processor(
     model_id: str,
-    model_type: Literal[
-        "image_classification", "image_encoder", "auto"
-    ] = "image_classification",
+    model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
 ) -> tuple[Any, Any]:
@@ -21,28 +28,27 @@ def get_hf_model_and_processor(
 
     Image-classification checkpoints use their task-specific model and image
     processor classes by default. Image encoders use ``AutoModel`` with
-    ``AutoImageProcessor``. ``model_type="auto"`` uses ``AutoModel`` and
+    ``AutoImageProcessor``. ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
     """
-    if model_type == "image_classification":
-        from transformers import AutoImageProcessor, AutoModelForImageClassification
+    match model_type:
+        case HFModelType.IMAGE_CLASSIFICATION:
+            from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-        model_class = AutoModelForImageClassification
-        processor_class = AutoImageProcessor
-    elif model_type == "image_encoder":
-        from transformers import AutoImageProcessor, AutoModel
+            model_class = AutoModelForImageClassification
+            processor_class = AutoImageProcessor
+        case HFModelType.IMAGE_ENCODER:
+            from transformers import AutoImageProcessor, AutoModel
 
-        model_class = AutoModel
-        processor_class = AutoImageProcessor
-    elif model_type == "auto":
-        from transformers import AutoModel, AutoProcessor
+            model_class = AutoModel
+            processor_class = AutoImageProcessor
+        case HFModelType.AUTO:
+            from transformers import AutoModel, AutoProcessor
 
-        model_class = AutoModel
-        processor_class = AutoProcessor
-    else:
-        raise ValueError(
-            "model_type must be 'image_classification', 'image_encoder', or 'auto'"
-        )
+            model_class = AutoModel
+            processor_class = AutoProcessor
+        case _:
+            raise ValueError("model_type must be an HFModelType member")
 
     model_kwargs: dict[str, Any] = {}
     processor_kwargs: dict[str, Any] = {}
@@ -91,7 +97,7 @@ def hf_classifier(
     if score_mode not in ("sigmoid", "softmax"):
         raise ValueError("score_mode must be 'sigmoid' or 'softmax'")
 
-    model, processor = get_hf_model_and_processor(model_id)
+    model, processor = _get_hf_model_and_processor(model_id)
 
     inputs = processor(images=decode_rgb(image), return_tensors="pt")
     inputs = {name: value.to(DEVICE) for name, value in inputs.items()}

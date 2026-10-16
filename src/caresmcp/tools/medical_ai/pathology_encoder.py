@@ -1,0 +1,184 @@
+"""Embedding tools for pathology foundation models."""
+
+from functools import lru_cache
+from typing import Any, Literal
+
+from caresmcp.constants import DEVICE
+from caresmcp.registry import MEDAI, TAG_PATHOLOGY
+from caresmcp.util.moduleloader import requires
+
+from ..image_processing import decode_rgb
+
+PathologyEncoder = Literal["h0-mini", "uni", "virchow", "virchow2", "h-optimus-0"]
+PathologyPooling = Literal["model", "cls", "mean", "cls_mean"]
+
+_MODEL_IDS: dict[PathologyEncoder, str] = {
+    "h0-mini": "hf-hub:bioptimus/H0-mini",
+    "uni": "hf-hub:MahmoodLab/UNI",
+    "virchow": "hf-hub:paige-ai/Virchow",
+    "virchow2": "hf-hub:paige-ai/Virchow2",
+    "h-optimus-0": "hf-hub:bioptimus/H-optimus-0",
+}
+
+
+@lru_cache(maxsize=len(_MODEL_IDS))
+def _load_pathology_encoder(encoder: PathologyEncoder) -> tuple[Any, Any]:
+    """Load a published pathology encoder and its checkpoint transforms."""
+    import timm
+    import torch
+    from timm.data import resolve_data_config
+    from timm.data.transforms_factory import create_transform
+    from torchvision import transforms
+
+    model_kwargs: dict[str, Any] = {"pretrained": True}
+    if encoder == "uni":
+        model_kwargs.update(init_values=1e-5, dynamic_img_size=True)
+    elif encoder == "h-optimus-0":
+        model_kwargs.update(init_values=1e-5, dynamic_img_size=False)
+    elif encoder in ("virchow", "virchow2"):
+        from timm.layers import SwiGLUPacked
+
+        model_kwargs.update(mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
+
+    model = timm.create_model(_MODEL_IDS[encoder], **model_kwargs)
+    model = model.to(DEVICE)
+    model.eval()
+    if encoder == "h-optimus-0":
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.707223, 0.578729, 0.703617),
+                    std=(0.211883, 0.230117, 0.177517),
+                ),
+            ]
+        )
+    else:
+        transform = create_transform(
+            **resolve_data_config(model.pretrained_cfg, model=model)
+        )
+    return model, transform
+
+
+def _extract_pathology_embedding_tensor(
+    image: bytes,
+    encoder: PathologyEncoder,
+    pooling: PathologyPooling | None = None,
+) -> tuple[PathologyPooling, Any]:
+    """Extract one pathology feature tensor for use by internal tool chains."""
+    import torch
+
+    if encoder not in _MODEL_IDS:
+        raise ValueError("encoder must name a supported pathology encoder")
+    if pooling is None:
+        selected_pooling: PathologyPooling = (
+            "cls_mean" if encoder in ("virchow", "virchow2") else "model"
+        )
+    else:
+        selected_pooling = pooling
+    if selected_pooling not in ("model", "cls", "mean", "cls_mean"):
+        raise ValueError("pooling must be 'model', 'cls', 'mean', or 'cls_mean'")
+    if encoder not in ("virchow", "virchow2") and selected_pooling != "model":
+        raise ValueError(
+            "cls, mean, and cls_mean pooling are only supported by Virchow"
+        )
+
+    try:
+        tile = decode_rgb(image)
+    except (OSError, ValueError) as exc:
+        raise ValueError("image must contain a readable pathology tile") from exc
+    if encoder == "h-optimus-0" and tile.size != (224, 224):
+        raise ValueError("H-optimus-0 requires 224 by 224 pixel tiles")
+
+    model, transform = _load_pathology_encoder(encoder)
+    batch = transform(tile).unsqueeze(0).to(DEVICE)
+    if DEVICE == "cuda":
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
+            output = model(batch)
+    else:
+        with torch.inference_mode():
+            output = model(batch)
+
+    if (
+        not isinstance(output, torch.Tensor)
+        or output.ndim not in (2, 3)
+        or output.shape[0] != 1
+    ):
+        raise RuntimeError("pathology encoder returned an invalid feature tensor")
+
+    if output.ndim == 2 and selected_pooling == "model":
+        embedding = output
+    elif output.ndim == 3 and selected_pooling != "model":
+        if output.shape[1] == 0:
+            raise RuntimeError("pathology encoder returned no feature tokens")
+        if selected_pooling == "cls":
+            embedding = output[:, 0, :]
+        else:
+            patch_token_start = 5 if encoder == "virchow2" else 1
+            if output.shape[1] <= patch_token_start:
+                raise RuntimeError("pathology encoder returned no patch tokens")
+            patch_tokens = output[:, patch_token_start:, :]
+            if selected_pooling == "mean":
+                embedding = patch_tokens.mean(dim=1)
+            else:
+                embedding = torch.cat(
+                    (output[:, 0, :], patch_tokens.mean(dim=1)), dim=-1
+                )
+    else:
+        raise RuntimeError(
+            "pathology encoder output shape does not match the requested pooling"
+        )
+
+    if embedding.ndim != 2 or embedding.shape[0] != 1:
+        raise RuntimeError("pathology encoder returned an unexpected embedding shape")
+    values = embedding[0].detach().float()
+    if not torch.isfinite(values).all():
+        raise RuntimeError("pathology encoder returned non-finite embedding values")
+    return selected_pooling, values
+
+
+@MEDAI.register("pathology_encoder_extract_embedding")
+@TAG_PATHOLOGY.register("pathology_encoder_extract_embedding")
+@requires(["torch", "transformers"], extra="hf")
+def pathology_encoder_extract_embedding(
+    image: bytes,
+    encoder: PathologyEncoder,
+    pooling: PathologyPooling | None = None,
+) -> dict[str, Any]:
+    """Extract one feature vector from a pathology tile or region of interest.
+
+    The embedding is a model representation, not a diagnosis or calibrated
+    disease probability. Check the selected checkpoint's license and access
+    requirements before use.
+
+    Args:
+        image: Encoded RGB or grayscale pathology tile or region of interest.
+        encoder: Supported pathology encoder: H0-mini, UNI, Virchow, Virchow2,
+            or H-optimus-0.
+        pooling: For Virchow models, use the class token, mean patch token, or
+            their concatenation. If omitted, Virchow uses ``cls_mean`` and the
+            other encoders use their model output.
+
+    Returns:
+        The model identifier, pooling method, embedding size, and feature vector.
+
+    See Also:
+        https://huggingface.co/bioptimus/H0-mini
+        https://huggingface.co/MahmoodLab/UNI
+        https://huggingface.co/paige-ai/Virchow
+        https://huggingface.co/paige-ai/Virchow2
+        https://huggingface.co/bioptimus/H-optimus-0
+    """
+    selected_pooling, values = _extract_pathology_embedding_tensor(
+        image=image,
+        encoder=encoder,
+        pooling=pooling,
+    )
+    values = values.cpu()
+
+    return {
+        "model_id": _MODEL_IDS[encoder].removeprefix("hf-hub:"),
+        "pooling": selected_pooling,
+        "embedding_size": int(values.numel()),
+        "embedding": values.tolist(),
+    }

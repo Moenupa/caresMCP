@@ -4,7 +4,10 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_XRAY
-from caresmcp.tools.medical_ai.transformers import get_hf_model_and_processor
+from caresmcp.tools.medical_ai.transformers import (
+    HFModelType,
+    _get_hf_model_and_processor,
+)
 from caresmcp.util.moduleloader import requires
 
 from ..image_processing import decode_rgb
@@ -38,9 +41,9 @@ def _extract_cxr_embedding(
     if pooling not in ("cls", "mean"):
         raise ValueError("pooling must be 'cls' or 'mean'")
 
-    model, processor = get_hf_model_and_processor(
+    model, processor = _get_hf_model_and_processor(
         model_id,
-        model_type="image_encoder",
+        model_type=HFModelType.IMAGE_ENCODER,
         trust_remote_code=model_id.startswith("m42-health/"),
     )
 
@@ -135,7 +138,7 @@ def _retrieve_cxr_reports(
 
 @MEDAI.register("cxr_encoder_extract_image_embedding")
 @TAG_XRAY.register("cxr_encoder_extract_image_embedding")
-@requires(["torch", "transformers"], extra="xray-hf")
+@requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_extract_image_embedding(
     image: bytes,
     encoder: CXRModel = "rad-dino",
@@ -167,7 +170,7 @@ def cxr_encoder_extract_image_embedding(
 
 @MEDAI.register("cxr_encoder_retrieve_similar_reports")
 @TAG_XRAY.register("cxr_encoder_retrieve_similar_reports")
-@requires(["torch", "transformers"], extra="xray-hf")
+@requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_retrieve_similar_reports(
     image: bytes,
     reference_ids: list[str],

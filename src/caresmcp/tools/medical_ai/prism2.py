@@ -7,12 +7,17 @@ decisions. Access to the checkpoint requires accepting the Hugging Face terms
 and is not provided by this package.
 """
 
-from io import BytesIO
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY
-from caresmcp.tools.medical_ai.transformers import get_hf_model_and_processor
+from caresmcp.tools.medical_ai.pathology_encoder import (
+    _extract_pathology_embedding_tensor,
+)
+from caresmcp.tools.medical_ai.transformers import (
+    HFModelType,
+    _get_hf_model_and_processor,
+)
 from caresmcp.util.moduleloader import requires
 
 MODEL_ID = "paige-ai/Prism2"
@@ -22,6 +27,8 @@ _PRISM2_REQUIRED_PACKAGES = [
     "transformers",
     "safetensors",
     "einops",
+    "timm",
+    "huggingface_hub",
 ]
 Prism2Operation = Literal[
     "response",
@@ -31,52 +38,39 @@ Prism2Operation = Literal[
 ]
 
 
-def _prepare_prism2_batch(tile_embeddings: bytes) -> tuple[Any, Any]:
-    """Decode one NumPy tile-embedding array and prepare a PRISM2 batch."""
-    import numpy as np
+def _prepare_prism2_batch(image: bytes) -> tuple[Any, Any]:
+    """Encode one pathology tile with Virchow2 and prepare a PRISM2 batch."""
     import torch
-
-    try:
-        embeddings = np.load(BytesIO(tile_embeddings), allow_pickle=False)
-    except (EOFError, OSError, ValueError) as exc:
-        raise ValueError("tile_embeddings must contain a NumPy .npy array") from exc
-
-    if not isinstance(embeddings, np.ndarray):
-        raise TypeError("tile_embeddings must contain one .npy array")
-    if embeddings.ndim != 2 or embeddings.shape[1] != VIRCHOW2_EMBEDDING_SIZE:
-        raise ValueError(
-            "tile_embeddings must have shape (N, 1280) for Virchow2 class-token features"
-        )
-    if embeddings.shape[0] == 0:
-        raise ValueError("tile_embeddings must contain at least one tile")
-    if embeddings.dtype.kind != "f":
-        raise ValueError("tile_embeddings must contain floating-point values")
-
-    embeddings = np.ascontiguousarray(embeddings, dtype=np.float32)
-    if not np.isfinite(embeddings).all():
-        raise ValueError("tile_embeddings must contain only finite values")
 
     if DEVICE != "cuda" or not torch.cuda.is_bf16_supported():
         raise RuntimeError("PRISM2 requires a CUDA GPU with bfloat16 support")
 
-    model, processor = get_hf_model_and_processor(
+    _, embedding = _extract_pathology_embedding_tensor(
+        image=image,
+        encoder="virchow2",
+        pooling="cls",
+    )
+    if embedding.shape != (VIRCHOW2_EMBEDDING_SIZE,):
+        raise RuntimeError("Virchow2 returned an embedding with an unexpected shape")
+
+    model, processor = _get_hf_model_and_processor(
         MODEL_ID,
-        model_type="auto",
+        model_type=HFModelType.AUTO,
         trust_remote_code=True,
         torch_dtype="auto",
     )
-    slide_embeddings = torch.from_numpy(embeddings)
+    slide_embeddings = embedding.unsqueeze(0).cpu().contiguous()
     batch = processor(tile_embeddings=[slide_embeddings]).to(DEVICE)
     return model, batch
 
 
 def _run_prism2_operation(
-    tile_embeddings: bytes,
+    image: bytes,
     operation: Prism2Operation = "response",
     prompt: str | None = None,
     max_new_tokens: int = 200,
 ) -> dict[str, Any]:
-    """Run a requested PRISM2 operation on one slide's tile embeddings."""
+    """Run a requested PRISM2 operation on one pathology tile or ROI."""
     import torch
 
     if operation not in (
@@ -96,7 +90,7 @@ def _run_prism2_operation(
     if operation == "response" and not 1 <= max_new_tokens <= 4096:
         raise ValueError("max_new_tokens must be between 1 and 4096")
 
-    model, batch = _prepare_prism2_batch(tile_embeddings)
+    model, batch = _prepare_prism2_batch(image)
     with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
         if operation == "base_embedding":
             embedding = model.get_base_embedding(**batch)
@@ -149,20 +143,19 @@ def _run_prism2_operation(
 @TAG_PATHOLOGY.register("prism2_extract_embedding")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
 def prism2_extract_embedding(
-    tile_embeddings: bytes,
+    image: bytes,
     embedding_type: Literal["base", "diagnostic"] = "base",
 ) -> dict[str, Any]:
-    """Extract a PRISM2 slide embedding from Virchow2 tile features.
+    """Extract a PRISM2 embedding from one pathology tile or ROI image.
 
     This tool is for non-commercial academic research and evaluation only. The
     license excludes commercial, clinical, and Research Use Only (RUO) use.
     Embeddings must not support diagnosis or patient-care decisions.
 
     Args:
-        tile_embeddings: NumPy ``.npy`` bytes containing an ``(N, 1280)`` array
-            of Virchow2 class-token features using 20x magnification, 224x224
-            tiles, and foreground tissue tiles.
-        embedding_type: ``"base"`` returns a 2560-dimensional slide embedding;
+        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
+            magnification. The image is treated as one PRISM2 tile.
+        embedding_type: ``"base"`` returns a 2560-dimensional base embedding;
             ``"diagnostic"`` returns a 3072-dimensional language-model embedding.
 
     Returns:
@@ -179,17 +172,17 @@ def prism2_extract_embedding(
     operation: Prism2Operation = (
         "base_embedding" if embedding_type == "base" else "diagnostic_embedding"
     )
-    return _run_prism2_operation(tile_embeddings, operation=operation)
+    return _run_prism2_operation(image, operation=operation)
 
 
 @MEDAI.register("prism2_score_yes_no_question")
 @TAG_PATHOLOGY.register("prism2_score_yes_no_question")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
 def prism2_score_yes_no_question(
-    tile_embeddings: bytes,
+    image: bytes,
     question: str,
 ) -> dict[str, Any]:
-    """Score a yes/no question for one slide with PRISM2.
+    """Score a yes/no question for one pathology tile or ROI with PRISM2.
 
     This tool is for non-commercial academic research and model evaluation only.
     The license excludes commercial, clinical, and Research Use Only (RUO) use.
@@ -197,9 +190,8 @@ def prism2_score_yes_no_question(
     decisions.
 
     Args:
-        tile_embeddings: NumPy ``.npy`` bytes containing an ``(N, 1280)`` array
-            of Virchow2 class-token features using 20x magnification, 224x224
-            tiles, and foreground tissue tiles.
+        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
+            magnification. The image is treated as one PRISM2 tile.
         question: A single yes/no question to score.
 
     Returns:
@@ -209,7 +201,7 @@ def prism2_score_yes_no_question(
         https://huggingface.co/paige-ai/Prism2
     """
     return _run_prism2_operation(
-        tile_embeddings,
+        image,
         operation="yes_no_score",
         prompt=question,
     )
@@ -219,11 +211,11 @@ def prism2_score_yes_no_question(
 @TAG_PATHOLOGY.register("prism2_generate_response")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
 def prism2_generate_response(
-    tile_embeddings: bytes,
+    image: bytes,
     prompt: str,
     max_new_tokens: int = 200,
 ) -> dict[str, Any]:
-    """Generate a single-turn PRISM2 response for academic model evaluation.
+    """Generate a single-turn response for a pathology tile or ROI image.
 
     Generated text may contain errors. This tool is for non-commercial academic
     research and evaluation only; the license excludes commercial, clinical,
@@ -231,9 +223,8 @@ def prism2_generate_response(
     clinical support, or patient-care decisions.
 
     Args:
-        tile_embeddings: NumPy ``.npy`` bytes containing an ``(N, 1280)`` array
-            of Virchow2 class-token features using 20x magnification, 224x224
-            tiles, and foreground tissue tiles.
+        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
+            magnification. The image is treated as one PRISM2 tile.
         prompt: A single-turn prompt. Use ``"Write a report"`` for report
             generation or provide a single question for question answering.
         max_new_tokens: Maximum number of new tokens to generate, from 1 to 4096.
@@ -245,7 +236,7 @@ def prism2_generate_response(
         https://huggingface.co/paige-ai/Prism2
     """
     return _run_prism2_operation(
-        tile_embeddings,
+        image,
         operation="response",
         prompt=prompt,
         max_new_tokens=max_new_tokens,
