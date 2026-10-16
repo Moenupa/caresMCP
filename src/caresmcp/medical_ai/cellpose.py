@@ -7,9 +7,8 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY
+from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
-
-from ..image_processing import decode_rgb
 
 PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]
 

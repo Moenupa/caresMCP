@@ -11,14 +11,15 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY
-from caresmcp.tools.medical_ai.pathology_encoder import (
+from caresmcp.util.moduleloader import requires
+
+from .pathology_encoder import (
     _extract_pathology_embedding_tensor,
 )
-from caresmcp.tools.medical_ai.transformers import (
+from .transformers import (
     HFModelType,
     _get_hf_model_and_processor,
 )
-from caresmcp.util.moduleloader import requires
 
 MODEL_ID = "paige-ai/Prism2"
 VIRCHOW2_EMBEDDING_SIZE = 1280

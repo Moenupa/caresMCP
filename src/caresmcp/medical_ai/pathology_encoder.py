@@ -5,9 +5,8 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY
+from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
-
-from ..image_processing import decode_rgb
 
 PathologyEncoder = Literal["h0-mini", "uni", "virchow", "virchow2", "h-optimus-0"]
 PathologyPooling = Literal["model", "cls", "mean", "cls_mean"]

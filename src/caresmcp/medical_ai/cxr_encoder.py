@@ -4,13 +4,13 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_XRAY
-from caresmcp.tools.medical_ai.transformers import (
+from caresmcp.tools.image_processing import decode_rgb
+from caresmcp.util.moduleloader import requires
+
+from .transformers import (
     HFModelType,
     _get_hf_model_and_processor,
 )
-from caresmcp.util.moduleloader import requires
-
-from ..image_processing import decode_rgb
 
 CXRModel = Literal["rad-dino", "cxformer-small", "cxformer-base"]
 CXR_ENCODER_MODEL_IDS: dict[CXRModel, str] = {

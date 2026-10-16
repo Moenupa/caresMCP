@@ -4,9 +4,8 @@ from typing import Any, Literal
 
 from caresmcp.constants import DEVICE, LRU_MAX_SIZE
 from caresmcp.registry import MEDAI
+from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
-
-from ..image_processing import decode_rgb
 
 
 class HFModelType(Enum):
