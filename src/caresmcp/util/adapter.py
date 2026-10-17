@@ -14,6 +14,30 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+def matches_tool_signature(
+    function: Callable[..., Any],
+    *,
+    return_type: type,
+    available_inputs: tuple[str, ...],
+) -> bool:
+    """Check a tool's declared output type and required input names.
+
+    Args:
+        function: Tool to inspect.
+        return_type: Exact return annotation required by the caller.
+        available_inputs: Names of inputs the caller can supply.
+
+    Returns:
+        Whether the return annotation matches and every required parameter is
+        available from the caller.
+    """
+    function_signature = signature(function)
+    return function_signature.return_annotation is return_type and all(
+        parameter.default is not Parameter.empty or parameter.name in available_inputs
+        for parameter in function_signature.parameters.values()
+    )
+
+
 def replace_input(
     parameter: str,
     adapter: Callable[[Any], Any],

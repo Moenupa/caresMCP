@@ -39,6 +39,10 @@ pathology = [
     "caresmcp[torch]",
     "cellpose>=4,<5",
 ]
+pathology-conch = [
+    "caresmcp[torch]",
+    "conch @ git+https://github.com/Mahmoodlab/CONCH.git",
+]
 prism2 = [
     "caresmcp[torch,hf]",
     "einops",

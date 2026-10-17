@@ -7,7 +7,7 @@ from PIL import Image
 
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import TAG_PATHOLOGY
-from caresmcp.util.adapter import skip_undefined_kwargs
+from caresmcp.util.adapter import matches_tool_signature, skip_undefined_kwargs
 from caresmcp.util.io import save_results
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "pathology"
@@ -22,7 +22,15 @@ SAMPLE_PATHS = (
     if SAMPLE_DIRECTORY.exists()
     else ()
 )
-PATHOLOGY_TOOLS = tuple(sorted(TAG_PATHOLOGY.get_all().items()))
+PATHOLOGY_TOOLS = tuple(
+    sorted(
+        (name, function)
+        for name, function in TAG_PATHOLOGY.get_all().items()
+        if matches_tool_signature(
+            function, return_type=bytes, available_inputs=("image",)
+        )
+    )
+)
 
 
 @pytest.mark.slow
