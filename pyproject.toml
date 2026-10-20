@@ -9,7 +9,7 @@ dependencies = [
     "rapidfuzz>=3,<4",
     # processing
     "opencv-python-headless",
-    "Pillow>=10",
+    "seaborn",
     "filetype>=1,<2",
     # cli and serving
     "typer<1",

@@ -4,12 +4,13 @@ import re
 from itertools import zip_longest
 from pathlib import Path
 
+import seaborn as sns
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from caresmcp.constants import CACHE_ROOT
-from caresmcp.registry import REGISTRIES, TAGS
+from caresmcp.registry import REGISTRIES, TAGS, TASKS
 from caresmcp.util.adapter import adapt_byte_inputs
 from caresmcp.util.io import get_kwargs_from_file, save_results
 
@@ -26,22 +27,16 @@ COLORS = [
 ]
 TAG_COLORS = {
     tag_name: color
-    for tag_name, color in zip_longest(
+    for tag_name, color in zip(
         sorted(TAGS),
-        [
-            "purple4",
-            "dark_red",
-            "dark_magenta",
-            "orange4",
-            "deep_pink4",
-            "dark_goldenrod",
-            "dark_khaki",
-            "dark_orange3",
-            "indian_red",
-            "gold3",
-        ],
+        sns.color_palette("husl", n_colors=len(TAGS)).as_hex(),
     )
-    if tag_name is not None
+} | {
+    tag_name: color
+    for tag_name, color in zip(
+        sorted(TASKS),
+        sns.color_palette("husl", desat=0.5, n_colors=len(TASKS)).as_hex(),
+    )
 }
 
 
@@ -77,7 +72,7 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             description = summary[0] if summary else ""
             tags = ", ".join(
                 f"[white on {TAG_COLORS[tag_name]}] {tag_name.removeprefix('TAG_').lower()} [/]"
-                for tag_name, tag_registry in sorted(TAGS.items())
+                for tag_name, tag_registry in sorted((TAGS | TASKS).items())
                 if name in tag_registry.get_all()
             )
             table.add_row(

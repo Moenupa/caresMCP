@@ -1,4 +1,4 @@
-.PHONY: all help format-check format check test test-slow
+.PHONY: all help format-check format check test test-slow list
 
 check_dirs := src tests
 
@@ -32,3 +32,6 @@ test:
 
 test-slow:
 	RUN_SLOW=1 $(RUN) pytest tests -rA
+
+list:
+	$(RUN) caresmcp list

@@ -23,4 +23,10 @@ TAG_XRAY = catalogue.create(pkg_name, "tag_xray")
 TAG_CT = catalogue.create(pkg_name, "tag_ct")
 TAG_PATHOLOGY = catalogue.create(pkg_name, "tag_pathology")
 
+TASK_CLS = catalogue.create(pkg_name, "task_classify")
+TASK_SEG = catalogue.create(pkg_name, "task_segment")
+TASK_CLIP = catalogue.create(pkg_name, "task_clip")
+TASK_EMBED = catalogue.create(pkg_name, "task_embed")
+
 TAGS = {name: value for name, value in locals().items() if name.startswith("TAG_")}
+TASKS = {name: value for name, value in locals().items() if name.startswith("TASK_")}
