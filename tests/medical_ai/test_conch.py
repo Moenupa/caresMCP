@@ -38,7 +38,7 @@ def projected_tile_embeddings(
 ) -> list[dict[str, Any]]:
     """Extract real projected embeddings for all bundled pathology tiles."""
     return [
-        conch.conch_extract_embedding(image, embedding_space="projected")
+        conch.conch_image_embed(image, embedding_space="projected")
         for _, image in pathology_tiles
     ]
 
@@ -61,9 +61,7 @@ def test_conch_extract_embedding_returns_projected_and_visual_features(
 ) -> None:
     """Extract finite, normalized image features in both CONCH feature spaces."""
     projected = projected_tile_embeddings[0]
-    visual = conch.conch_extract_embedding(
-        pathology_tiles[0][1], embedding_space="visual"
-    )
+    visual = conch.conch_image_embed(pathology_tiles[0][1], embedding_space="visual")
 
     assert projected["model_id"] == conch.MODEL_ID
     assert projected["embedding_space"] == "projected"
@@ -82,7 +80,7 @@ def test_conch_extract_text_embeddings_returns_normalized_vectors() -> None:
         "a histopathology image of benign breast fibromatosis",
         "a histopathology image of invasive breast carcinoma",
     ]
-    result = conch.conch_extract_text_embeddings(descriptions)
+    result = conch.conch_text_embed(descriptions)
 
     assert result["model_id"] == conch.MODEL_ID
     assert result["embedding_size"] > 0
@@ -102,7 +100,7 @@ def test_conch_score_candidate_texts_matches_real_embedding_cosines(
         "a histopathology image of invasive breast carcinoma",
     ]
     image_vector = projected_tile_embeddings[0]["embedding"]
-    text_result = conch.conch_extract_text_embeddings(descriptions)
+    text_result = conch.conch_text_embed(descriptions)
     score_result = conch.conch_score_candidate_texts(
         pathology_tiles[0][1], descriptions
     )

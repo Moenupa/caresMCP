@@ -3,7 +3,7 @@ from functools import lru_cache
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE, LRU_MAX_SIZE
-from caresmcp.registry import MEDAI
+from caresmcp.registry import MEDAI, TASK_CLS
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -64,6 +64,7 @@ def _get_hf_model_and_processor(
 
 
 @MEDAI.register("hf_classifier")
+@TASK_CLS.register("hf_classifier")
 @requires(["torch", "transformers"], extra="hf")
 def hf_classifier(
     image: bytes,

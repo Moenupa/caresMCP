@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_XRAY
+from caresmcp.registry import MEDAI, TAG_XRAY, TASK_CLIP, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -136,10 +136,11 @@ def _retrieve_cxr_reports(
     }
 
 
-@MEDAI.register("cxr_encoder_extract_image_embedding")
-@TAG_XRAY.register("cxr_encoder_extract_image_embedding")
+@MEDAI.register("cxr_encoder_image_embed")
+@TAG_XRAY.register("cxr_encoder_image_embed")
+@TASK_EMBED.register("cxr_encoder_image_embed")
 @requires(["torch", "transformers"], extra="hf")
-def cxr_encoder_extract_image_embedding(
+def cxr_encoder_image_embed(
     image: bytes,
     encoder: CXRModel = "rad-dino",
     pooling: Literal["cls", "mean"] = "cls",
@@ -170,6 +171,7 @@ def cxr_encoder_extract_image_embedding(
 
 @MEDAI.register("cxr_encoder_retrieve_similar_reports")
 @TAG_XRAY.register("cxr_encoder_retrieve_similar_reports")
+@TASK_CLIP.register("cxr_encoder_retrieve_similar_reports")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_retrieve_similar_reports(
     image: bytes,

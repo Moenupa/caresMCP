@@ -71,7 +71,7 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             summary = (function.__doc__ or "").strip().splitlines()
             description = summary[0] if summary else ""
             tags = ", ".join(
-                f"[white on {TAG_COLORS[tag_name]}] {tag_name.removeprefix('TAG_').lower()} [/]"
+                f"[white on {TAG_COLORS[tag_name]}] {tag_name.split("_")[-1]} [/]"
                 for tag_name, tag_registry in sorted((TAGS | TASKS).items())
                 if name in tag_registry.get_all()
             )

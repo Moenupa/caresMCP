@@ -10,7 +10,7 @@ and is not provided by this package.
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY
+from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.util.moduleloader import requires
 
 from .pathology_encoder import (
@@ -140,10 +140,11 @@ def _run_prism2_operation(
     }
 
 
-@MEDAI.register("prism2_extract_embedding")
-@TAG_PATHOLOGY.register("prism2_extract_embedding")
+@MEDAI.register("prism2_image_embed")
+@TAG_PATHOLOGY.register("prism2_image_embed")
+@TASK_EMBED.register("prism2_image_embed")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
-def prism2_extract_embedding(
+def prism2_image_embed(
     image: bytes,
     embedding_type: Literal["base", "diagnostic"] = "base",
 ) -> dict[str, Any]:
@@ -178,6 +179,7 @@ def prism2_extract_embedding(
 
 @MEDAI.register("prism2_score_yes_no_question")
 @TAG_PATHOLOGY.register("prism2_score_yes_no_question")
+@TASK_CLIP.register("prism2_score_yes_no_question")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
 def prism2_score_yes_no_question(
     image: bytes,
@@ -208,10 +210,10 @@ def prism2_score_yes_no_question(
     )
 
 
-@MEDAI.register("prism2_generate_response")
-@TAG_PATHOLOGY.register("prism2_generate_response")
+@MEDAI.register("prism2_image_caption")
+@TAG_PATHOLOGY.register("prism2_image_caption")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
-def prism2_generate_response(
+def prism2_image_caption(
     image: bytes,
     prompt: str,
     max_new_tokens: int = 200,

@@ -5,7 +5,7 @@ from importlib import import_module
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY
+from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -163,10 +163,11 @@ def _encode_image(
     return embeddings
 
 
-@MEDAI.register("conch_extract_embedding")
-@TAG_PATHOLOGY.register("conch_extract_embedding")
+@MEDAI.register("conch_image_embed")
+@TAG_PATHOLOGY.register("conch_image_embed")
+@TASK_EMBED.register("conch_image_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
-def conch_extract_embedding(
+def conch_image_embed(
     image: bytes,
     embedding_space: Literal["projected", "visual"] = "projected",
     normalize: bool = True,
@@ -215,10 +216,11 @@ def conch_extract_embedding(
     }
 
 
-@MEDAI.register("conch_extract_text_embeddings")
-@TAG_PATHOLOGY.register("conch_extract_text_embeddings")
+@MEDAI.register("conch_text_embed")
+@TAG_PATHOLOGY.register("conch_text_embed")
+@TASK_EMBED.register("conch_text_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
-def conch_extract_text_embeddings(
+def conch_text_embed(
     texts: list[str],
     normalize: bool = True,
 ) -> dict[str, Any]:
@@ -260,6 +262,7 @@ def conch_extract_text_embeddings(
 
 @MEDAI.register("conch_score_candidate_texts")
 @TAG_PATHOLOGY.register("conch_score_candidate_texts")
+@TASK_CLIP.register("conch_score_candidate_texts")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_score_candidate_texts(
     image: bytes,
@@ -317,6 +320,7 @@ def conch_score_candidate_texts(
 
 @MEDAI.register("conch_zero_shot_classify")
 @TAG_PATHOLOGY.register("conch_zero_shot_classify")
+@TASK_CLIP.register("conch_zero_shot_classify")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_zero_shot_classify(
     image: bytes,
@@ -398,7 +402,7 @@ def conch_mizero_classify_tiles(
 
     Args:
         tile_embeddings: Non-empty projected CONCH image embeddings, one per
-            tile. These can be obtained with ``conch_extract_embedding``.
+            tile. These can be obtained with ``conch_image_embed``.
         class_names: Unique class labels to compare against the tiles.
         prompt_templates: Optional templates containing ``{class_name}``.
         class_synonyms: Optional synonym list for each class, in class order.
@@ -479,6 +483,7 @@ def conch_mizero_classify_tiles(
 
 @MEDAI.register("conch_retrieve_images_by_text")
 @TAG_PATHOLOGY.register("conch_retrieve_images_by_text")
+@TASK_CLIP.register("conch_retrieve_images_by_text")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_retrieve_images_by_text(
     query_text: str,
@@ -488,7 +493,7 @@ def conch_retrieve_images_by_text(
 ) -> dict[str, Any]:
     """Retrieve projected CONCH image embeddings that best match a text query.
 
-    Candidate vectors must come from ``conch_extract_embedding`` with the
+    Candidate vectors must come from ``conch_image_embed`` with the
     ``projected`` embedding space. This enables text-to-image retrieval without
     resending the original images.
 

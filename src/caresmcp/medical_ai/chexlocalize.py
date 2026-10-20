@@ -3,7 +3,7 @@
 from io import BytesIO
 from typing import Any
 
-from caresmcp.registry import MEDAI, TAG_XRAY
+from caresmcp.registry import MEDAI, TAG_XRAY, TASK_SEG
 
 
 @MEDAI.register("chexlocalize_evaluate_saliency_localization")
@@ -72,6 +72,7 @@ def chexlocalize_evaluate_saliency_localization(
 
 @MEDAI.register("chexlocalize_segment_saliency_map")
 @TAG_XRAY.register("chexlocalize_segment_saliency_map")
+@TASK_SEG.register("chexlocalize_segment_saliency_map")
 def chexlocalize_segment_saliency_map(
     saliency_map: bytes,
     threshold: float = 0.5,

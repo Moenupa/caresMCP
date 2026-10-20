@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
-from caresmcp.registry import MEDAI, TAG_XRAY
+from caresmcp.registry import MEDAI, TAG_XRAY, TASK_CLS, TASK_SEG
 from caresmcp.util.moduleloader import requires
 
 ChestXrayWeights = Literal[
@@ -56,12 +56,13 @@ def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, size: int) -> Any:
 
 @MEDAI.register("torchxrayvision_classify")
 @TAG_XRAY.register("torchxrayvision_classify")
+@TASK_CLS.register("torchxrayvision_classify")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_classify(
     image: bytes,
     weights: ChestXrayWeights = "densenet121-res224-all",
 ) -> dict[str, float]:
-    """Return TorchXRayVision scores for the pathologies supported by a model.
+    """Score by predicted pathology classes.
 
     Args:
         image: Chest radiograph image bytes.
@@ -106,6 +107,7 @@ def torchxrayvision_classify(
 
 @MEDAI.register("torchxrayvision_segment_anatomy")
 @TAG_XRAY.register("torchxrayvision_segment_anatomy")
+@TASK_SEG.register("torchxrayvision_segment_anatomy")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_segment_anatomy(
     image: bytes,
