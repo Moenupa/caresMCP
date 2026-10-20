@@ -5,7 +5,7 @@ from importlib import import_module
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_CLIP, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -163,8 +163,7 @@ def _encode_image(
     return embeddings
 
 
-@MEDAI.register("conch_image_embed")
-@TAG_PATHOLOGY.register("conch_image_embed")
+@PATHOLOGY.register("conch_image_embed")
 @TASK_EMBED.register("conch_image_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_image_embed(
@@ -216,8 +215,7 @@ def conch_image_embed(
     }
 
 
-@MEDAI.register("conch_text_embed")
-@TAG_PATHOLOGY.register("conch_text_embed")
+@PATHOLOGY.register("conch_text_embed")
 @TASK_EMBED.register("conch_text_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_text_embed(
@@ -260,8 +258,7 @@ def conch_text_embed(
     }
 
 
-@MEDAI.register("conch_score_candidate_texts")
-@TAG_PATHOLOGY.register("conch_score_candidate_texts")
+@PATHOLOGY.register("conch_score_candidate_texts")
 @TASK_CLIP.register("conch_score_candidate_texts")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_score_candidate_texts(
@@ -318,8 +315,7 @@ def conch_score_candidate_texts(
     }
 
 
-@MEDAI.register("conch_zero_shot_classify")
-@TAG_PATHOLOGY.register("conch_zero_shot_classify")
+@PATHOLOGY.register("conch_zero_shot_classify")
 @TASK_CLIP.register("conch_zero_shot_classify")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_zero_shot_classify(
@@ -383,8 +379,7 @@ def conch_zero_shot_classify(
     }
 
 
-@MEDAI.register("conch_mizero_classify_tiles")
-@TAG_PATHOLOGY.register("conch_mizero_classify_tiles")
+@PATHOLOGY.register("conch_mizero_classify_tiles")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_mizero_classify_tiles(
     tile_embeddings: list[list[float]],
@@ -481,8 +476,7 @@ def conch_mizero_classify_tiles(
     }
 
 
-@MEDAI.register("conch_retrieve_images_by_text")
-@TAG_PATHOLOGY.register("conch_retrieve_images_by_text")
+@PATHOLOGY.register("conch_retrieve_images_by_text")
 @TASK_CLIP.register("conch_retrieve_images_by_text")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_retrieve_images_by_text(

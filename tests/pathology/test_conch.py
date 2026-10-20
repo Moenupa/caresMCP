@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("torch")
 pytest.importorskip("conch")
 
-from caresmcp.medical_ai import conch
+from caresmcp.pathology import conch
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 

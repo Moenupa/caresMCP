@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -137,8 +137,7 @@ def _extract_pathology_embedding_tensor(
     return selected_pooling, values
 
 
-@MEDAI.register("pathology_encoder_embed")
-@TAG_PATHOLOGY.register("pathology_encoder_embed")
+@PATHOLOGY.register("pathology_encoder_embed")
 @TASK_EMBED.register("pathology_encoder_embed")
 @requires(["torch", "transformers"], extra="hf")
 def pathology_encoder_embed(

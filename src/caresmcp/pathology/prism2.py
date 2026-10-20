@@ -10,7 +10,7 @@ and is not provided by this package.
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_CLIP, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.util.moduleloader import requires
 from caresmcp.util.transformers import (
     HFModelType,
@@ -139,8 +139,7 @@ def _run_prism2_operation(
     }
 
 
-@MEDAI.register("prism2_image_embed")
-@TAG_PATHOLOGY.register("prism2_image_embed")
+@PATHOLOGY.register("prism2_image_embed")
 @TASK_EMBED.register("prism2_image_embed")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_embed(
@@ -176,8 +175,7 @@ def prism2_image_embed(
     return _run_prism2_operation(image, operation=operation)
 
 
-@MEDAI.register("prism2_score_yes_no_question")
-@TAG_PATHOLOGY.register("prism2_score_yes_no_question")
+@PATHOLOGY.register("prism2_score_yes_no_question")
 @TASK_CLIP.register("prism2_score_yes_no_question")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_score_yes_no_question(
@@ -209,8 +207,7 @@ def prism2_score_yes_no_question(
     )
 
 
-@MEDAI.register("prism2_image_caption")
-@TAG_PATHOLOGY.register("prism2_image_caption")
+@PATHOLOGY.register("prism2_image_caption")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_caption(
     image: bytes,

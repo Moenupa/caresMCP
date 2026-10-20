@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from caresmcp.constants import CACHE_ROOT
-from caresmcp.registry import TAG_PATHOLOGY
+from caresmcp.registry import PATHOLOGY
 from caresmcp.util.adapter import matches_tool_signature, skip_undefined_kwargs
 from caresmcp.util.io import save_results
 
@@ -25,7 +25,7 @@ SAMPLE_PATHS = (
 PATHOLOGY_TOOLS = tuple(
     sorted(
         (name, function)
-        for name, function in TAG_PATHOLOGY.get_all().items()
+        for name, function in PATHOLOGY.get_all().items()
         if matches_tool_signature(
             function, return_type=bytes, available_inputs=("image",)
         )

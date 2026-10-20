@@ -1,12 +1,10 @@
-"""Research tools for pathology image analysis."""
-
 import math
 from functools import lru_cache
 from io import BytesIO
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_SEG
+from caresmcp.registry import PATHOLOGY, TASK_SEG
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
@@ -24,8 +22,7 @@ def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
     )
 
 
-@MEDAI.register("cellpose_segment_pathology_cells")
-@TAG_PATHOLOGY.register("cellpose_segment_pathology_cells")
+@PATHOLOGY.register("cellpose_segment_pathology_cells")
 @TASK_SEG.register("cellpose_segment_pathology_cells")
 @requires("cellpose", extra="pathology")
 def cellpose_segment_pathology_cells(
