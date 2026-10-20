@@ -1,8 +1,11 @@
 """Command-line entry point for listing registries and running the MCP server."""
 
 import re
+from collections.abc import Callable
+from inspect import signature, unwrap
 from itertools import zip_longest
 from pathlib import Path
+from typing import Any, Literal, get_args, get_origin, get_type_hints
 
 import seaborn as sns
 import typer
@@ -38,11 +41,39 @@ TAG_COLORS = {
         sns.color_palette("husl", desat=0.5, n_colors=len(TASKS)).as_hex(),
     )
 }
+MODEL_PARAMETER_NAMES = {
+    "architecture",
+    "encoder",
+    "model",
+    "model_id",
+    "pretrained_model",
+    "weights",
+}
 
 
 def _is_todo(description: str) -> bool:
     """Return True if the description looks like a TODO item."""
     return bool(re.search(r"\b[Tt][Oo][Dd][Oo]\b", description))
+
+
+def _supported_models(function: Callable[..., Any]) -> str:
+    """Return declared model choices from Literal-annotated model parameters."""
+    try:
+        annotations = get_type_hints(unwrap(function))
+    except (NameError, TypeError):
+        annotations = {}
+
+    model_values: list[str] = []
+    for name, parameter in signature(function).parameters.items():
+        if name not in MODEL_PARAMETER_NAMES:
+            continue
+
+        annotation = annotations.get(name, parameter.annotation)
+        if get_origin(annotation) is Literal:
+            model_values.extend(
+                value for value in get_args(annotation) if isinstance(value, str)
+            )
+    return ",\n".join(model_values)
 
 
 @app.command("list")
@@ -56,8 +87,9 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
 
     categories = [category] if category is not None else sorted(REGISTRIES)
     table = Table(show_header=True, header_style="bold")
-    table.add_column("Category")
+    table.add_column("Categ")
     table.add_column("Name")
+    table.add_column("Models", max_width=30)
     table.add_column("Tags")
     table.add_column("Description")
 
@@ -71,13 +103,14 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             summary = (function.__doc__ or "").strip().splitlines()
             description = summary[0] if summary else ""
             tags = ", ".join(
-                f"[white on {TAG_COLORS[tag_name]}] {tag_name.split("_")[-1]} [/]"
+                f"[white on {TAG_COLORS[tag_name]}] {tag_name.split('_')[-1]} [/]"
                 for tag_name, tag_registry in sorted((TAGS | TASKS).items())
                 if name in tag_registry.get_all()
             )
             table.add_row(
                 f"[{color}]{cat_name}[/]",
                 f"[{color}]{name}[/]",
+                _supported_models(function),
                 tags,
                 description,
                 style="dim" if _is_todo(description) else None,

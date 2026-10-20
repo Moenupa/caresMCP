@@ -12,13 +12,13 @@ from typing import Any, Literal
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.util.moduleloader import requires
+from caresmcp.util.transformers import (
+    HFModelType,
+    _get_hf_model_and_processor,
+)
 
 from .pathology_encoder import (
     _extract_pathology_embedding_tensor,
-)
-from .transformers import (
-    HFModelType,
-    _get_hf_model_and_processor,
 )
 
 MODEL_ID = "paige-ai/Prism2"
@@ -29,7 +29,6 @@ _PRISM2_REQUIRED_PACKAGES = [
     "safetensors",
     "einops",
     "timm",
-    "huggingface_hub",
 ]
 Prism2Operation = Literal[
     "response",
@@ -48,7 +47,7 @@ def _prepare_prism2_batch(image: bytes) -> tuple[Any, Any]:
 
     _, embedding = _extract_pathology_embedding_tensor(
         image=image,
-        encoder="virchow2",
+        model_id="paige-ai/Virchow2",
         pooling="cls",
     )
     if embedding.shape != (VIRCHOW2_EMBEDDING_SIZE,):
@@ -143,7 +142,7 @@ def _run_prism2_operation(
 @MEDAI.register("prism2_image_embed")
 @TAG_PATHOLOGY.register("prism2_image_embed")
 @TASK_EMBED.register("prism2_image_embed")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_embed(
     image: bytes,
     embedding_type: Literal["base", "diagnostic"] = "base",
@@ -180,7 +179,7 @@ def prism2_image_embed(
 @MEDAI.register("prism2_score_yes_no_question")
 @TAG_PATHOLOGY.register("prism2_score_yes_no_question")
 @TASK_CLIP.register("prism2_score_yes_no_question")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_score_yes_no_question(
     image: bytes,
     question: str,
@@ -212,7 +211,7 @@ def prism2_score_yes_no_question(
 
 @MEDAI.register("prism2_image_caption")
 @TAG_PATHOLOGY.register("prism2_image_caption")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="prism2")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_caption(
     image: bytes,
     prompt: str,

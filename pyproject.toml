@@ -27,25 +27,19 @@ monai = [
 totalsegmentator = [
     "TotalSegmentator>=2.0",
 ]
+hf = [
+    "caresmcp[torch]",
+    "transformers[torchhub]>=4.57,<5",
+    "einops",
+]
 xray = [
     "caresmcp[torch]",
     "torchxrayvision>=1.2.4",
 ]
-hf = [
-    "caresmcp[torch]",
-    "transformers[torchhub]>=4.57,<5",
-]
 pathology = [
     "caresmcp[torch]",
     "cellpose>=4,<5",
-]
-pathology-conch = [
-    "caresmcp[torch]",
     "conch @ git+https://github.com/Mahmoodlab/CONCH.git",
-]
-prism2 = [
-    "caresmcp[torch,hf]",
-    "einops",
 ]
 medical-dicom = [
     "pydicom>=3.0",

@@ -8,20 +8,18 @@ from caresmcp.registry import MEDAI, TAG_PATHOLOGY, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
-PathologyEncoder = Literal["h0-mini", "uni", "virchow", "virchow2", "h-optimus-0"]
+PathologyEncoder = Literal[
+    "bioptimus/H0-mini",
+    "MahmoodLab/UNI",
+    "paige-ai/Virchow",
+    "paige-ai/Virchow2",
+    "bioptimus/H-optimus-0",
+]
 PathologyPooling = Literal["model", "cls", "mean", "cls_mean"]
 
-_MODEL_IDS: dict[PathologyEncoder, str] = {
-    "h0-mini": "hf-hub:bioptimus/H0-mini",
-    "uni": "hf-hub:MahmoodLab/UNI",
-    "virchow": "hf-hub:paige-ai/Virchow",
-    "virchow2": "hf-hub:paige-ai/Virchow2",
-    "h-optimus-0": "hf-hub:bioptimus/H-optimus-0",
-}
 
-
-@lru_cache(maxsize=len(_MODEL_IDS))
-def _load_pathology_encoder(encoder: PathologyEncoder) -> tuple[Any, Any]:
+@lru_cache(maxsize=2)
+def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
     """Load a published pathology encoder and its checkpoint transforms."""
     import timm
     import torch
@@ -30,19 +28,19 @@ def _load_pathology_encoder(encoder: PathologyEncoder) -> tuple[Any, Any]:
     from torchvision import transforms
 
     model_kwargs: dict[str, Any] = {"pretrained": True}
-    if encoder == "uni":
+    if model_id == "MahmoodLab/UNI":
         model_kwargs.update(init_values=1e-5, dynamic_img_size=True)
-    elif encoder == "h-optimus-0":
+    elif model_id == "bioptimus/H-optimus-0":
         model_kwargs.update(init_values=1e-5, dynamic_img_size=False)
-    elif encoder in ("virchow", "virchow2"):
+    elif model_id in ("paige-ai/Virchow", "paige-ai/Virchow2"):
         from timm.layers import SwiGLUPacked
 
         model_kwargs.update(mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
 
-    model = timm.create_model(_MODEL_IDS[encoder], **model_kwargs)
+    model = timm.create_model(f"hf-hub:{model_id}", **model_kwargs)
     model = model.to(DEVICE)
     model.eval()
-    if encoder == "h-optimus-0":
+    if model_id == "bioptimus/H-optimus-0":
         transform = transforms.Compose(
             [
                 transforms.ToTensor(),
@@ -61,23 +59,26 @@ def _load_pathology_encoder(encoder: PathologyEncoder) -> tuple[Any, Any]:
 
 def _extract_pathology_embedding_tensor(
     image: bytes,
-    encoder: PathologyEncoder,
+    model_id: PathologyEncoder,
     pooling: PathologyPooling | None = None,
 ) -> tuple[PathologyPooling, Any]:
     """Extract one pathology feature tensor for use by internal tool chains."""
     import torch
 
-    if encoder not in _MODEL_IDS:
-        raise ValueError("encoder must name a supported pathology encoder")
     if pooling is None:
         selected_pooling: PathologyPooling = (
-            "cls_mean" if encoder in ("virchow", "virchow2") else "model"
+            "cls_mean"
+            if model_id in ("paige-ai/Virchow", "paige-ai/Virchow2")
+            else "model"
         )
     else:
         selected_pooling = pooling
     if selected_pooling not in ("model", "cls", "mean", "cls_mean"):
         raise ValueError("pooling must be 'model', 'cls', 'mean', or 'cls_mean'")
-    if encoder not in ("virchow", "virchow2") and selected_pooling != "model":
+    if (
+        model_id not in ("paige-ai/Virchow", "paige-ai/Virchow2")
+        and selected_pooling != "model"
+    ):
         raise ValueError(
             "cls, mean, and cls_mean pooling are only supported by Virchow"
         )
@@ -86,10 +87,10 @@ def _extract_pathology_embedding_tensor(
         tile = decode_rgb(image)
     except (OSError, ValueError) as exc:
         raise ValueError("image must contain a readable pathology tile") from exc
-    if encoder == "h-optimus-0" and tile.size != (224, 224):
+    if model_id == "bioptimus/H-optimus-0" and tile.size != (224, 224):
         raise ValueError("H-optimus-0 requires 224 by 224 pixel tiles")
 
-    model, transform = _load_pathology_encoder(encoder)
+    model, transform = _load_pathology_encoder(model_id)
     batch = transform(tile).unsqueeze(0).to(DEVICE)
     if DEVICE == "cuda":
         with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
@@ -113,7 +114,7 @@ def _extract_pathology_embedding_tensor(
         if selected_pooling == "cls":
             embedding = output[:, 0, :]
         else:
-            patch_token_start = 5 if encoder == "virchow2" else 1
+            patch_token_start = 5 if model_id == "paige-ai/Virchow2" else 1
             if output.shape[1] <= patch_token_start:
                 raise RuntimeError("pathology encoder returned no patch tokens")
             patch_tokens = output[:, patch_token_start:, :]
@@ -142,7 +143,7 @@ def _extract_pathology_embedding_tensor(
 @requires(["torch", "transformers"], extra="hf")
 def pathology_encoder_embed(
     image: bytes,
-    encoder: PathologyEncoder,
+    model_id: PathologyEncoder,
     pooling: PathologyPooling | None = None,
 ) -> dict[str, Any]:
     """Extract one feature vector from a pathology tile or region of interest.
@@ -153,8 +154,9 @@ def pathology_encoder_embed(
 
     Args:
         image: Encoded RGB or grayscale pathology tile or region of interest.
-        encoder: Supported pathology encoder: H0-mini, UNI, Virchow, Virchow2,
-            or H-optimus-0.
+        encoder: Hugging Face model ID: ``bioptimus/H0-mini``,
+            ``MahmoodLab/UNI``, ``paige-ai/Virchow``, ``paige-ai/Virchow2``,
+            or ``bioptimus/H-optimus-0``.
         pooling: For Virchow models, use the class token, mean patch token, or
             their concatenation. If omitted, Virchow uses ``cls_mean`` and the
             other encoders use their model output.
@@ -171,13 +173,13 @@ def pathology_encoder_embed(
     """
     selected_pooling, values = _extract_pathology_embedding_tensor(
         image=image,
-        encoder=encoder,
+        model_id=model_id,
         pooling=pooling,
     )
     values = values.cpu()
 
     return {
-        "model_id": _MODEL_IDS[encoder].removeprefix("hf-hub:"),
+        "model_id": model_id,
         "pooling": selected_pooling,
         "embedding_size": int(values.numel()),
         "embedding": values.tolist(),

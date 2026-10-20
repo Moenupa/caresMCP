@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import lru_cache
+from io import BytesIO
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE, LRU_MAX_SIZE
@@ -14,6 +15,8 @@ class HFModelType(Enum):
     IMAGE_CLASSIFICATION = "image_classification"
     IMAGE_ENCODER = "image_encoder"
     AUTO = "auto"
+    SAM = "sam"
+    SEMANTIC_SEGMENTATION = "semantic_segmentation"
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
@@ -29,8 +32,23 @@ def _get_hf_model_and_processor(
     processor classes by default. Image encoders use ``AutoModel`` with
     ``AutoImageProcessor``. ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
+
+    Never support revision or local_files_only. Since it brings complexity we/agents dont need.
     """
     match model_type:
+        case HFModelType.SAM:
+            from transformers import SamModel, SamProcessor
+
+            model_class = SamModel
+            processor_class = SamProcessor
+        case HFModelType.SEMANTIC_SEGMENTATION:
+            from transformers import (
+                AutoImageProcessor,
+                AutoModelForSemanticSegmentation,
+            )
+
+            model_class = AutoModelForSemanticSegmentation
+            processor_class = AutoImageProcessor
         case HFModelType.IMAGE_CLASSIFICATION:
             from transformers import AutoImageProcessor, AutoModelForImageClassification
 
@@ -120,3 +138,33 @@ def hf_classifier(
     return {
         label: float(score) for label, score in zip(labels, score_values, strict=True)
     }
+
+
+def encode_label_mask(labels: Any) -> bytes:
+    """Encode integer class IDs as a palette PNG with transparent background.
+
+    Masks deliberately preserve class IDs rather than multiplying patient
+    intensities by labels. This exception supports downstream measurements.
+    """
+    import numpy as np
+    from PIL import Image
+
+    labels = np.asarray(labels)
+    if labels.ndim != 2 or not np.isfinite(labels).all():
+        raise RuntimeError("segmenter must return a finite 2D label map")
+    if (
+        (labels < 0).any()
+        or (labels > 255).any()
+        or (labels != labels.astype(int)).any()
+    ):
+        raise RuntimeError("segmenter labels must be integers from 0 through 255")
+    mask = Image.fromarray(labels.astype(np.uint8)).convert("P")
+    # Keep the existing cardiac label colors; extend deterministically.
+    colors = [(0, 0, 0), (31, 119, 180), (255, 127, 14), (44, 160, 44)]
+    colors.extend(
+        ((i * 67) % 256, (i * 131) % 256, (i * 197) % 256) for i in range(4, 256)
+    )
+    mask.putpalette([value for color in colors for value in color])
+    output = BytesIO()
+    mask.save(output, format="PNG", transparency=0)
+    return output.getvalue()

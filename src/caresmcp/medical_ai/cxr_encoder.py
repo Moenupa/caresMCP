@@ -6,28 +6,16 @@ from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TAG_XRAY, TASK_CLIP, TASK_EMBED
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
-
-from .transformers import (
+from caresmcp.util.transformers import (
     HFModelType,
     _get_hf_model_and_processor,
 )
 
-CXRModel = Literal["rad-dino", "cxformer-small", "cxformer-base"]
-CXR_ENCODER_MODEL_IDS: dict[CXRModel, str] = {
-    "rad-dino": "microsoft/rad-dino",
-    "cxformer-small": "m42-health/CXformer-small",
-    "cxformer-base": "m42-health/CXformer-base",
-}
-
-
-def _get_model_id(encoder: CXRModel) -> str:
-    """Return a supported encoder's Hugging Face model identifier."""
-    try:
-        return CXR_ENCODER_MODEL_IDS[encoder]
-    except KeyError as exc:
-        raise ValueError(
-            "encoder must be 'rad-dino', 'cxformer-small', or 'cxformer-base'"
-        ) from exc
+CXRModel = Literal[
+    "microsoft/rad-dino",
+    "m42-health/CXformer-small",
+    "m42-health/CXformer-base",
+]
 
 
 def _extract_cxr_embedding(
@@ -142,7 +130,7 @@ def _retrieve_cxr_reports(
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_image_embed(
     image: bytes,
-    encoder: CXRModel = "rad-dino",
+    model_id: CXRModel = "microsoft/rad-dino",
     pooling: Literal["cls", "mean"] = "cls",
 ) -> dict[str, Any]:
     """Extract a general visual feature vector from a chest radiograph.
@@ -151,7 +139,8 @@ def cxr_encoder_image_embed(
 
     Args:
         image: Chest radiograph image bytes.
-        encoder: RAD-DINO, CXFormer small, or CXFormer base checkpoint.
+        model_id: Hugging Face ID or local directory for a compatible image
+            encoder that returns ``last_hidden_state``.
         pooling: Use the first token or the mean of non-CLS tokens.
 
     Returns:
@@ -164,7 +153,7 @@ def cxr_encoder_image_embed(
     """
     return _extract_cxr_embedding(
         image=image,
-        model_id=_get_model_id(encoder),
+        model_id=model_id,
         pooling=pooling,
     )
 
@@ -178,7 +167,7 @@ def cxr_encoder_retrieve_similar_reports(
     reference_ids: list[str],
     reference_reports: list[str],
     reference_image_embeddings: list[list[float]],
-    encoder: CXRModel = "rad-dino",
+    model_id: CXRModel = "microsoft/rad-dino",
     reference_pooling: Literal["cls", "mean"] = "cls",
     top_k: int = 5,
 ) -> dict[str, Any]:
@@ -192,7 +181,8 @@ def cxr_encoder_retrieve_similar_reports(
         reference_ids: Identifiers for indexed studies or images.
         reference_reports: Report text paired with each reference image.
         reference_image_embeddings: Features from the reference images.
-        encoder: Checkpoint used for the query and reference embeddings.
+        model_id: Hugging Face ID or local directory for the encoder used to
+            create the query and reference embeddings.
         reference_pooling: Pooling method used for the reference features.
         top_k: Maximum number of reports to return.
 
@@ -210,7 +200,7 @@ def cxr_encoder_retrieve_similar_reports(
         reference_ids=reference_ids,
         reference_reports=reference_reports,
         reference_image_embeddings=reference_image_embeddings,
-        model_id=_get_model_id(encoder),
+        model_id=model_id,
         reference_pooling=reference_pooling,
         top_k=top_k,
     )
