@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from caresmcp.constants import CACHE_ROOT
-from caresmcp.registry import TAG_XRAY
+from caresmcp.registry import XRAY
 from caresmcp.util.adapter import skip_undefined_kwargs
 from caresmcp.util.io import save_results
 
@@ -23,7 +23,7 @@ SAMPLE_PATHS = (
     if SAMPLE_DIRECTORY.exists()
     else ()
 )
-XRAY_TOOLS = [(k, v) for k, v in TAG_XRAY.get_all().items() if "embedding" not in k]
+XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
 
 
 @pytest.mark.slow

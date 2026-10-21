@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
-from caresmcp.registry import MEDAI, TAG_XRAY, TASK_CLS, TASK_SEG
+from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
 from caresmcp.util.moduleloader import requires
 
 ChestXrayWeights = Literal[
@@ -54,8 +54,7 @@ def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, size: int) -> Any:
     return transform(normalized)
 
 
-@MEDAI.register("torchxrayvision_classify")
-@TAG_XRAY.register("torchxrayvision_classify")
+@XRAY.register("torchxrayvision_classify")
 @TASK_CLS.register("torchxrayvision_classify")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_classify(
@@ -105,8 +104,7 @@ def torchxrayvision_classify(
     return {name: round(float(score), 4) for name, score in zip(pathologies, scores)}
 
 
-@MEDAI.register("torchxrayvision_segment_anatomy")
-@TAG_XRAY.register("torchxrayvision_segment_anatomy")
+@XRAY.register("torchxrayvision_segment_anatomy")
 @TASK_SEG.register("torchxrayvision_segment_anatomy")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_segment_anatomy(
@@ -237,8 +235,7 @@ def torchxrayvision_segment_anatomy(
     return output.getvalue()
 
 
-@MEDAI.register("torchxrayvision_localize")
-@TAG_XRAY.register("torchxrayvision_localize")
+@XRAY.register("torchxrayvision_localize")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_localize(
     image: bytes,

@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_XRAY, TASK_CLIP, TASK_EMBED
+from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 from caresmcp.util.transformers import (
@@ -124,8 +124,7 @@ def _retrieve_cxr_reports(
     }
 
 
-@MEDAI.register("cxr_encoder_image_embed")
-@TAG_XRAY.register("cxr_encoder_image_embed")
+@XRAY.register("cxr_encoder_image_embed")
 @TASK_EMBED.register("cxr_encoder_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_image_embed(
@@ -158,8 +157,7 @@ def cxr_encoder_image_embed(
     )
 
 
-@MEDAI.register("cxr_encoder_retrieve_similar_reports")
-@TAG_XRAY.register("cxr_encoder_retrieve_similar_reports")
+@XRAY.register("cxr_encoder_retrieve_similar_reports")
 @TASK_CLIP.register("cxr_encoder_retrieve_similar_reports")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_retrieve_similar_reports(

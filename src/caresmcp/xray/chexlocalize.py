@@ -3,11 +3,10 @@
 from io import BytesIO
 from typing import Any
 
-from caresmcp.registry import MEDAI, TAG_XRAY, TASK_SEG
+from caresmcp.registry import TASK_SEG, XRAY
 
 
-@MEDAI.register("chexlocalize_evaluate_saliency_localization")
-@TAG_XRAY.register("chexlocalize_evaluate_saliency_localization")
+@XRAY.register("chexlocalize_evaluate_saliency_localization")
 def chexlocalize_evaluate_saliency_localization(
     saliency_map: bytes,
     ground_truth_mask: bytes,
@@ -70,8 +69,7 @@ def chexlocalize_evaluate_saliency_localization(
     }
 
 
-@MEDAI.register("chexlocalize_segment_saliency_map")
-@TAG_XRAY.register("chexlocalize_segment_saliency_map")
+@XRAY.register("chexlocalize_segment_saliency_map")
 @TASK_SEG.register("chexlocalize_segment_saliency_map")
 def chexlocalize_segment_saliency_map(
     saliency_map: bytes,

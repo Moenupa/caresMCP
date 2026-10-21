@@ -137,10 +137,10 @@ def _extract_pathology_embedding_tensor(
     return selected_pooling, values
 
 
-@PATHOLOGY.register("pathology_encoder_embed")
-@TASK_EMBED.register("pathology_encoder_embed")
+@PATHOLOGY.register("pathology_image_embed")
+@TASK_EMBED.register("pathology_image_embed")
 @requires(["torch", "transformers"], extra="hf")
-def pathology_encoder_embed(
+def pathology_image_embed(
     image: bytes,
     model_id: PathologyEncoder,
     pooling: PathologyPooling | None = None,
@@ -153,7 +153,7 @@ def pathology_encoder_embed(
 
     Args:
         image: Encoded RGB or grayscale pathology tile or region of interest.
-        encoder: Hugging Face model ID: ``bioptimus/H0-mini``,
+        model_id: Hugging Face model ID: ``bioptimus/H0-mini``,
             ``MahmoodLab/UNI``, ``paige-ai/Virchow``, ``paige-ai/Virchow2``,
             or ``bioptimus/H-optimus-0``.
         pooling: For Virchow models, use the class token, mean patch token, or

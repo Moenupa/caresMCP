@@ -8,6 +8,7 @@ IMAGE_PROC = catalogue.create(pkg_name, "image")
 MEDAI = catalogue.create(pkg_name, "medai")
 PROMPT = catalogue.create(pkg_name, "prompt")
 PATHOLOGY = catalogue.create(pkg_name, "pathology")
+XRAY = catalogue.create(pkg_name, "xray")
 
 # categorical dict for tools/prompts
 # strict 1-to-n mapping without overlap
@@ -16,6 +17,7 @@ REGISTRIES = {
     "medai": MEDAI,
     "prompt": PROMPT,
     "pathology": PATHOLOGY,
+    "xray": XRAY,
 }
 
 # many-to-many mapping for tag for flexible association

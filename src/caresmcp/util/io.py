@@ -24,10 +24,14 @@ def save_results(
     print_fn: Callable[[Any], None] = print,
 ) -> None:
     """Print a text result or save a binary result to a file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(data, bytes):
-        path.parent.mkdir(parents=True, exist_ok=True)
         path = path.with_suffix("." + (guess_extension(data) or "bin"))
         path.write_bytes(data)
         print_fn(f"[saved] Output to {path.resolve()}")
     else:
+        # write as json
+        path = path.with_suffix(".json")
+        path.write_text(json.dumps(data, indent=2))
+        print_fn(f"[saved] Output to {path.resolve()}")
         print_fn(f"[print] Output: {data}")
