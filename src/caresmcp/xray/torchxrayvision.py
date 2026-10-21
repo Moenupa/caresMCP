@@ -330,7 +330,7 @@ def torchxrayvision_localize(
 
     base = np.asarray(image_array[0], dtype=np.float32)
     base = np.clip((base + 1024.0) / 2048.0, 0, 1)
-    base_image = Image.fromarray(np.uint8(base * 255), mode="L").convert("RGB")  # ty: ignore[invalid-argument-type]
+    base_image = Image.fromarray(np.uint8(base * 255), mode="L").convert("RGB")
     base_image = base_image.resize((input_size, input_size), Image.Resampling.BILINEAR)
 
     red = np.clip(1.5 * heatmap_array, 0, 1)
@@ -342,5 +342,5 @@ def torchxrayvision_localize(
     result = np.uint8(np.clip((1 - alpha) * overlay + alpha * color_map, 0, 1) * 255)
 
     output_image = BytesIO()
-    Image.fromarray(result, mode="RGB").save(output_image, format="PNG")  # ty: ignore[invalid-argument-type]
+    Image.fromarray(result, mode="RGB").save(output_image, format="PNG")
     return output_image.getvalue()

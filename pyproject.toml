@@ -9,7 +9,7 @@ dependencies = [
     "rapidfuzz>=3,<4",
     # processing
     "opencv-python-headless",
-    "seaborn",
+    "seaborn", # incl pillow, numpy
     "filetype>=1,<2",
     # cli and serving
     "typer<1",
@@ -22,6 +22,7 @@ torch = [
     "torchvision",
 ]
 monai = [
+    "caresmcp[torch]",
     "monai>=1.3",
 ]
 totalsegmentator = [
@@ -39,7 +40,7 @@ xray = [
 pathology = [
     "caresmcp[torch]",
     "cellpose>=4,<5",
-    "conch @ git+https://github.com/Mahmoodlab/CONCH.git",
+    "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
 ]
 medical-dicom = [
     "pydicom>=3.0",

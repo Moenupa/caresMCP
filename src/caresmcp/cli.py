@@ -3,12 +3,12 @@
 import re
 from collections.abc import Callable
 from inspect import signature, unwrap
-from itertools import zip_longest
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin, get_type_hints
 
 import seaborn as sns
 import typer
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -22,12 +22,13 @@ console = Console()
 
 # Cycle of row styles assigned to categories (by sorted index)
 COLORS = [
-    "cyan",
     "yellow",
+    "cyan",
     "magenta",
     "green",
+    "red",
     "blue",
-]
+] * 10
 TAG_COLORS = {
     tag_name: color
     for tag_name, color in zip(
@@ -85,18 +86,16 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             f"Choose one of: {valid_categories}", param_hint="category"
         )
 
-    categories = [category] if category is not None else sorted(REGISTRIES)
-    table = Table(show_header=True, header_style="bold")
+    table = Table(show_header=True, header_style="bold", box=box.MINIMAL_HEAVY_HEAD)
     table.add_column("Categ")
     table.add_column("Name")
     table.add_column("Models", max_width=30)
     table.add_column("Tags")
-    table.add_column("Description")
+    table.add_column("Description", no_wrap=True)
 
-    for cat_name, color in zip_longest(categories, COLORS):
-        if cat_name is None:
-            break
-
+    for cat_name, color in zip(
+        [category] if category is not None else sorted(REGISTRIES), COLORS
+    ):
         registry = REGISTRIES[cat_name]
         table.add_section()
         for name, function in sorted(registry.get_all().items()):

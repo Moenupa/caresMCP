@@ -7,15 +7,13 @@ import zlib
 from typing import Literal
 
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TAG_CT, TAG_MRI
+from caresmcp.registry import MEDAI
 from caresmcp.util.moduleloader import requires
 
 logger = logging.getLogger(__name__)
 
 
 @MEDAI.register("totalsegmentator_segment_anatomy")
-@TAG_CT.register("totalsegmentator_segment_anatomy")
-@TAG_MRI.register("totalsegmentator_segment_anatomy")
 @requires(["totalsegmentator", "nibabel"], extra="totalsegmentator")
 def totalsegmentator_segment_anatomy(
     image: bytes,

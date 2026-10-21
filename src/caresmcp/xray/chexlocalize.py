@@ -115,5 +115,5 @@ def chexlocalize_segment_saliency_map(
         )
     mask = np.uint8(values >= threshold) * 255
     output = BytesIO()
-    Image.fromarray(mask, mode="L").save(output, format="PNG")  # ty: ignore[invalid-argument-type]
+    Image.fromarray(mask, mode="L").save(output, format="PNG")
     return output.getvalue()

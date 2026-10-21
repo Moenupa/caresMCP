@@ -9,6 +9,9 @@ MEDAI = catalogue.create(pkg_name, "medai")
 PROMPT = catalogue.create(pkg_name, "prompt")
 PATHOLOGY = catalogue.create(pkg_name, "pathology")
 XRAY = catalogue.create(pkg_name, "xray")
+ULTRASOUND = catalogue.create(pkg_name, "ultrasound")
+MRI = catalogue.create(pkg_name, "mri")
+CT = catalogue.create(pkg_name, "ct")
 
 # categorical dict for tools/prompts
 # strict 1-to-n mapping without overlap
@@ -18,13 +21,14 @@ REGISTRIES = {
     "prompt": PROMPT,
     "pathology": PATHOLOGY,
     "xray": XRAY,
+    "ultrasound": ULTRASOUND,
+    "mri": MRI,
+    "ct": CT,
 }
 
 # many-to-many mapping for tag for flexible association
 TAG_MONAI = catalogue.create(pkg_name, "tag_monai")
 TAG_MRI = catalogue.create(pkg_name, "tag_mri")
-TAG_XRAY = catalogue.create(pkg_name, "tag_xray")
-TAG_CT = catalogue.create(pkg_name, "tag_ct")
 
 TASK_CLS = catalogue.create(pkg_name, "task_classify")
 TASK_SEG = catalogue.create(pkg_name, "task_segment")
