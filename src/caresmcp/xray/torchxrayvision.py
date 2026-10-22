@@ -68,11 +68,14 @@ ANATOMICAL_TARGETS = (
 )
 
 
-def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, size: int) -> Any:
+def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, weight_or_size: int | ChestXrayWeights) -> tuple[Any, int]:
     """Decode and resize a radiograph using TorchXRayVision preprocessing."""
     import numpy as np
     from PIL import Image, UnidentifiedImageError
 
+    if isinstance(weight_or_size, str):
+        weight_or_size = 512 if weight_or_size.startswith("resnet") else 224
+    assert isinstance(weight_or_size, int), f"Expected int, got {type(weight_or_size)}"
     try:
         with Image.open(BytesIO(image)) as source:
             pixels = np.asarray(source.convert("L"))
@@ -81,9 +84,9 @@ def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, size: int) -> Any:
 
     normalized = xrv.datasets.normalize(pixels, maxval=255, reshape=True)
     transform = transforms.Compose(
-        [xrv.datasets.XRayCenterCrop(), xrv.datasets.XRayResizer(size)]
+        [xrv.datasets.XRayCenterCrop(), xrv.datasets.XRayResizer(weight_or_size)]
     )
-    return transform(normalized)
+    return transform(normalized), weight_or_size
 
 
 @XRAY.register("torchxrayvision_classify")
@@ -110,8 +113,7 @@ def torchxrayvision_classify(
     import torchxrayvision as xrv
     from torchvision import transforms
 
-    input_size = 512 if weights.startswith("resnet") else 224
-    image_array = _preprocess_xray(image, xrv, transforms, input_size)
+    image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=weights)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
     if weights.startswith("resnet"):
@@ -152,9 +154,7 @@ def torchxrayvision_segment_anatomy(
     """Return a color-indexed PNG of 14 anatomical regions in a chest X-ray.
 
     The TorchXRayVision PSPNet predicts anatomical structures rather than
-    disease regions. In the returned PNG, palette index 0 is background and
-    indices 1 through 14 correspond in order to the targets in the legend.
-    Each pixel is assigned to its highest-scoring target when that score meets
+    disease regions. Each pixel is assigned to its highest-scoring target when that score meets
     ``probability_threshold``.
 
     See Also:
@@ -166,10 +166,7 @@ def torchxrayvision_segment_anatomy(
     from PIL import Image
     from torchvision import transforms
 
-    if not 0 <= probability_threshold <= 1:
-        raise ValueError("probability_threshold must be between 0 and 1")
-
-    image_array = _preprocess_xray(image, xrv, transforms, 512)
+    image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=512)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
     model = xrv.baseline_models.chestx_det.PSPNet(cache_dir=MODEL_CACHE_DIR.as_posix())
     model = model.to(DEVICE)
@@ -235,8 +232,7 @@ def torchxrayvision_localize(
     from PIL import Image
     from torchvision import transforms
 
-    input_size = 512 if weights.startswith("resnet") else 224
-    image_array = _preprocess_xray(image, xrv, transforms, input_size)
+    image_array, input_size = _preprocess_xray(image, xrv, transforms, weight_or_size=weights)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
     if weights.startswith("resnet"):

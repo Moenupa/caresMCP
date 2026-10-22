@@ -14,7 +14,7 @@ def decode_rgb(image: bytes) -> Image.Image:
 
 
 @IMAGE_PROC.register("inspect")
-def inspect(image: bytes, **_) -> dict[str, object]:
+def inspect(image: bytes) -> dict[str, object]:
     """Get metadata for a 2D image."""
     with Image.open(BytesIO(image)) as pil_image:
         return {
@@ -32,7 +32,6 @@ def crop(
     top: int,
     right: int,
     bottom: int,
-    **_,
 ) -> bytes:
     """Crop a 2D image using pixel coordinates."""
     if right <= left or bottom <= top:
@@ -58,7 +57,6 @@ def centercrop(
     image: bytes,
     width: int,
     height: int,
-    **_,
 ) -> bytes:
     """Crop the center of a 2D image using pixel coordinates."""
     if width <= 0 or height <= 0:
