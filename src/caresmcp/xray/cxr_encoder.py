@@ -137,7 +137,7 @@ def cxr_encoder_image_embed(
     The feature vector does not predict disease labels.
 
     Args:
-        image: Chest radiograph image bytes.
+        image: Chest radiograph image.
         model_id: Hugging Face ID or local directory for a compatible image
             encoder that returns ``last_hidden_state``.
         pooling: Use the first token or the mean of non-CLS tokens.
@@ -175,7 +175,7 @@ def cxr_encoder_retrieve_similar_reports(
     same encoder and pooling method.
 
     Args:
-        image: Query chest radiograph image bytes.
+        image: Query chest radiograph image.
         reference_ids: Identifiers for indexed studies or images.
         reference_reports: Report text paired with each reference image.
         reference_image_embeddings: Features from the reference images.

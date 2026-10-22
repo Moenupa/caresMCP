@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from caresmcp.api.decorators import skip_undefined_kwargs
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
-from caresmcp.util.adapter import skip_undefined_kwargs
 from caresmcp.util.io import save_results
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "xray"
@@ -41,7 +41,6 @@ def test_xray(
     sample_path: Path,
 ) -> None:
     """Run compatible X-ray tools and save image results for inspection."""
-    print(f"Running {tool_name} on {sample_path.name}")
     image = sample_path.read_bytes()
     arguments: dict[str, object] = {
         "image": image,

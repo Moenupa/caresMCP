@@ -12,9 +12,9 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
+from caresmcp.api.decorators import adapt_byte_inputs
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
-from caresmcp.util.adapter import adapt_byte_inputs
 from caresmcp.util.io import get_kwargs_from_file, save_results
 
 app = typer.Typer(add_completion=False)

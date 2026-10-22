@@ -1,11 +1,23 @@
-"""Chest radiograph tools powered by TorchXRayVision."""
+"""Chest radiograph tools powered by TorchXRayVision.
+
+Good test samples:
+- Hernia: https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png
+"""
 
 from io import BytesIO
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
 
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
 from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
+from caresmcp.util.io import draw_legends
 from caresmcp.util.moduleloader import requires
+
+CHEST_XRAY_IMAGE_FIELD = Field(description="Chest radiograph image")
+TORCHXRAYVISION_WEIGHTS_FIELD = Field(
+    description="Pretrained TorchXRayVision checkpoint to use"
+)
 
 ChestXrayWeights = Literal[
     "densenet121-res224-all",
@@ -16,6 +28,26 @@ ChestXrayWeights = Literal[
     "densenet121-res224-mimic_nb",
     "densenet121-res224-mimic_ch",
     "resnet50-res512-all",
+]
+ChestXrayLabels = Literal[
+    "Atelectasis",
+    "Consolidation",
+    "Infiltration",
+    "Pneumothorax",
+    "Edema",
+    "Emphysema",
+    "Fibrosis",
+    "Effusion",
+    "Pneumonia",
+    "Pleural_Thickening",
+    "Cardiomegaly",
+    "Nodule",
+    "Mass",
+    "Hernia",
+    "Lung Lesion",
+    "Fracture",
+    "Lung Opacity",
+    "Enlarged Cardiomediastinum",
 ]
 
 ANATOMICAL_TARGETS = (
@@ -58,19 +90,18 @@ def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, size: int) -> Any:
 @TASK_CLS.register("torchxrayvision_classify")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_classify(
-    image: bytes,
-    weights: ChestXrayWeights = "densenet121-res224-all",
+    image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
+    weights: Annotated[
+        ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
+    ] = "densenet121-res224-all",
 ) -> dict[str, float]:
     """Score by predicted pathology classes.
 
-    Args:
-        image: Chest radiograph image bytes.
-        weights: Pretrained TorchXRayVision DenseNet or ResNet checkpoint.
-
     Returns:
         A mapping from labels to sigmoid-scaled scores, including:
-        Atelectasis, Consolidation, Infiltration, Pneumothorax, Edema, Emphysema, Fibrosis, Effusion, Pneumonia, Pleural_Thickening, Cardiomegaly, Nodule, Mass, Hernia,
-        Lung Lesion, Fracture, Lung Opacity, Enlarged Cardiomediastinum
+        Atelectasis, Consolidation, Infiltration, Pneumothorax, Edema, Emphysema,\
+        Fibrosis, Effusion, Pneumonia, Pleural_Thickening, Cardiomegaly, Nodule,\
+        Mass, Hernia, Lung Lesion, Fracture, Lung Opacity, Enlarged Cardiomediastinum
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -108,8 +139,15 @@ def torchxrayvision_classify(
 @TASK_SEG.register("torchxrayvision_segment_anatomy")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_segment_anatomy(
-    image: bytes,
-    probability_threshold: float = 0.5,
+    image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
+    probability_threshold: Annotated[
+        float,
+        Field(
+            ge=0,
+            le=1,
+            description="Minimum sigmoid score for a pixel to receive a target label",
+        ),
+    ] = 0.5,
 ) -> bytes:
     """Return a color-indexed PNG of 14 anatomical regions in a chest X-ray.
 
@@ -119,21 +157,13 @@ def torchxrayvision_segment_anatomy(
     Each pixel is assigned to its highest-scoring target when that score meets
     ``probability_threshold``.
 
-    Args:
-        image: Chest radiograph image bytes.
-        probability_threshold: Minimum sigmoid score for a pixel to receive a
-            target label, from 0 to 1.
-
-    Returns:
-        A color-indexed PNG segmentation image with a transparent background
-        and a legend mapping each color to its anatomical target.
-
     See Also:
         https://github.com/mlmed/torchxrayvision
     """
+    import seaborn as sns
     import torch
     import torchxrayvision as xrv
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image
     from torchvision import transforms
 
     if not 0 <= probability_threshold <= 1:
@@ -155,80 +185,19 @@ def torchxrayvision_segment_anatomy(
         )
         mask = labels.to(torch.uint8).cpu().numpy()
 
-    colors = (
-        (31, 119, 180),
-        (255, 127, 14),
-        (44, 160, 44),
-        (214, 39, 40),
-        (148, 103, 189),
-        (140, 86, 75),
-        (227, 119, 194),
-        (127, 127, 127),
-        (188, 189, 34),
-        (23, 190, 207),
-        (174, 199, 232),
-        (255, 187, 120),
-        (152, 223, 138),
-        (255, 152, 150),
-    )
+    colors = sns.color_palette("tab20", n_colors=14)
     palette = [0, 0, 0]
     for color in colors:
-        palette.extend(color)
-    palette.extend((255, 255, 255, 0, 0, 0))
+        palette.extend(int(x * 255) for x in color)
     palette.extend([0] * (768 - len(palette)))
-
-    font = ImageFont.load_default()
-    measure = ImageDraw.Draw(Image.new("P", (1, 1)))
-    label_width = max(
-        measure.textbbox((0, 0), target, font=font)[2] for target in ANATOMICAL_TARGETS
-    )
-    swatch_size = 14
-    row_height = 20
-    panel_padding = 12
-    panel_width = int(panel_padding * 2 + swatch_size + 8 + label_width)
-    legend_height = panel_padding * 2 + 20 + len(ANATOMICAL_TARGETS) * row_height
 
     mask_image = Image.fromarray(mask, mode="P")
     mask_image.putpalette(palette)
-    canvas = Image.new(
-        "P",
-        (mask_image.width + panel_width, max(mask_image.height, legend_height)),
-        15,
+    canvas = draw_legends(
+        mask_image,
+        ANATOMICAL_TARGETS,
+        title="Anatomical targets",
     )
-    canvas.putpalette(palette)
-    canvas.paste(mask_image, (0, 0))
-
-    draw = ImageDraw.Draw(canvas)
-    draw.line((mask_image.width, 0, mask_image.width, canvas.height), fill=16)
-    legend_top = (canvas.height - legend_height) // 2
-    panel_left = mask_image.width
-    draw.text(
-        (panel_left + panel_padding, legend_top + panel_padding),
-        "Anatomical targets",
-        fill=16,
-        font=font,
-    )
-
-    rows_top = legend_top + panel_padding + 20
-    for index, target in enumerate(ANATOMICAL_TARGETS, start=1):
-        row_top = rows_top + (index - 1) * row_height
-        swatch_top = row_top + (row_height - swatch_size) // 2
-        draw.rectangle(
-            (
-                panel_left + panel_padding,
-                swatch_top,
-                panel_left + panel_padding + swatch_size - 1,
-                swatch_top + swatch_size - 1,
-            ),
-            fill=index,
-            outline=16,
-        )
-        draw.text(
-            (panel_left + panel_padding + swatch_size + 8, row_top + 4),
-            target,
-            fill=16,
-            font=font,
-        )
 
     output = BytesIO()
     canvas.save(output, format="PNG", transparency=0)
@@ -238,20 +207,20 @@ def torchxrayvision_segment_anatomy(
 @XRAY.register("torchxrayvision_localize")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_localize(
-    image: bytes,
-    pathology: str,
-    weights: ChestXrayWeights = "densenet121-res224-all",
+    image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
+    label: Annotated[
+        ChestXrayLabels,
+        Field(description="Pathology label exposed by the selected checkpoint"),
+    ],
+    weights: Annotated[
+        ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
+    ] = "densenet121-res224-all",
 ) -> bytes:
     """Return a Grad-CAM overlay for one TorchXRayVision pathology score.
 
     The heatmap highlights image regions that contribute positively to the
     selected model output. It is a model explanation, not a pathology mask or
     a radiologist-validated localization.
-
-    Args:
-        image: Chest radiograph image bytes.
-        pathology: Pathology label exposed by the selected checkpoint.
-        weights: Pretrained TorchXRayVision DenseNet or ResNet checkpoint.
 
     Returns:
         A color PNG overlay on the square, center-cropped model input.
@@ -282,12 +251,11 @@ def torchxrayvision_localize(
     model.eval()
 
     pathologies = list(model.pathologies)
-    if pathology not in pathologies:
+    if label not in pathologies:
         raise ValueError(
-            "pathology must be one of the selected checkpoint labels: "
-            + ", ".join(pathologies)
+            "label must be one of the supported labels: " + ", ".join(pathologies)
         )
-    class_index = pathologies.index(pathology)
+    class_index = pathologies.index(label)
 
     activations: list[Any] = []
 

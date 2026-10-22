@@ -22,7 +22,7 @@ torch = [
     "torchvision",
 ]
 monai = [
-    "caresmcp[torch]",
+    "caresmcp[torch,hf]",
     "monai>=1.3",
 ]
 totalsegmentator = [
@@ -30,12 +30,15 @@ totalsegmentator = [
 ]
 hf = [
     "caresmcp[torch]",
-    "transformers[torchhub]>=4.57,<5",
+    "transformers[torchhub]>=4.57,<5", # incl safetensors
     "einops",
 ]
 xray = [
     "caresmcp[torch]",
-    "torchxrayvision>=1.2.4",
+    "torchxrayvision>=1.5,<1.6",
+]
+ultrasound = [
+    "caresmcp[monai]",
 ]
 pathology = [
     "caresmcp[torch]",
@@ -50,7 +53,7 @@ medical-dicom = [
 caresmcp = "caresmcp.cli:app"
 
 [build-system]
-requires = ["uv_build>=0.12.19,<0.13.0"]
+requires = ["uv_build>=0.12,<0.13"]
 build-backend = "uv_build"
 
 [dependency-groups]

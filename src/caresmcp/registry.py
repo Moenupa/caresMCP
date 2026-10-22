@@ -18,7 +18,6 @@ CT = catalogue.create(pkg_name, "ct")
 REGISTRIES = {
     "image": IMAGE_PROC,
     "medai": MEDAI,
-    "prompt": PROMPT,
     "pathology": PATHOLOGY,
     "xray": XRAY,
     "ultrasound": ULTRASOUND,
@@ -28,7 +27,6 @@ REGISTRIES = {
 
 # many-to-many mapping for tag for flexible association
 TAG_MONAI = catalogue.create(pkg_name, "tag_monai")
-TAG_MRI = catalogue.create(pkg_name, "tag_mri")
 
 TASK_CLS = catalogue.create(pkg_name, "task_classify")
 TASK_SEG = catalogue.create(pkg_name, "task_segment")
