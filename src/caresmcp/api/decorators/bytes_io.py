@@ -5,7 +5,8 @@ from inspect import signature
 from os import PathLike
 from typing import Annotated, Any, get_args, get_origin, get_type_hints
 from urllib.parse import unquote_to_bytes, urlsplit
-from urllib.request import urlopen
+
+from curl_cffi import requests
 
 from .base import adapt_inputs
 
@@ -72,8 +73,15 @@ def _read_bytes(value: Any) -> bytes:
     if parsed.scheme.lower() in {"http", "https"}:
         if not parsed.netloc:
             raise ValueError("HTTP byte input must include a host")
-        with urlopen(value, timeout=30) as response:
-            return response.read()
+        # Match browser headers and TLS fingerprints for hosts that reject urllib.
+        with requests.Session(impersonate="chrome") as session:
+            try:
+                response = session.get(value, timeout=15, allow_redirects=True)
+                response.raise_for_status()
+            except requests.RequestsError:
+                # URLs may contain credentials or signed query parameters.
+                raise ValueError("Unable to download HTTP byte input") from None
+            return response.content
 
     with open(value, "rb") as source:
         return source.read()
