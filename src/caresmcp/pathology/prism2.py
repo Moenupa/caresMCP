@@ -9,13 +9,13 @@ and is not provided by this package.
 
 from typing import Any, Literal
 
-from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
-from caresmcp.util.moduleloader import requires
-from caresmcp.util.transformers import (
+from caresmcp.api.models.hf_hub import (
     HFModelType,
     _get_hf_model_and_processor,
 )
+from caresmcp.constants import DEVICE
+from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
+from caresmcp.util.moduleloader import requires
 
 from .pathology_encoder import (
     _extract_pathology_embedding_tensor,

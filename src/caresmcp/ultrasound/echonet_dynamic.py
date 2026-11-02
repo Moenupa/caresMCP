@@ -6,10 +6,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from caresmcp.api.models.hf_hub import encode_label_mask
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_SEG, ULTRASOUND
 from caresmcp.util.moduleloader import requires
-from caresmcp.util.transformers import encode_label_mask
 
 _EF_CHECKPOINT_URL = (
     "https://github.com/echonet/dynamic/releases/download/v1.0.0/"

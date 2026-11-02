@@ -4,14 +4,14 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.models.hf_hub import (
+    HFModelType,
+    _get_hf_model_and_processor,
+)
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
 from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
-from caresmcp.util.transformers import (
-    HFModelType,
-    _get_hf_model_and_processor,
-)
 
 CXRModel = Literal[
     "microsoft/rad-dino",
@@ -86,9 +86,7 @@ def _retrieve_cxr_reports(
 
     count = len(reference_reports)
     if len(reference_image_embeddings) != count:
-        raise ValueError(
-            "reference reports and embeddings must have equal lengths"
-        )
+        raise ValueError("reference reports and embeddings must have equal lengths")
 
     query_result = _extract_cxr_embedding(
         image=image,
@@ -164,9 +162,7 @@ def cxr_encoder_retrieve_similar_reports(
         list[list[float]], REFERENCE_EMBEDDINGS_FIELD
     ],
     model_id: Annotated[CXRModel, CXR_MODEL_FIELD] = "microsoft/rad-dino",
-    reference_pooling: Annotated[
-        Literal["cls", "mean"], CXR_POOLING_FIELD
-    ] = "cls",
+    reference_pooling: Annotated[Literal["cls", "mean"], CXR_POOLING_FIELD] = "cls",
     top_k: Annotated[int, TOP_K_FIELD] = 5,
 ) -> dict[str, Any]:
     """Find reports paired with the most similar reference chest radiographs.

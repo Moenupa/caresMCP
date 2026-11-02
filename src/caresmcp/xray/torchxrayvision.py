@@ -68,7 +68,9 @@ ANATOMICAL_TARGETS = (
 )
 
 
-def _preprocess_xray(image: bytes, xrv: Any, transforms: Any, weight_or_size: int | ChestXrayWeights) -> tuple[Any, int]:
+def _preprocess_xray(
+    image: bytes, xrv: Any, transforms: Any, weight_or_size: int | ChestXrayWeights
+) -> tuple[Any, int]:
     """Decode and resize a radiograph using TorchXRayVision preprocessing."""
     import numpy as np
     from PIL import Image, UnidentifiedImageError
@@ -232,7 +234,9 @@ def torchxrayvision_localize(
     from PIL import Image
     from torchvision import transforms
 
-    image_array, input_size = _preprocess_xray(image, xrv, transforms, weight_or_size=weights)
+    image_array, input_size = _preprocess_xray(
+        image, xrv, transforms, weight_or_size=weights
+    )
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
     if weights.startswith("resnet"):

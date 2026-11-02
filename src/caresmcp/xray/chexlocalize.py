@@ -7,9 +7,7 @@ from pydantic import Field
 
 from caresmcp.registry import TASK_SEG, XRAY
 
-SALIENCY_MAP_FIELD = Field(
-    description="Grayscale saliency map as a PNG or JPEG image"
-)
+SALIENCY_MAP_FIELD = Field(description="Grayscale saliency map as a PNG or JPEG image")
 GROUND_TRUTH_MASK_FIELD = Field(
     description="Grayscale reference mask; nonzero pixels mark the finding"
 )
