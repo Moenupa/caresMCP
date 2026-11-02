@@ -9,9 +9,9 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.imageio import draw_legends
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
 from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
-from caresmcp.util.io import draw_legends
 from caresmcp.util.moduleloader import requires
 
 CHEST_XRAY_IMAGE_FIELD = Field(description="Chest radiograph image")

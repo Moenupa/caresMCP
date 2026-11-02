@@ -6,9 +6,9 @@ import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import matches_tool_signature, skip_undefined_kwargs
+from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import PATHOLOGY
-from caresmcp.util.io import save_results
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "pathology"
 SAMPLE_PATHS = (

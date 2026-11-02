@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 from caresmcp.api.decorators import skip_undefined_kwargs
+from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
-from caresmcp.util.io import save_results
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "xray"
 SAMPLE_PATHS = (
