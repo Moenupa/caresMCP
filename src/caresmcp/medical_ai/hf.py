@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Any, Literal
 
 from caresmcp.api.models.hf_hub import _get_hf_model_and_processor
@@ -29,7 +30,8 @@ def hf_classifier(
             mutually exclusive classes.
 
     Returns:
-        Model provenance, score mode, and scores keyed by checkpoint labels.
+        Scores keyed by checkpoint labels. Repeated label names include their
+        class IDs to distinguish separate classes.
 
     See Also:
         https://huggingface.co/docs/transformers/tasks/image_classification
@@ -63,8 +65,11 @@ def hf_classifier(
         str(config_labels.get(index, config_labels.get(str(index), f"class_{index}")))
         for index in range(len(score_values))
     ]
-    if len(set(labels)) != len(labels):
-        raise ValueError("checkpoint id2label contains duplicate labels")
+    label_counts = Counter(labels)
+    labels = [
+        f"{label} (class {index})" if label_counts[label] > 1 else label
+        for index, label in enumerate(labels)
+    ]
     return {
         label: float(score) for label, score in zip(labels, score_values, strict=True)
     }

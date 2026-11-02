@@ -1,8 +1,10 @@
-"""Integration exercise for chest X-ray tools and bundled sample images."""
+"""Integration exercise for chest X-ray tools and sample image URLs."""
 
 from collections.abc import Callable
 from inspect import Parameter, signature
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+from urllib.request import urlopen
 
 import pytest
 
@@ -11,24 +13,22 @@ from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
 
-SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "xray"
-SAMPLE_PATHS = (
-    tuple(
-        sorted(
-            path
-            for path in SAMPLE_DIRECTORY.iterdir()
-            if path.suffix.lower() in {".jpg", ".jpeg", ".png"}
-        )
-    )
-    if SAMPLE_DIRECTORY.exists()
-    else ()
-)
+SAMPLES = """
+https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Atelectasis.png?raw=true
+https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Cardiomegaly_Edema_Effusion.png?raw=true
+https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Effusion.png?raw=true
+https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Fibrosis.png?raw=true
+https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/No%20Finding.png?raw=true
+https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png
+""".strip().splitlines()
 XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "sample_path", SAMPLE_PATHS, ids=[path.name for path in SAMPLE_PATHS]
+    "sample_url",
+    SAMPLES,
+    ids=[unquote(Path(urlparse(url).path).name) for url in SAMPLES],
 )
 @pytest.mark.parametrize(
     ("tool_name", "tool_function"),
@@ -38,16 +38,17 @@ XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
 def test_xray(
     tool_name: str,
     tool_function: Callable[..., object],
-    sample_path: Path,
+    sample_url: str,
 ) -> None:
     """Run compatible X-ray tools and save image results for inspection."""
-    image = sample_path.read_bytes()
+    sample_path = Path(unquote(urlparse(sample_url).path))
+    with urlopen(sample_url, timeout=30) as response:
+        image = response.read()
     arguments: dict[str, object] = {
         "image": image,
         "saliency_map": image,
         "ground_truth_mask": image,
         "pathology": "Atelectasis",
-        "sample_path": sample_path,
         "unused_test_option": True,
     }
     required_arguments = {
@@ -68,4 +69,4 @@ def test_xray(
     assert isinstance(result, (str, list, dict, bytes)), (
         f"Expected bytes, str, list, or dict, got {type(result)}"
     )
-    save_results(result, CACHE_ROOT / tool_name / f"{sample_path.stem}")
+    save_results(result, CACHE_ROOT / tool_name / sample_path.stem)
