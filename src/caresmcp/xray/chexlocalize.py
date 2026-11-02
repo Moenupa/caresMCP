@@ -1,32 +1,40 @@
 """Saliency map utilities for chest X-ray localization evaluation."""
 
 from io import BytesIO
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from caresmcp.registry import TASK_SEG, XRAY
 
+SALIENCY_MAP_FIELD = Field(
+    description="Grayscale saliency map as a PNG or JPEG image"
+)
+GROUND_TRUTH_MASK_FIELD = Field(
+    description="Grayscale reference mask; nonzero pixels mark the finding"
+)
+SALIENCY_THRESHOLD_FIELD = Field(
+    ge=0,
+    le=1,
+    description="Saliency cutoff in [0, 1] for including foreground pixels",
+)
+SMOOTHING_KERNEL_SIZE_FIELD = Field(
+    ge=0,
+    description="Square box-filter width in pixels; zero disables smoothing",
+)
 
-@XRAY.register("chexlocalize_evaluate_saliency_localization")
-def chexlocalize_evaluate_saliency_localization(
-    saliency_map: bytes,
-    ground_truth_mask: bytes,
-    saliency_threshold: float = 0.5,
+
+@XRAY.register("chexlocalize_evaluate")
+def chexlocalize_evaluate(
+    saliency_map: Annotated[bytes, SALIENCY_MAP_FIELD],
+    ground_truth_mask: Annotated[bytes, GROUND_TRUTH_MASK_FIELD],
+    saliency_threshold: Annotated[float, SALIENCY_THRESHOLD_FIELD] = 0.5,
 ) -> dict[str, float]:
-    """Score one saliency map against a radiologist reference mask.
-
-    This computes the per-image intersection-over-union and pointing-game hit
-    used in saliency localization evaluation. The threshold converts the
-    grayscale saliency map into a binary segmentation; the pointing-game
-    location is the saliency map's maximum-valued pixel.
-
-    Args:
-        saliency_map: Grayscale PNG or JPEG bytes containing saliency values.
-        ground_truth_mask: Grayscale reference mask bytes; nonzero pixels are
-            treated as the localized finding.
-        saliency_threshold: Saliency cutoff in the range [0, 1].
+    """Evaluate a saliency map against a radiologist reference mask.
 
     Returns:
-        Per-image intersection-over-union and pointing-game hit, each in [0, 1].
+        A mapping with intersection-over-union and pointing-game hit scores,
+        each in [0, 1].
 
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize
@@ -69,23 +77,17 @@ def chexlocalize_evaluate_saliency_localization(
     }
 
 
-@XRAY.register("chexlocalize_segment_saliency_map")
-@TASK_SEG.register("chexlocalize_segment_saliency_map")
-def chexlocalize_segment_saliency_map(
-    saliency_map: bytes,
-    threshold: float = 0.5,
-    smoothing_kernel_size: int = 0,
+@XRAY.register("chexlocalize_segment")
+@TASK_SEG.register("chexlocalize_segment")
+def chexlocalize_segment(
+    saliency_map: Annotated[bytes, SALIENCY_MAP_FIELD],
+    threshold: Annotated[float, SALIENCY_THRESHOLD_FIELD] = 0.5,
+    smoothing_kernel_size: Annotated[int, SMOOTHING_KERNEL_SIZE_FIELD] = 0,
 ) -> bytes:
-    """Convert a grayscale chest X-ray saliency map to a binary mask.
-
-    Args:
-        saliency_map: Grayscale PNG or JPEG bytes containing saliency values.
-        threshold: Saliency cutoff in the range [0, 1].
-        smoothing_kernel_size: Optional square box-filter width in pixels;
-            zero disables smoothing.
+    """Convert a chest X-ray saliency map to a binary mask.
 
     Returns:
-        A binary PNG mask with foreground value 255 and background value 0.
+        A PNG mask with foreground value 255 and background value 0.
 
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize

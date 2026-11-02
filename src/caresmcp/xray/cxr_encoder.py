@@ -1,6 +1,8 @@
 """Chest radiograph image encoder and report retrieval tools."""
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
 
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
@@ -17,17 +19,29 @@ CXRModel = Literal[
     "m42-health/CXformer-base",
 ]
 
+CHEST_RADIOGRAPH_FIELD = Field(description="Chest radiograph image")
+CXR_MODEL_FIELD = Field(description="Supported Hugging Face chest X-ray encoder")
+CXR_POOLING_FIELD = Field(
+    description="Use the CLS token or mean-pool the non-CLS tokens"
+)
+REFERENCE_REPORTS_FIELD = Field(
+    min_length=1,
+    description="Radiology reports paired with the reference images",
+)
+REFERENCE_EMBEDDINGS_FIELD = Field(
+    min_length=1,
+    description="Reference image vectors from the same encoder and pooling method",
+)
+TOP_K_FIELD = Field(ge=1, description="Maximum number of report matches to return")
+
 
 def _extract_cxr_embedding(
     image: bytes,
-    model_id: str,
+    model_id: CXRModel,
     pooling: Literal["cls", "mean"] = "cls",
 ) -> dict[str, Any]:
-    """Extract a feature vector from a published chest radiograph encoder."""
+    """Extract an image embedding using a supported chest radiograph encoder."""
     import torch
-
-    if pooling not in ("cls", "mean"):
-        raise ValueError("pooling must be 'cls' or 'mean'")
 
     model, processor = _get_hf_model_and_processor(
         model_id,
@@ -60,32 +74,21 @@ def _extract_cxr_embedding(
 
 def _retrieve_cxr_reports(
     image: bytes,
-    reference_ids: list[str],
     reference_reports: list[str],
     reference_image_embeddings: list[list[float]],
-    model_id: str,
+    model_id: CXRModel,
     reference_pooling: Literal["cls", "mean"] = "cls",
     top_k: int = 5,
 ) -> dict[str, Any]:
-    """Retrieve reports paired with the nearest reference CXR embeddings.
-
-    This performs image-embedding nearest-neighbor retrieval; it is not the
-    separately trained CXR-RePaiR or X-REM pipeline.
-    """
+    """Retrieve paired reports by image embedding similarity."""
     import torch
     from torch.nn import functional
 
-    count = len(reference_ids)
-    if count == 0:
-        raise ValueError("at least one reference report is required")
-    if len(reference_reports) != count or len(reference_image_embeddings) != count:
+    count = len(reference_reports)
+    if len(reference_image_embeddings) != count:
         raise ValueError(
-            "reference IDs, reports, and embeddings must have equal lengths"
+            "reference reports and embeddings must have equal lengths"
         )
-    if len(set(reference_ids)) != count:
-        raise ValueError("reference_ids must be unique")
-    if not 1 <= top_k:
-        raise ValueError("top_k must be positive")
 
     query_result = _extract_cxr_embedding(
         image=image,
@@ -111,7 +114,6 @@ def _retrieve_cxr_reports(
     scores, indices = torch.topk(similarities, k=result_count)
     matches = [
         {
-            "reference_id": reference_ids[index],
             "report": reference_reports[index],
             "cosine_similarity": float(score),
         }
@@ -128,22 +130,17 @@ def _retrieve_cxr_reports(
 @TASK_EMBED.register("cxr_encoder_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_image_embed(
-    image: bytes,
-    model_id: CXRModel = "microsoft/rad-dino",
-    pooling: Literal["cls", "mean"] = "cls",
+    image: Annotated[bytes, CHEST_RADIOGRAPH_FIELD],
+    model_id: Annotated[CXRModel, CXR_MODEL_FIELD] = "microsoft/rad-dino",
+    pooling: Annotated[Literal["cls", "mean"], CXR_POOLING_FIELD] = "cls",
 ) -> dict[str, Any]:
-    """Extract a general visual feature vector from a chest radiograph.
+    """Create a visual embedding for a chest radiograph.
 
-    The feature vector does not predict disease labels.
-
-    Args:
-        image: Chest radiograph image.
-        model_id: Hugging Face ID or local directory for a compatible image
-            encoder that returns ``last_hidden_state``.
-        pooling: Use the first token or the mean of non-CLS tokens.
+    The embedding represents image features and does not provide disease
+    labels.
 
     Returns:
-        Model provenance, pooling method, and a JSON-safe embedding vector.
+        The model ID, pooling method, and embedding vector.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino
@@ -161,41 +158,33 @@ def cxr_encoder_image_embed(
 @TASK_CLIP.register("cxr_encoder_retrieve_similar_reports")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_retrieve_similar_reports(
-    image: bytes,
-    reference_ids: list[str],
-    reference_reports: list[str],
-    reference_image_embeddings: list[list[float]],
-    model_id: CXRModel = "microsoft/rad-dino",
-    reference_pooling: Literal["cls", "mean"] = "cls",
-    top_k: int = 5,
+    image: Annotated[bytes, CHEST_RADIOGRAPH_FIELD],
+    reference_reports: Annotated[list[str], REFERENCE_REPORTS_FIELD],
+    reference_image_embeddings: Annotated[
+        list[list[float]], REFERENCE_EMBEDDINGS_FIELD
+    ],
+    model_id: Annotated[CXRModel, CXR_MODEL_FIELD] = "microsoft/rad-dino",
+    reference_pooling: Annotated[
+        Literal["cls", "mean"], CXR_POOLING_FIELD
+    ] = "cls",
+    top_k: Annotated[int, TOP_K_FIELD] = 5,
 ) -> dict[str, Any]:
-    """Retrieve reports paired with nearest CXR image embeddings.
+    """Find reports paired with the most similar reference chest radiographs.
 
-    Each reference report must be paired with an embedding extracted using the
-    same encoder and pooling method.
-
-    Args:
-        image: Query chest radiograph image.
-        reference_ids: Identifiers for indexed studies or images.
-        reference_reports: Report text paired with each reference image.
-        reference_image_embeddings: Features from the reference images.
-        model_id: Hugging Face ID or local directory for the encoder used to
-            create the query and reference embeddings.
-        reference_pooling: Pooling method used for the reference features.
-        top_k: Maximum number of reports to return.
+    This ranks the supplied reports by cosine similarity between image
+    embeddings. It does not generate reports or diagnose findings.
 
     Returns:
-        Model provenance and the highest cosine-similarity report matches.
+        The model ID, pooling method, and matching reports ordered by cosine
+        similarity.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino
         https://huggingface.co/m42-health/CXformer-small
         https://huggingface.co/m42-health/CXformer-base
-        https://github.com/rajpurkarlab/CXR-RePaiR
     """
     return _retrieve_cxr_reports(
         image=image,
-        reference_ids=reference_ids,
         reference_reports=reference_reports,
         reference_image_embeddings=reference_image_embeddings,
         model_id=model_id,
