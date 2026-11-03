@@ -47,7 +47,7 @@ def test_xray(
         "image": image,
         "saliency_map": image,
         "ground_truth_mask": image,
-        "pathology": "Atelectasis",
+        "label": "Atelectasis",
         "unused_test_option": True,
     }
     required_arguments = {
@@ -58,7 +58,7 @@ def test_xray(
     }
     missing_arguments = sorted(required_arguments.difference(arguments))
     if missing_arguments:
-        pytest.skip("requires task-specific inputs: " + ", ".join(missing_arguments))
+        pytest.skip("missing task-specific inputs: " + ", ".join(missing_arguments))
 
     try:
         result = skip_undefined_kwargs(tool_function)(**arguments)

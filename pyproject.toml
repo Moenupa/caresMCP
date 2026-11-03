@@ -39,7 +39,7 @@ xray = [
     "torchxrayvision>=1.5,<1.6",
 ]
 ultrasound = [
-    "caresmcp[monai]",
+    "caresmcp[hf,monai]",
 ]
 pathology = [
     "caresmcp[torch]",

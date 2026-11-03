@@ -78,3 +78,23 @@ def _get_hf_model_and_processor(
     model = model_class.from_pretrained(model_id, **model_kwargs).to(DEVICE)
     model.eval()
     return model, processor
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def _get_hf_checkpoint(
+    model_id: str,
+    filename: str,
+    *,
+    revision: str | None = None,
+    map_location: str = "cpu",
+) -> Any:
+    """Load a tensor-only PyTorch checkpoint from a Hub repository."""
+    import torch
+    from huggingface_hub import hf_hub_download
+
+    artifact = hf_hub_download(
+        repo_id=model_id,
+        filename=filename,
+        revision=revision,
+    )
+    return torch.load(artifact, map_location=map_location, weights_only=True)

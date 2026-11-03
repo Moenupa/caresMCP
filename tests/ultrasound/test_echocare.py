@@ -1,26 +1,18 @@
-"""Integration coverage for EchoCare using real ultrasound images."""
-
 import math
-import os
 from pathlib import Path
 
 import pytest
 
+from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators.file_io import save_results
+from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.ultrasound.echocare import echocare_image_embed
 
-SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data_subset10" / "ultrasound"
-SAMPLE_IMAGE_PATHS = (
-    tuple(
-        sorted(
-            path
-            for path in SAMPLE_DIRECTORY.rglob("*")
-            if path.suffix.lower() in {".jpeg", ".jpg", ".png"}
-        )
-    )
-    if SAMPLE_DIRECTORY.exists()
-    else ()
-)
+SAMPLES = """
+https://prod-images-static.radiopaedia.org/images/74884529/81c7389cb9f3846ae942256a998303cf4eca7b110e35a3749e60b96aebc0cdd0.png
+https://prod-images-static.radiopaedia.org/images/74884530/ae784ed9410c42c13af06381284a00e541ef4f293f7c57a9afc4eafff93ff643.png
+""".strip().splitlines()
 
 
 def test_echocare_tool_is_registered() -> None:
@@ -30,21 +22,23 @@ def test_echocare_tool_is_registered() -> None:
 
 
 @pytest.mark.slow
-def test_echocare_with_real_ultrasound_image() -> None:
+@pytest.mark.cuda
+@pytest.mark.parametrize(
+    "sample_url",
+    SAMPLES,
+    ids=[Path(url).parent.stem for url in SAMPLES],
+)
+def test_echocare_with_real_ultrasound_image(sample_url: str) -> None:
     """Extract an embedding from a real example when weights are available."""
-    checkpoint_path = os.environ.get("ECHOCARE_CHECKPOINT", "")
-    if not SAMPLE_IMAGE_PATHS:
-        pytest.skip("data_subset10/ultrasound samples are not available")
-    if not checkpoint_path:
-        pytest.skip("set ECHOCARE_CHECKPOINT to the downloaded encoder weights")
+    image = _read_bytes(sample_url)
 
     try:
-        result = echocare_image_embed(
-            SAMPLE_IMAGE_PATHS[0].read_bytes(), checkpoint_path=checkpoint_path
-        )
+        result = echocare_image_embed(image)
     except ImportError as exc:
         pytest.skip(str(exc))
 
-    assert result["model"] == "CAIR-HKISI/EchoCare"
     assert len(result["embedding"]) == 2048
     assert all(math.isfinite(value) for value in result["embedding"])
+    save_results(
+        result, CACHE_ROOT / "echocare_image_embed" / Path(sample_url).parent.stem
+    )

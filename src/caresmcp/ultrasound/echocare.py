@@ -1,18 +1,14 @@
 """Image embeddings from the pretrained EchoCare ultrasound foundation model."""
 
-from collections.abc import Mapping
-from functools import lru_cache
-from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
+from caresmcp.api.models.hf_hub import _get_hf_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.util.moduleloader import requires
 
-EchoCareModelId = Literal["CAIR-HKISI/EchoCare"]
-_MODEL_ID: EchoCareModelId = "CAIR-HKISI/EchoCare"
+_MODEL_ID = "Moenupa/EchoCare"
 _IMAGE_SIZE = 256
-_STAGE_NAMES = ("patch_embed", "stage_1", "stage_2", "stage_3", "stage_4")
 
 
 def _decode_echocare_image(image: bytes, torch: Any) -> Any:
@@ -37,10 +33,8 @@ def _decode_echocare_image(image: bytes, torch: Any) -> Any:
     return torch.from_numpy(pixels).permute(2, 0, 1).unsqueeze(0).to(DEVICE)
 
 
-@lru_cache(maxsize=2)
-def _load_echocare_encoder(checkpoint_path: str) -> Any:
+def _load_echocare_encoder(checkpoint: Any) -> Any:
     """Load and cache the official EchoCare Swin Transformer encoder."""
-    import torch
     from monai.networks.nets.swin_unetr import SwinTransformer
 
     model = SwinTransformer(
@@ -57,47 +51,20 @@ def _load_echocare_encoder(checkpoint_path: str) -> Any:
         spatial_dims=2,
         use_v2=True,
     )
-    try:
-        checkpoint = torch.load(
-            checkpoint_path,
-            map_location="cpu",
-            weights_only=True,
-        )
-        if not isinstance(checkpoint, Mapping):
-            raise TypeError("checkpoint must contain a state dictionary")
-        state_dict = checkpoint.get("state_dict", checkpoint)
-        if not isinstance(state_dict, Mapping):
-            raise TypeError("checkpoint must contain a state dictionary")
+    state_dict = checkpoint.get("state_dict", checkpoint)
+    for k in list(dict(state_dict).keys()):
+        if k.startswith("swin."):
+            state_dict[k[5:]] = state_dict.pop(k)
 
-        state_dict = dict(state_dict)
-        if any(name.startswith("module.") for name in state_dict):
-            state_dict = {
-                name.removeprefix("module."): value
-                for name, value in state_dict.items()
-            }
-        state_dict.pop("mask_token", None)
-        if any(name.startswith("encoder.") for name in state_dict):
-            state_dict = {
-                name.removeprefix("encoder."): value
-                for name, value in state_dict.items()
-                if name.startswith("encoder.")
-            }
-        model.load_state_dict(state_dict, strict=True)
-    except (OSError, RuntimeError, TypeError, ValueError) as exc:
-        raise ValueError(
-            "checkpoint_path must point to the official EchoCare encoder weights"
-        ) from exc
-
+    model.load_state_dict(state_dict)
     return model.to(DEVICE).eval()
 
 
 @ULTRASOUND.register("echocare_image_embed")
 @TASK_EMBED.register("echocare_image_embed")
-@requires(["torch", "monai", "PIL"], extra="ultrasound")
+@requires(["torch", "monai", "transformers"], extra="ultrasound")
 def echocare_image_embed(
     image: bytes,
-    checkpoint_path: str,
-    model_id: EchoCareModelId = _MODEL_ID,
 ) -> dict[str, Any]:
     """Extract a 2048-dimensional EchoCare embedding from an ultrasound image.
 
@@ -108,8 +75,6 @@ def echocare_image_embed(
 
     Args:
         image: Encoded ultrasound image or frame bytes.
-        checkpoint_path: Local path to the downloaded EchoCare encoder weights.
-        model_id: Supported EchoCare model identifier.
 
     Returns:
         Model identifier and a 2048-dimensional embedding obtained by global
@@ -121,20 +86,11 @@ def echocare_image_embed(
     """
     import torch
 
-    if model_id != _MODEL_ID:
-        raise ValueError("model_id must be 'CAIR-HKISI/EchoCare'")
-
-    checkpoint = Path(checkpoint_path).expanduser()
-    if not checkpoint_path.strip() or not checkpoint.is_file():
-        raise ValueError("checkpoint_path must be a readable local file")
-
     tensor = _decode_echocare_image(image, torch)
-    model = _load_echocare_encoder(str(checkpoint.resolve()))
+    checkpoint = _get_hf_checkpoint(model_id=_MODEL_ID, filename="model.safetensors")
+    model = _load_echocare_encoder(checkpoint)
     with torch.inference_mode():
         feature_maps = model(tensor)
-
-    if not isinstance(feature_maps, list) or len(feature_maps) != len(_STAGE_NAMES):
-        raise RuntimeError("EchoCare encoder must return five feature maps")
 
     final_features = feature_maps[-1]
     if final_features.ndim != 4 or final_features.shape[0] != 1:
@@ -147,6 +103,6 @@ def echocare_image_embed(
         raise RuntimeError("EchoCare encoder must return a 2048-dimensional embedding")
 
     return {
-        "model": model_id,
+        "model": _MODEL_ID,
         "embedding": [float(value) for value in embedding],
     }
