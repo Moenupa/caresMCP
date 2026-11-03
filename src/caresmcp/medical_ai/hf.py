@@ -1,10 +1,10 @@
 from collections import Counter
 from typing import Any, Literal
 
+from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models.hf_hub import _get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS
-from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
 

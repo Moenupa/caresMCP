@@ -5,6 +5,12 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 
+def decode_rgb(image: bytes) -> Image.Image:
+    """Decode image bytes into an RGB PIL image."""
+    with Image.open(BytesIO(image)) as pil_image:
+        return pil_image.convert("RGB")
+
+
 def draw_legends(
     image: Image.Image,
     labels: Sequence[str],

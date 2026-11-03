@@ -3,9 +3,9 @@ from functools import lru_cache
 from io import BytesIO
 from typing import Any, Literal
 
+from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
-from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
 PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]

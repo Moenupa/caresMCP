@@ -4,21 +4,51 @@ from math import isfinite
 from pathlib import Path
 from statistics import fmean
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.models.torch_hub import _get_torch_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.util.moduleloader import requires
 
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torchvision.transforms import Compose
+
 _PANECHO_REPOSITORY = "CarDS-Yale/PanEcho"
+_PANECHO_NAME = "PanEcho"
 _FRAME_COUNT = 16
 _IMAGE_SIZE = 224
 _PANECHO_DEPS = ["torch", "torchvision", "cv2", "timm", "PIL"]
 
 
-def _decode_panecho_video(video: bytes, cv2: Any, torch: Any) -> Any:
+def _panecho_transform() -> "Compose":
+    """Build shared preprocessing for RGB echo frames."""
+    from torchvision import transforms
+
+    return transforms.Compose(
+        [
+            transforms.Resize(
+                (_IMAGE_SIZE, _IMAGE_SIZE),
+                interpolation=transforms.InterpolationMode.BILINEAR,
+                antialias=True,
+            ),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225),
+            ),
+        ]
+    )
+
+
+def _decode_panecho_video(video: bytes) -> Any:
     """Decode and normalize 16 uniformly sampled frames from an echo video."""
+    import cv2
     import numpy as np
+    import torch
+    from PIL import Image
 
     if not video:
         raise ValueError("video must contain a readable echocardiogram")
@@ -58,65 +88,21 @@ def _decode_panecho_video(video: bytes, cv2: Any, torch: Any) -> Any:
         finally:
             capture.release()
 
-    resized = [
-        cv2.resize(
-            cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
-            (_IMAGE_SIZE, _IMAGE_SIZE),
-            interpolation=cv2.INTER_LINEAR,
-        )
-        for frame in frames
-    ]
-    tensor = torch.from_numpy(np.stack(resized)).permute(0, 3, 1, 2).float() / 255
-    mean = tensor.new_tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
-    standard_deviation = tensor.new_tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
-    tensor = (tensor - mean) / standard_deviation
+    transform = _panecho_transform()
+    tensor = torch.stack(
+        [
+            transform(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+            for frame in frames
+        ]
+    )
     return tensor.permute(1, 0, 2, 3).unsqueeze(0).to(DEVICE)
 
 
-def _decode_panecho_image(image: bytes, torch: Any) -> Any:
+def _decode_panecho_image(image: bytes) -> "Tensor":
     """Decode and normalize one image for the PanEcho image encoder."""
-    from io import BytesIO
-
-    import numpy as np
-    from PIL import Image, UnidentifiedImageError
-
-    try:
-        with Image.open(BytesIO(image)) as source:
-            resized = source.convert("RGB").resize(
-                (_IMAGE_SIZE, _IMAGE_SIZE), Image.Resampling.BILINEAR
-            )
-            pixels = np.asarray(resized, dtype=np.float32) / 255
-    except (OSError, UnidentifiedImageError) as exc:
-        raise ValueError("image must contain a readable echocardiogram frame") from exc
-
-    tensor = torch.from_numpy(pixels).permute(2, 0, 1).unsqueeze(0)
-    mean = tensor.new_tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
-    standard_deviation = tensor.new_tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
-    return ((tensor - mean) / standard_deviation).to(DEVICE)
-
-
-def _load_panecho_model(model_kind: str) -> Any:
-    """Load one PanEcho checkpoint and retain it for subsequent requests."""
-    import torch
-
-    model_options: dict[str, dict[str, Any]] = {
-        "tasks": {"tasks": "all"},
-        "video_embedding": {"backbone_only": True},
-        "image_embedding": {"image_encoder_only": True},
-    }
-    if model_kind not in model_options:
-        raise ValueError("model_kind must be a supported PanEcho model variant")
-
-    model = torch.hub.load(
-        _PANECHO_REPOSITORY,
-        "PanEcho",
-        trust_repo=True,
-        skip_validation=True,
-        **model_options[model_kind],
-    )
-    model = model.to(DEVICE)
-    model.eval()
-    return model
+    transform = _panecho_transform()
+    tensor = transform(decode_rgb(image))
+    return tensor.unsqueeze(0).to(DEVICE)
 
 
 def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
@@ -129,6 +115,8 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
             raise RuntimeError("PanEcho output has no matching task description")
 
         values = output.detach().float().cpu().reshape(-1).tolist()
+        if not all(isfinite(value) for value in values):
+            raise RuntimeError("PanEcho output must contain finite numbers")
         if task.task_type == "regression":
             if len(values) != 1:
                 raise RuntimeError("PanEcho regression output must be a single value")
@@ -212,11 +200,14 @@ def panecho_predict_video(video: bytes) -> dict[str, Any]:
         https://github.com/CarDS-Yale/PanEcho
         https://doi.org/10.1001/jama.2025.8731
     """
-    import cv2
     import torch
 
-    tensor = _decode_panecho_video(video, cv2, torch)
-    model = _load_panecho_model("tasks")
+    tensor = _decode_panecho_video(video)
+    model = _get_torch_checkpoint(
+        _PANECHO_REPOSITORY,
+        _PANECHO_NAME,
+        tasks="all",
+    )
     with torch.inference_mode():
         outputs = model(tensor)
 
@@ -284,11 +275,14 @@ def panecho_video_embed(video: bytes) -> dict[str, Any]:
     See Also:
         https://github.com/CarDS-Yale/PanEcho
     """
-    import cv2
     import torch
 
-    tensor = _decode_panecho_video(video, cv2, torch)
-    model = _load_panecho_model("video_embedding")
+    tensor = _decode_panecho_video(video)
+    model = _get_torch_checkpoint(
+        _PANECHO_REPOSITORY,
+        _PANECHO_NAME,
+        backbone_only=True,
+    )
     with torch.inference_mode():
         embedding = model(tensor)[0].detach().float().cpu().tolist()
 
@@ -312,8 +306,12 @@ def panecho_image_embed(image: bytes) -> dict[str, Any]:
     """
     import torch
 
-    tensor = _decode_panecho_image(image, torch)
-    model = _load_panecho_model("image_embedding")
+    tensor = _decode_panecho_image(image)
+    model = _get_torch_checkpoint(
+        _PANECHO_REPOSITORY,
+        _PANECHO_NAME,
+        image_encoder_only=True,
+    )
     with torch.inference_mode():
         embedding = model(tensor)[0].detach().float().cpu().tolist()
 

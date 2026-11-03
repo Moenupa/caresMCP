@@ -4,9 +4,9 @@ from functools import lru_cache, partial
 from importlib import import_module
 from typing import Any, Literal
 
+from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
-from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
 MODEL_ID = "MahmoodLab/conch"

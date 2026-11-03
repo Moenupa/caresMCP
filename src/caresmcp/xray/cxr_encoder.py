@@ -4,13 +4,13 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models.hf_hub import (
     HFModelType,
     _get_hf_model_and_processor,
 )
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
-from caresmcp.tools.image_processing import decode_rgb
 from caresmcp.util.moduleloader import requires
 
 CXRModel = Literal[

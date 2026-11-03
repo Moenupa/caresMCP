@@ -7,12 +7,6 @@ from PIL import Image
 from caresmcp.registry import IMAGE_PROC
 
 
-def decode_rgb(image: bytes) -> Image.Image:
-    """Decode image bytes into an RGB PIL image."""
-    with Image.open(BytesIO(image)) as pil_image:
-        return pil_image.convert("RGB")
-
-
 @IMAGE_PROC.register("inspect")
 def inspect(image: bytes) -> dict[str, object]:
     """Get metadata for a 2D image."""
