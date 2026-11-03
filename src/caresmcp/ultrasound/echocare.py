@@ -1,6 +1,8 @@
 """Image embeddings from the pretrained EchoCare ultrasound foundation model."""
 
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from caresmcp.api.models.hf_hub import _get_hf_checkpoint
 from caresmcp.constants import DEVICE
@@ -9,6 +11,7 @@ from caresmcp.util.moduleloader import requires
 
 _MODEL_ID = "Moenupa/EchoCare"
 _IMAGE_SIZE = 256
+ULTRASOUND_IMG = Field(description="Ultrasound image or frame")
 
 
 def _decode_echocare_image(image: bytes, torch: Any) -> Any:
@@ -63,18 +66,8 @@ def _load_echocare_encoder(checkpoint: Any) -> Any:
 @ULTRASOUND.register("echocare_image_embed")
 @TASK_EMBED.register("echocare_image_embed")
 @requires(["torch", "monai", "transformers"], extra="ultrasound")
-def echocare_image_embed(
-    image: bytes,
-) -> dict[str, Any]:
+def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, Any]:
     """Extract a 2048-dimensional EchoCare embedding from an ultrasound image.
-
-    The official EchoCare checkpoint is distributed from the project page.
-    Download its pretrained encoder weights and provide the local checkpoint
-    path. The image is resized to 256 by 256 RGB pixels and scaled to the
-    0-to-1 range.
-
-    Args:
-        image: Encoded ultrasound image or frame bytes.
 
     Returns:
         Model identifier and a 2048-dimensional embedding obtained by global
