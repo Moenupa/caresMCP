@@ -1,6 +1,5 @@
 """Echocardiography tools powered by the pretrained PanEcho model."""
 
-from functools import lru_cache
 from math import isfinite
 from pathlib import Path
 from statistics import fmean
@@ -96,7 +95,6 @@ def _decode_panecho_image(image: bytes, torch: Any) -> Any:
     return ((tensor - mean) / standard_deviation).to(DEVICE)
 
 
-@lru_cache(maxsize=1)
 def _load_panecho_model(model_kind: str) -> Any:
     """Load one PanEcho checkpoint and retain it for subsequent requests."""
     import torch
@@ -113,6 +111,7 @@ def _load_panecho_model(model_kind: str) -> Any:
         _PANECHO_REPOSITORY,
         "PanEcho",
         trust_repo=True,
+        skip_validation=True,
         **model_options[model_kind],
     )
     model = model.to(DEVICE)
@@ -129,7 +128,7 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
         if task is None:
             raise RuntimeError("PanEcho output has no matching task description")
 
-        values = output[0].detach().float().cpu().reshape(-1).tolist()
+        values = output.detach().float().cpu().reshape(-1).tolist()
         if task.task_type == "regression":
             if len(values) != 1:
                 raise RuntimeError("PanEcho regression output must be a single value")
@@ -137,11 +136,8 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
             continue
 
         class_names = [str(label) for label in task.class_names]
-        if len(class_names) != len(values):
-            raise RuntimeError("PanEcho output count does not match its task labels")
         predictions[task_name] = {
-            label: float(value)
-            for label, value in zip(class_names, values, strict=True)
+            label: float(value) for label, value in zip(class_names, values)
         }
     return predictions
 

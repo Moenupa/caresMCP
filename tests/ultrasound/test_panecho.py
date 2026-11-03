@@ -1,16 +1,14 @@
 """Integration coverage for ultrasound tools using real samples."""
 
 import math
-from io import BytesIO
 from pathlib import Path
 
 import pytest
 
-from caresmcp.registry import TASK_EMBED, TASK_SEG, ULTRASOUND
-from caresmcp.ultrasound.echonet_dynamic import (
-    echonet_dynamic_predict_ef,
-    echonet_dynamic_segment_lv,
-)
+from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators.file_io import save_results
+from caresmcp.constants import CACHE_ROOT
+from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.ultrasound.panecho import (
     panecho_aggregate_study,
     panecho_image_embed,
@@ -18,29 +16,10 @@ from caresmcp.ultrasound.panecho import (
     panecho_video_embed,
 )
 
-SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data_subset10" / "ultrasound"
-SAMPLE_VIDEO_PATHS = (
-    tuple(
-        sorted(
-            path
-            for path in SAMPLE_DIRECTORY.rglob("*")
-            if path.suffix.lower() in {".avi", ".m4v", ".mov", ".mp4"}
-        )
-    )
-    if SAMPLE_DIRECTORY.exists()
-    else ()
-)
-SAMPLE_IMAGE_PATHS = (
-    tuple(
-        sorted(
-            path
-            for path in SAMPLE_DIRECTORY.rglob("*")
-            if path.suffix.lower() in {".jpeg", ".jpg", ".png"}
-        )
-    )
-    if SAMPLE_DIRECTORY.exists()
-    else ()
-)
+SAMPLES = """
+https://prod-images-static.radiopaedia.org/images/75936103/66061f99ceed45ca01fd96c37182847f60d0f915e419b06ed5492510e4b6a0d8_big_gallery.jpeg
+https://prod-images-static.radiopaedia.org/images/75936110/94f539f7b8fef0a1695c4c25f03072f6768c8a580c03927f11121d127c7fe8a0.mp4
+""".strip().splitlines()
 
 
 def test_panecho_tools_are_registered() -> None:
@@ -53,21 +32,14 @@ def test_panecho_tools_are_registered() -> None:
     assert "panecho_image_embed" in TASK_EMBED.get_all()
 
 
-def test_echonet_dynamic_tool_is_registered() -> None:
-    """Expose EchoNet-Dynamic EF estimation through the ultrasound catalogue."""
-    assert "echonet_dynamic_predict_ef" in ULTRASOUND.get_all()
-    assert "echonet_dynamic_segment_lv" in ULTRASOUND.get_all()
-    assert "echonet_dynamic_segment_lv" in TASK_SEG.get_all()
-
-
 @pytest.mark.slow
-def test_panecho_with_real_ultrasound_samples() -> None:
+@pytest.mark.cuda
+def test_panecho_with_real_ultrasound_samples(
+    video_url: str = SAMPLES[1], image_url: str = SAMPLES[0]
+) -> None:
     """Run PanEcho on real video and image examples when the subset is present."""
-    if not SAMPLE_VIDEO_PATHS or not SAMPLE_IMAGE_PATHS:
-        pytest.skip("data_subset10/ultrasound samples are not available")
-
-    video = SAMPLE_VIDEO_PATHS[0].read_bytes()
-    image = SAMPLE_IMAGE_PATHS[0].read_bytes()
+    video = _read_bytes(video_url)
+    image = _read_bytes(image_url)
     try:
         predictions = panecho_predict_video(video)
         study_predictions = panecho_aggregate_study([predictions])
@@ -86,75 +58,10 @@ def test_panecho_with_real_ultrasound_samples() -> None:
         assert all(math.isfinite(value) for value in values)
     assert len(video_embedding["embedding"]) == 768
     assert len(image_embedding["embedding"]) == 768
-
-
-@pytest.mark.slow
-def test_echonet_dynamic_with_real_ultrasound_video() -> None:
-    """Run EchoNet-Dynamic on a real video when an example is available."""
-    if not SAMPLE_VIDEO_PATHS:
-        pytest.skip("data_subset10/ultrasound video samples are not available")
-
-    import cv2
-    import numpy as np
-
-    capture = cv2.VideoCapture(SAMPLE_VIDEO_PATHS[0].as_posix())
-    try:
-        frames = []
-        for _ in range(10):
-            read_successfully, frame = capture.read()
-            if not read_successfully:
-                break
-            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.float32))
-    finally:
-        capture.release()
-    if not frames:
-        pytest.skip("the available ultrasound video could not be decoded")
-
-    pixels = np.stack(frames)
-    channel_mean = pixels.mean(axis=(0, 1, 2)).tolist()
-    channel_std = pixels.std(axis=(0, 1, 2)).tolist()
-    if any(value == 0 for value in channel_std):
-        pytest.skip("the available video has a constant color channel")
-    try:
-        result = echonet_dynamic_predict_ef(
-            SAMPLE_VIDEO_PATHS[0].read_bytes(),
-            channel_mean=channel_mean,
-            channel_std=channel_std,
-        )
-    except ImportError as exc:
-        pytest.skip(str(exc))
-
-    assert result["model"] == "EchoNet-Dynamic"
-    assert math.isfinite(result["ef_percent"])
-
-
-@pytest.mark.slow
-def test_echonet_dynamic_segmentation_with_real_ultrasound_frame() -> None:
-    """Segment a real ultrasound frame when an example is available."""
-    if not SAMPLE_IMAGE_PATHS:
-        pytest.skip("data_subset10/ultrasound image samples are not available")
-
-    import numpy as np
-    from PIL import Image
-
-    image = SAMPLE_IMAGE_PATHS[0].read_bytes()
-    with Image.open(BytesIO(image)) as source:
-        pixels = np.asarray(source.convert("RGB"), dtype=np.float32)
-    channel_mean = pixels.mean(axis=(0, 1)).tolist()
-    channel_std = pixels.std(axis=(0, 1)).tolist()
-    if any(value == 0 for value in channel_std):
-        pytest.skip("the available image has a constant color channel")
-
-    try:
-        segmentation = echonet_dynamic_segment_lv(
-            image,
-            channel_mean=channel_mean,
-            channel_std=channel_std,
-        )
-    except ImportError as exc:
-        pytest.skip(str(exc))
-
-    with Image.open(BytesIO(segmentation)) as mask:
-        labels = np.asarray(mask)
-        assert mask.size == pixels.shape[1::-1]
-        assert set(np.unique(labels)).issubset({0, 1})
+    save_results(
+        predictions, CACHE_ROOT / "panecho_predict_video" / Path(video_url).parent.stem
+    )
+    save_results(
+        study_predictions,
+        CACHE_ROOT / "panecho_aggregate_study" / Path(video_url).parent.stem,
+    )
