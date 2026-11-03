@@ -2,12 +2,12 @@ from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.request import urlopen
 
 import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import matches_tool_signature, skip_undefined_kwargs
+from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import PATHOLOGY
@@ -45,8 +45,7 @@ def test_pathology(
 ) -> None:
     """Run pathology tools on image URLs and save outputs."""
     sample_path = Path(urlparse(sample_url).path)
-    with urlopen(sample_url, timeout=30) as response:
-        image = response.read()
+    image = _read_bytes(sample_url)
 
     try:
         result = skip_undefined_kwargs(tool_function)(image=image)

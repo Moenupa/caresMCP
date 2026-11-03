@@ -4,11 +4,11 @@ from collections.abc import Callable
 from inspect import Parameter, signature
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-from urllib.request import urlopen
 
 import pytest
 
 from caresmcp.api.decorators import skip_undefined_kwargs
+from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
@@ -42,8 +42,7 @@ def test_xray(
 ) -> None:
     """Run compatible X-ray tools and save image results for inspection."""
     sample_path = Path(unquote(urlparse(sample_url).path))
-    with urlopen(sample_url, timeout=30) as response:
-        image = response.read()
+    image = _read_bytes(sample_url)
     arguments: dict[str, object] = {
         "image": image,
         "saliency_map": image,

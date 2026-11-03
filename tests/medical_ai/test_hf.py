@@ -1,10 +1,10 @@
 """Exercise standard pretrained classifiers on real images from public URLs."""
 
 import math
-from urllib.request import urlopen
 
 import pytest
 
+from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.medical_ai.hf import hf_classifier
 
 
@@ -31,8 +31,7 @@ def require_hf_dependencies() -> None:
 def sample(request: pytest.FixtureRequest) -> tuple[bytes, set[str]]:
     """Download each real sample once and provide its expected ImageNet labels."""
     url, expected_labels = request.param
-    with urlopen(url, timeout=30) as response:
-        return response.read(), expected_labels
+    return _read_bytes(url), expected_labels
 
 
 @pytest.mark.slow

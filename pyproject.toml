@@ -12,6 +12,7 @@ dependencies = [
     "seaborn", # incl pillow, numpy
     "filetype>=1,<2",
     # cli and serving
+    "curl-cffi>=0.14,<1",
     "typer<1",
     "fastmcp>=4,<5",
 ]

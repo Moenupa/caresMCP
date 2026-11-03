@@ -31,5 +31,3 @@ def save_results(
         # write as json
         path = path.with_suffix(".json")
         path.write_text(json.dumps(data, indent=2))
-
-    print_fn(f"[saved] Output to {path.resolve()}")
