@@ -3,6 +3,7 @@
 import gzip
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from caresmcp.constants import CACHE_ROOT
@@ -29,7 +30,6 @@ SAMPLE_PATHS = tuple(
 def test_totalsegmentator(sample_path: Path) -> None:
     """Segment real volumes and verify the resulting spatial grid and labels."""
     nib = pytest.importorskip("nibabel")
-    np = pytest.importorskip("numpy")
     pytest.importorskip("totalsegmentator")
     from totalsegmentator.map_to_binary import class_map
 

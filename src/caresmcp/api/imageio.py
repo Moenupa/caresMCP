@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from io import BytesIO
 from typing import Any
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -121,8 +122,6 @@ def encode_label_mask(labels: Any) -> bytes:
     Masks deliberately preserve class IDs rather than multiplying patient
     intensities by labels. This exception supports downstream measurements.
     """
-    import numpy as np
-    from PIL import Image
 
     labels = np.asarray(labels)
     if labels.ndim != 2 or not np.isfinite(labels).all():

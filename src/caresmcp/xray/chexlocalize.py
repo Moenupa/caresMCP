@@ -3,6 +3,9 @@
 from io import BytesIO
 from typing import Annotated, Any
 
+import cv2
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.registry import TASK_SEG, XRAY
@@ -37,8 +40,6 @@ def chexlocalize_evaluate(
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize
     """
-    import numpy as np
-    from PIL import Image, UnidentifiedImageError
 
     if not 0 <= saliency_threshold <= 1:
         raise ValueError("saliency_threshold must be between 0 and 1")
@@ -90,9 +91,6 @@ def chexlocalize_segment(
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize
     """
-    import cv2
-    import numpy as np
-    from PIL import Image, UnidentifiedImageError
 
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be between 0 and 1")

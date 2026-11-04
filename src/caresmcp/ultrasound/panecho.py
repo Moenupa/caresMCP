@@ -6,6 +6,9 @@ from statistics import fmean
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Annotated, Any
 
+import cv2
+import numpy as np
+from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
@@ -22,7 +25,7 @@ _PANECHO_REPOSITORY = "CarDS-Yale/PanEcho"
 _PANECHO_NAME = "PanEcho"
 _FRAME_COUNT = 16
 _IMAGE_SIZE = 224
-_PANECHO_DEPS = ["torch", "torchvision", "cv2", "timm", "PIL"]
+_PANECHO_DEPS = ["torch", "torchvision", "timm"]
 
 
 def _panecho_transform() -> "Compose":
@@ -47,10 +50,7 @@ def _panecho_transform() -> "Compose":
 
 def _decode_panecho_video(video: bytes) -> Any:
     """Decode and normalize 16 uniformly sampled frames from an echo video."""
-    import cv2
-    import numpy as np
     import torch
-    from PIL import Image
 
     if not video:
         raise ValueError("video must contain a readable echocardiogram")

@@ -7,6 +7,8 @@ Good test samples:
 from io import BytesIO
 from typing import Annotated, Any, Literal
 
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.api.imageio import draw_legends
@@ -72,8 +74,6 @@ def _preprocess_xray(
     image: bytes, xrv: Any, transforms: Any, weight_or_size: int | ChestXrayWeights
 ) -> tuple[Any, int]:
     """Decode and resize a radiograph using TorchXRayVision preprocessing."""
-    import numpy as np
-    from PIL import Image, UnidentifiedImageError
 
     if isinstance(weight_or_size, str):
         weight_or_size = 512 if weight_or_size.startswith("resnet") else 224
@@ -165,7 +165,6 @@ def torchxrayvision_segment_anatomy(
     import seaborn as sns
     import torch
     import torchxrayvision as xrv
-    from PIL import Image
     from torchvision import transforms
 
     image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=512)
@@ -228,10 +227,8 @@ def torchxrayvision_localize(
         https://github.com/mlmed/torchxrayvision
         https://github.com/rajpurkarlab/cheXlocalize
     """
-    import numpy as np
     import torch
     import torchxrayvision as xrv
-    from PIL import Image
     from torchvision import transforms
 
     image_array, input_size = _preprocess_xray(

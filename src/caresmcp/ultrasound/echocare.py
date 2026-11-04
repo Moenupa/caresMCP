@@ -2,6 +2,8 @@
 
 from typing import Annotated, Any
 
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.api.models import get_hf_checkpoint
@@ -17,9 +19,6 @@ ULTRASOUND_IMG = Field(description="Ultrasound image or frame")
 def _decode_echocare_image(image: bytes, torch: Any) -> Any:
     """Decode an RGB image and apply the EchoCare input transform."""
     from io import BytesIO
-
-    import numpy as np
-    from PIL import Image, UnidentifiedImageError
 
     if not image:
         raise ValueError("image must contain a readable ultrasound frame")

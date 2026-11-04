@@ -6,6 +6,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Any
 
+import cv2
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.api.imageio import encode_label_mask
@@ -55,7 +58,6 @@ def _decode_echonet_dynamic_video(
     torch: Any,
 ) -> Any:
     """Decode a centered 32-frame clip at a two-frame sampling period."""
-    import numpy as np
 
     if not video:
         raise ValueError("video must contain a readable apical four-chamber echo")
@@ -182,7 +184,7 @@ def _load_echonet_dynamic_segmentation_model() -> Any:
 
 
 @ULTRASOUND.register("echonet_dynamic_predict_ef")
-@requires(["torch", "torchvision", "cv2"], extra="ultrasound")
+@requires(["torch", "torchvision"], extra="ultrasound")
 def echonet_dynamic_predict_ef(
     video: Annotated[
         bytes, Field(description="Apical four-chamber echocardiography video bytes.")
@@ -210,7 +212,6 @@ def echonet_dynamic_predict_ef(
         https://github.com/echonet/dynamic
         https://doi.org/10.1038/s41586-020-2145-8
     """
-    import cv2
     import torch
 
     tensor = _decode_echonet_dynamic_video(
@@ -237,7 +238,7 @@ def echonet_dynamic_predict_ef(
 
 @ULTRASOUND.register("echonet_dynamic_segment_lv")
 @TASK_SEG.register("echonet_dynamic_segment_lv")
-@requires(["torch", "torchvision", "PIL"], extra="ultrasound")
+@requires(["torch", "torchvision"], extra="ultrasound")
 def echonet_dynamic_segment_lv(
     image: Annotated[
         bytes, Field(description="Apical four-chamber echocardiography frame bytes.")
@@ -267,9 +268,7 @@ def echonet_dynamic_segment_lv(
     """
     from io import BytesIO
 
-    import numpy as np
     import torch
-    from PIL import Image, UnidentifiedImageError
     from torch.nn import functional
 
     _validate_channel_statistics(channel_mean, channel_std)

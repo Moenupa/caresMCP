@@ -3,6 +3,9 @@ from functools import lru_cache
 from io import BytesIO
 from typing import Any, Literal
 
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
@@ -55,8 +58,6 @@ def cellpose_segment_pathology_cells(
         https://cellpose.readthedocs.io/en/latest/models.html
         https://cellpose.readthedocs.io/en/latest/outputs.html
     """
-    import numpy as np
-    from PIL import Image, ImageDraw, ImageFont
 
     if diameter is not None and (not math.isfinite(diameter) or diameter <= 0):
         raise ValueError("diameter must be a finite positive number or None")
