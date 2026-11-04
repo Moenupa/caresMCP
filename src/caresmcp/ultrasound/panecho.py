@@ -4,7 +4,9 @@ from math import isfinite
 from pathlib import Path
 from statistics import fmean
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
+
+from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models.torch_hub import _get_torch_checkpoint
@@ -130,67 +132,21 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
     return predictions
 
 
-def _validate_video_predictions(
-    video_predictions: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Validate the serialized predictions returned by PanEcho inference."""
-    if not video_predictions:
-        raise ValueError("at least one PanEcho video prediction is required")
-
-    task_names: set[str] | None = None
-    for result in video_predictions:
-        if not isinstance(result, dict) or result.get("model") != "PanEcho":
-            raise ValueError("each result must be a PanEcho video prediction")
-        predictions = result.get("predictions")
-        if not isinstance(predictions, dict) or not predictions:
-            raise ValueError("each result must contain task predictions")
-
-        current_task_names = set(predictions)
-        if task_names is None:
-            task_names = current_task_names
-        elif current_task_names != task_names:
-            raise ValueError("all PanEcho results must contain the same tasks")
-
-        for prediction in predictions.values():
-            values = (
-                prediction.values() if isinstance(prediction, dict) else (prediction,)
-            )
-            if isinstance(prediction, dict) and not prediction:
-                raise ValueError("classification predictions must contain class values")
-            if any(
-                isinstance(value, bool)
-                or not isinstance(value, int | float)
-                or not isfinite(value)
-                for value in values
-            ):
-                raise ValueError("PanEcho predictions must contain finite numbers")
-
-    first_predictions = video_predictions[0]["predictions"]
-    for result in video_predictions[1:]:
-        for task_name, first_value in first_predictions.items():
-            current_value = result["predictions"][task_name]
-            if isinstance(first_value, dict) != isinstance(current_value, dict):
-                raise ValueError("PanEcho task outputs must have consistent types")
-            if (
-                isinstance(first_value, dict)
-                and current_value.keys() != first_value.keys()
-            ):
-                raise ValueError("PanEcho class labels must match across videos")
-
-    return [result["predictions"] for result in video_predictions]
-
-
 @ULTRASOUND.register("panecho_predict_video")
 @requires(_PANECHO_DEPS, extra="ultrasound")
-def panecho_predict_video(video: bytes) -> dict[str, Any]:
+def panecho_predict_video(
+    video: Annotated[
+        bytes,
+        Field(
+            description="Echocardiography cine video, such as MP4. DICOM is not supported."
+        ),
+    ],
+) -> dict[str, Any]:
     """Predict echocardiography measurements and findings from one video.
 
     PanEcho returns regression estimates and class probabilities for its
-    echocardiography reporting tasks. Use ``panecho_aggregate_study`` to
+    echocardiography reporting tasks. Use ``panecho_predict_study`` to
     combine predictions from multiple videos in the same study.
-
-    Args:
-        video: Echocardiography video bytes.
 
     Returns:
         Model name and a mapping of task names to measurements or class
@@ -217,18 +173,20 @@ def panecho_predict_video(video: bytes) -> dict[str, Any]:
     }
 
 
-@ULTRASOUND.register("panecho_aggregate_study")
-def panecho_aggregate_study(
-    video_predictions: list[dict[str, Any]],
+@ULTRASOUND.register("panecho_predict_study")
+@requires(_PANECHO_DEPS, extra="ultrasound")
+def panecho_predict_study(
+    videos: Annotated[
+        list[bytes],
+        Field(
+            min_length=1,
+            description="Echocardiography cine videos from one study, such as MP4. DICOM is not supported.",
+        ),
+    ],
 ) -> dict[str, Any]:
-    """Aggregate PanEcho predictions from videos in one echocardiography study.
+    """Predict echocardiography measurements and findings for one study.
 
-    Each video prediction receives equal weight when producing the study-level
-    result, matching the aggregation described for PanEcho.
-
-    Args:
-        video_predictions: Results returned by ``panecho_predict_video`` for
-            videos acquired during the same study.
+    Each video receives equal weight in the study predictions.
 
     Returns:
         Model name, number of videos, aggregation method, and task predictions.
@@ -237,11 +195,12 @@ def panecho_aggregate_study(
         https://github.com/CarDS-Yale/PanEcho
         https://doi.org/10.1001/jama.2025.8731
     """
-    predictions = _validate_video_predictions(video_predictions)
-    task_names = predictions[0].keys()
+    if not videos:
+        raise ValueError("at least one echocardiography video is required")
+
+    predictions = [panecho_predict_video(video)["predictions"] for video in videos]
     aggregated: dict[str, Any] = {}
-    for task_name in task_names:
-        first_value = predictions[0][task_name]
+    for task_name, first_value in predictions[0].items():
         if isinstance(first_value, dict):
             aggregated[task_name] = {
                 label: fmean(prediction[task_name][label] for prediction in predictions)
@@ -254,7 +213,7 @@ def panecho_aggregate_study(
 
     return {
         "model": "PanEcho",
-        "video_count": len(predictions),
+        "video_count": len(videos),
         "aggregation": "equal_weight_mean",
         "predictions": aggregated,
     }
@@ -263,11 +222,15 @@ def panecho_aggregate_study(
 @ULTRASOUND.register("panecho_video_embed")
 @TASK_EMBED.register("panecho_video_embed")
 @requires(_PANECHO_DEPS, extra="ultrasound")
-def panecho_video_embed(video: bytes) -> dict[str, Any]:
+def panecho_video_embed(
+    video: Annotated[
+        bytes,
+        Field(
+            description="Echocardiography cine video, such as MP4. DICOM is not supported."
+        ),
+    ],
+) -> dict[str, Any]:
     """Extract a 768-dimensional PanEcho feature vector from an echo video.
-
-    Args:
-        video: Echocardiography video bytes.
 
     Returns:
         Model name and a JSON-safe 768-dimensional feature vector.
@@ -292,11 +255,13 @@ def panecho_video_embed(video: bytes) -> dict[str, Any]:
 @ULTRASOUND.register("panecho_image_embed")
 @TASK_EMBED.register("panecho_image_embed")
 @requires(_PANECHO_DEPS, extra="ultrasound")
-def panecho_image_embed(image: bytes) -> dict[str, Any]:
+def panecho_image_embed(
+    image: Annotated[
+        bytes,
+        Field(description="Single encoded echocardiography frame."),
+    ],
+) -> dict[str, Any]:
     """Extract a 768-dimensional PanEcho feature vector from one echo frame.
-
-    Args:
-        image: Echocardiography image bytes.
 
     Returns:
         Model name and a JSON-safe feature vector for the image.

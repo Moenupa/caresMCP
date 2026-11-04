@@ -12,7 +12,7 @@ from .base import adapt_inputs
 
 
 def adapt_byte_inputs[**P, R](function: Callable[P, R]) -> Callable[P, R]:
-    """Adapt arguments annotated as ``bytes`` from paths, data URIs, or HTTP URLs.
+    """Adapt ``bytes`` and ``list[bytes]`` inputs from paths, data URIs, or URLs.
 
     Args:
         function: Function whose supplied byte-valued arguments should be adapted.
@@ -21,7 +21,7 @@ def adapt_byte_inputs[**P, R](function: Callable[P, R]) -> Callable[P, R]:
         The function wrapped to read byte inputs from supported string or path values.
     """
 
-    byte_inputs = {name: _read_bytes for name in _byte_input_names(function)}
+    byte_inputs = {name: _read_byte_input for name in _byte_input_names(function)}
     if not byte_inputs:
         return function
     return adapt_inputs(**byte_inputs)(function)
@@ -43,10 +43,19 @@ def _byte_input_names(function: Callable[..., Any]) -> tuple[str, ...]:
 
 
 def _is_bytes_annotation(annotation: Any) -> bool:
-    """Return whether an annotation declares bytes, including Annotated bytes."""
+    """Return whether an annotation declares bytes or a list of bytes."""
     if get_origin(annotation) is Annotated:
         annotation = get_args(annotation)[0]
-    return annotation is bytes or annotation == "bytes"
+    if get_origin(annotation) is list:
+        return get_args(annotation) == (bytes,)
+    return annotation is bytes or annotation in ("bytes", "list[bytes]")
+
+
+def _read_byte_input(value: Any) -> bytes | list[bytes]:
+    """Read a single byte source or a list of byte sources."""
+    if isinstance(value, list):
+        return [_read_bytes(item) for item in value]
+    return _read_bytes(value)
 
 
 def _read_bytes(value: Any) -> bytes:

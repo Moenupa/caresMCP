@@ -47,8 +47,10 @@ def adapt_fastmcp_tool[**P, R](function: Callable[P, R]) -> Callable[P, Any]:
     return wrapped
 
 
-def _normalize_mcp_byte_source(value: Any) -> bytes | str:
+def _normalize_mcp_byte_source(value: Any) -> bytes | str | list[Any]:
     """Convert FastMCP's validated bytes value back to a URL or data URI."""
+    if isinstance(value, list):
+        return [_normalize_mcp_byte_source(item) for item in value]
     if isinstance(value, bytes):
         try:
             value = value.decode("utf-8")

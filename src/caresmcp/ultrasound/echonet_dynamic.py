@@ -4,7 +4,9 @@ from functools import lru_cache
 from math import isfinite
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from caresmcp.api.imageio import encode_label_mask
 from caresmcp.constants import DEVICE
@@ -182,19 +184,23 @@ def _load_echonet_dynamic_segmentation_model() -> Any:
 @ULTRASOUND.register("echonet_dynamic_predict_ef")
 @requires(["torch", "torchvision", "cv2"], extra="ultrasound")
 def echonet_dynamic_predict_ef(
-    video: bytes,
-    channel_mean: list[float],
-    channel_std: list[float],
+    video: Annotated[
+        bytes, Field(description="Apical four-chamber echocardiography video bytes.")
+    ],
+    channel_mean: Annotated[
+        list[float],
+        Field(
+            description="RGB pixel means computed from EchoNet-Dynamic training videos, on the original 0 to 255 pixel scale."
+        ),
+    ],
+    channel_std: Annotated[
+        list[float],
+        Field(
+            description="RGB pixel standard deviations computed from EchoNet-Dynamic training videos, on the original 0 to 255 pixel scale."
+        ),
+    ],
 ) -> dict[str, Any]:
     """Estimate left ventricular ejection fraction from an apical four-chamber video.
-
-    Args:
-        video: Apical four-chamber echocardiography video bytes.
-        channel_mean: RGB pixel means computed from EchoNet-Dynamic training
-            videos, on the original 0 to 255 pixel scale.
-        channel_std: RGB pixel standard deviations computed from
-            EchoNet-Dynamic training videos, on the original 0 to 255 pixel
-            scale.
 
     Returns:
         Model name, estimated ejection fraction in percent, and the temporal
@@ -233,19 +239,23 @@ def echonet_dynamic_predict_ef(
 @TASK_SEG.register("echonet_dynamic_segment_lv")
 @requires(["torch", "torchvision", "PIL"], extra="ultrasound")
 def echonet_dynamic_segment_lv(
-    image: bytes,
-    channel_mean: list[float],
-    channel_std: list[float],
+    image: Annotated[
+        bytes, Field(description="Apical four-chamber echocardiography frame bytes.")
+    ],
+    channel_mean: Annotated[
+        list[float],
+        Field(
+            description="RGB pixel means computed from EchoNet-Dynamic training videos, on the original 0 to 255 pixel scale."
+        ),
+    ],
+    channel_std: Annotated[
+        list[float],
+        Field(
+            description="RGB pixel standard deviations computed from EchoNet-Dynamic training videos, on the original 0 to 255 pixel scale."
+        ),
+    ],
 ) -> bytes:
     """Segment the left ventricle in an apical four-chamber echocardiogram frame.
-
-    Args:
-        image: Apical four-chamber echocardiography frame bytes.
-        channel_mean: RGB pixel means computed from EchoNet-Dynamic training
-            videos, on the original 0 to 255 pixel scale.
-        channel_std: RGB pixel standard deviations computed from
-            EchoNet-Dynamic training videos, on the original 0 to 255 pixel
-            scale.
 
     Returns:
         Palette PNG mask with transparent background and pixel values 0 for
