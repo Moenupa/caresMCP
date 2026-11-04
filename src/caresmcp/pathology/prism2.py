@@ -9,10 +9,7 @@ and is not provided by this package.
 
 from typing import Any, Literal
 
-from caresmcp.api.models.hf_hub import (
-    HFModelType,
-    _get_hf_model_and_processor,
-)
+from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
 from caresmcp.util.moduleloader import requires
@@ -53,7 +50,7 @@ def _prepare_prism2_batch(image: bytes) -> tuple[Any, Any]:
     if embedding.shape != (VIRCHOW2_EMBEDDING_SIZE,):
         raise RuntimeError("Virchow2 returned an embedding with an unexpected shape")
 
-    model, processor = _get_hf_model_and_processor(
+    model, processor = get_hf_model_and_processor(
         MODEL_ID,
         model_type=HFModelType.AUTO,
         trust_remote_code=True,

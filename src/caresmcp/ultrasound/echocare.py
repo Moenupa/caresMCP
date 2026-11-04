@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from caresmcp.api.models.hf_hub import _get_hf_checkpoint
+from caresmcp.api.models import get_hf_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.util.moduleloader import requires
@@ -80,7 +80,7 @@ def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, A
     import torch
 
     tensor = _decode_echocare_image(image, torch)
-    checkpoint = _get_hf_checkpoint(model_id=_MODEL_ID, filename="model.safetensors")
+    checkpoint = get_hf_checkpoint(model_id=_MODEL_ID, filename="model.safetensors")
     model = _load_echocare_encoder(checkpoint)
     with torch.inference_mode():
         feature_maps = model(tensor)

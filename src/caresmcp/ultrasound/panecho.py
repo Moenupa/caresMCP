@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
-from caresmcp.api.models.torch_hub import _get_torch_checkpoint
+from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.util.moduleloader import requires
@@ -159,7 +159,7 @@ def panecho_predict_video(
     import torch
 
     tensor = _decode_panecho_video(video)
-    model = _get_torch_checkpoint(
+    model = get_torch_model(
         _PANECHO_REPOSITORY,
         _PANECHO_NAME,
         tasks="all",
@@ -241,7 +241,7 @@ def panecho_video_embed(
     import torch
 
     tensor = _decode_panecho_video(video)
-    model = _get_torch_checkpoint(
+    model = get_torch_model(
         _PANECHO_REPOSITORY,
         _PANECHO_NAME,
         backbone_only=True,
@@ -272,7 +272,7 @@ def panecho_image_embed(
     import torch
 
     tensor = _decode_panecho_image(image)
-    model = _get_torch_checkpoint(
+    model = get_torch_model(
         _PANECHO_REPOSITORY,
         _PANECHO_NAME,
         image_encoder_only=True,

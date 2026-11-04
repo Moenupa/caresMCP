@@ -5,10 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
-from caresmcp.api.models.hf_hub import (
-    HFModelType,
-    _get_hf_model_and_processor,
-)
+from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
 from caresmcp.util.moduleloader import requires
@@ -43,7 +40,7 @@ def _extract_cxr_embedding(
     """Extract an image embedding using a supported chest radiograph encoder."""
     import torch
 
-    model, processor = _get_hf_model_and_processor(
+    model, processor = get_hf_model_and_processor(
         model_id,
         model_type=HFModelType.IMAGE_ENCODER,
         trust_remote_code=model_id.startswith("m42-health/"),

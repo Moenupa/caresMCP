@@ -2,7 +2,7 @@ from collections import Counter
 from typing import Any, Literal
 
 from caresmcp.api.imageio import decode_rgb
-from caresmcp.api.models.hf_hub import _get_hf_model_and_processor
+from caresmcp.api.models import get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS
 from caresmcp.util.moduleloader import requires
@@ -43,7 +43,7 @@ def hf_classifier(
     if score_mode not in ("sigmoid", "softmax"):
         raise ValueError("score_mode must be 'sigmoid' or 'softmax'")
 
-    model, processor = _get_hf_model_and_processor(model_id)
+    model, processor = get_hf_model_and_processor(model_id)
     config_labels = model.config.id2label
     if config_labels is None:
         raise ValueError(

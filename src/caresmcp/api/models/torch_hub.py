@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def _get_torch_checkpoint(
+def get_torch_model(
     repo_or_dir: str,
     model: str,
     **kwargs,

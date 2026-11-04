@@ -19,7 +19,7 @@ class HFModelType(Enum):
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def _get_hf_model_and_processor(
+def get_hf_model_and_processor(
     model_id: str,
     model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
     trust_remote_code: bool = False,
@@ -81,7 +81,7 @@ def _get_hf_model_and_processor(
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def _get_hf_checkpoint(
+def get_hf_checkpoint(
     model_id: str,
     filename: str,
     *,
