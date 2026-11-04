@@ -132,7 +132,7 @@ def _load_echonet_dynamic_model() -> Any:
         _EF_CHECKPOINT_URL,
         map_location="cpu",
         progress=True,
-        weights_only=True,
+        weights_only=False,
     )
     state_dict = checkpoint.get("state_dict", checkpoint)
     state_dict = {
@@ -171,7 +171,7 @@ def _load_echonet_dynamic_segmentation_model() -> Any:
         _SEGMENTATION_CHECKPOINT_URL,
         map_location="cpu",
         progress=True,
-        weights_only=True,
+        weights_only=False,
     )
     state_dict = checkpoint.get("state_dict", checkpoint)
     state_dict = {

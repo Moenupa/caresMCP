@@ -1,42 +1,39 @@
-"""Real CONCH inference tests using bundled pathology tiles."""
+"""Real CONCH inference tests using pathology image URLs."""
 
 import json
 import math
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import pytest
 
 pytest.importorskip("torch")
 pytest.importorskip("conch")
 
+from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.pathology import conch
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 
-SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data" / "pathology"
-SAMPLE_PATHS = tuple(
-    sorted(
-        path
-        for path in SAMPLE_DIRECTORY.glob("breast-fibromatosis-1-*.png")
-        if path.is_file()
-    )
-)
+SAMPLES = """
+https://prod-images-static.radiopaedia.org/images/74884531/6f22f016116baa92e86b44a6bec617b490d615e54ebdbdc31078981193d6a675.png
+https://prod-images-static.radiopaedia.org/images/74884532/8ed482a35146d868c83f7dd21128840039a515bbfa917c6831fdda93fbc3343f.png
+https://prod-images-static.radiopaedia.org/images/74884533/4870726dffb5b8d84541c6e78c459f1051e33b30e4f689dfd33e6b2927621009.png
+""".strip().splitlines()
 
 
 @pytest.fixture(scope="module")
 def pathology_tiles() -> list[tuple[str, bytes]]:
-    """Return the bundled breast fibromatosis tiles at each magnification."""
-    if len(SAMPLE_PATHS) < 3:
-        pytest.skip("the three bundled pathology magnifications are required")
-    return [(path.stem, path.read_bytes()) for path in SAMPLE_PATHS]
+    """Return breast fibromatosis tiles at each magnification from image URLs."""
+    return [(Path(urlparse(url).path).parent.name, _read_bytes(url)) for url in SAMPLES]
 
 
 @pytest.fixture(scope="module")
 def projected_tile_embeddings(
     pathology_tiles: list[tuple[str, bytes]],
 ) -> list[dict[str, Any]]:
-    """Extract real projected embeddings for all bundled pathology tiles."""
+    """Extract real projected embeddings for all pathology sample tiles."""
     return [
         conch.conch_image_embed(image, embedding_space="projected")
         for _, image in pathology_tiles
@@ -166,7 +163,7 @@ def test_conch_retrieves_real_image_embeddings_from_text(
     pathology_tiles: list[tuple[str, bytes]],
     projected_tile_embeddings: list[dict[str, Any]],
 ) -> None:
-    """Rank bundled tile embeddings for a real CONCH text query."""
+    """Rank sample tile embeddings for a real CONCH text query."""
     image_ids = [tile_id for tile_id, _ in pathology_tiles]
     image_vectors = [item["embedding"] for item in projected_tile_embeddings]
     query = "a histopathology image of benign breast fibromatosis"
