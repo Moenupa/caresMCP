@@ -71,3 +71,6 @@ markers = [
     "slow: mark tests as slow (pytest -m 'not slow' or set RUN_SLOW=1 to run)",
     "cuda: mark tests as requiring a CUDA device",
 ]
+filterwarnings = [
+  "ignore::torch.serialization.SourceChangeWarning",
+]

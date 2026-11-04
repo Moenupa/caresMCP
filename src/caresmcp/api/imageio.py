@@ -45,7 +45,7 @@ def draw_legends(
 
     palette = image.getpalette() or []
     palette.extend([0] * (768 - len(palette)))
-    used_indices = set(image.getdata())  # ty: ignore[invalid-argument-type]
+    used_indices = set(image.get_flattened_data())
     free_indices = [
         index
         for index in range(256)
