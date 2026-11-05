@@ -1,0 +1,276 @@
+"""MONAI tumor detection and nuclei analysis for pathology image regions."""
+
+from functools import lru_cache
+from io import BytesIO
+from typing import Annotated, Any, cast
+
+import numpy as np
+from PIL import Image
+from pydantic import Field
+
+from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.models.hf_hub import get_hf_checkpoint
+from caresmcp.constants import DEVICE
+from caresmcp.registry import PATHOLOGY, TAG_MONAI, TASK_CLS, TASK_SEG
+from caresmcp.util.moduleloader import requires
+
+TUMOR_PATCH_SIZE = 224
+TUMOR_MODEL_ID = "MONAI/pathology_tumor_detection"
+NUCLEI_CLASSIFIER_ID = "MONAI/pathology_nuclei_classification"
+HOVERNET_ID = "MONAI/pathology_nuclei_segmentation_classification"
+REVISIONS = {
+    TUMOR_MODEL_ID: "0.6.3",
+    NUCLEI_CLASSIFIER_ID: "0.2.1",
+    HOVERNET_ID: "0.2.7",
+}
+NUCLEI_CLASSES = ("other", "inflammatory", "epithelial", "spindle_shaped")
+
+
+@lru_cache(maxsize=3)
+def _load_pathology_model(model_id: str) -> Any:
+    """Load and cache a released MONAI pathology checkpoint on the selected device."""
+    from monai.networks.nets import DenseNet121, HoVerNet, TorchVisionFCModel
+
+    if model_id == TUMOR_MODEL_ID:
+        model = TorchVisionFCModel(
+            model_name="resnet18", num_classes=1, use_conv=True, pretrained=False
+        )
+    elif model_id == NUCLEI_CLASSIFIER_ID:
+        model = DenseNet121(spatial_dims=2, in_channels=4, out_channels=4)
+    elif model_id == HOVERNET_ID:
+        model = HoVerNet(
+            mode="fast", adapt_standard_resnet=True, in_channels=3, out_classes=5
+        )
+    else:
+        raise ValueError("Unsupported MONAI pathology model")
+    checkpoint = get_hf_checkpoint(
+        model_id, "models/model.pt", revision=REVISIONS[model_id]
+    )
+    model.load_state_dict(checkpoint, strict=True)
+    return model.to(DEVICE).eval()
+
+
+@PATHOLOGY.register("monai_pathology_tumor_detection")
+@TAG_MONAI.register("monai_pathology_tumor_detection")
+@TASK_CLS.register("monai_pathology_tumor_detection")
+@requires(["torch", "torchvision", "monai", "huggingface_hub"], extra="monai")
+def monai_pathology_tumor_detection(
+    image: Annotated[
+        bytes,
+        Field(
+            description="Encoded RGB H&E lymph-node tile or ROI at level-zero resolution."
+        ),
+    ],
+    batch_size: Annotated[
+        int, Field(description="Number of tumor patches scored together.", ge=1, le=400)
+    ] = 32,
+) -> dict[str, Any]:
+    """Score tumor presence in an RGB H&E lymph-node tile or ROI at level-zero resolution.
+
+    Returns model provenance, image size, and tumor scores from 0 to 1 for
+    224x224 patches. Each patch has a pixel box [left, top, right, bottom]
+    within the input image, with exclusive right and bottom bounds.
+    max_tumor_score is the highest patch score in the supplied region.
+    Scores are not calibrated diagnostic probabilities or slide-level predictions.
+
+    See Also:
+        https://huggingface.co/MONAI/pathology_tumor_detection
+        https://github.com/Project-MONAI/model-zoo/blob/dev/models/pathology_tumor_detection/docs/README.md
+        https://arxiv.org/abs/1512.03385
+    """
+    import torch
+
+    model_id = TUMOR_MODEL_ID
+    if (
+        isinstance(batch_size, bool)
+        or not isinstance(batch_size, int)
+        or not 1 <= batch_size <= 400
+    ):
+        raise ValueError("batch_size must be an integer from 1 to 400")
+
+    pixels = np.asarray(decode_rgb(image))
+    height, width = pixels.shape[:2]
+    boxes = [
+        [x, y, min(x + TUMOR_PATCH_SIZE, width), min(y + TUMOR_PATCH_SIZE, height)]
+        for y in range(0, height, TUMOR_PATCH_SIZE)
+        for x in range(0, width, TUMOR_PATCH_SIZE)
+    ]
+    model = _load_pathology_model(model_id)
+    patches = []
+    with torch.inference_mode():
+        for offset in range(0, len(boxes), batch_size):
+            batch_boxes = boxes[offset : offset + batch_size]
+            batch = np.full(
+                (len(batch_boxes), TUMOR_PATCH_SIZE, TUMOR_PATCH_SIZE, 3),
+                255,
+                dtype=np.float32,
+            )
+            for index, (left, top, right, bottom) in enumerate(batch_boxes):
+                batch[index, : bottom - top, : right - left] = pixels[
+                    top:bottom, left:right
+                ]
+            inputs = torch.from_numpy(batch).permute(0, 3, 1, 2).to(DEVICE)
+            logits = model(inputs / 127.5 - 1.0)
+            if logits.numel() != len(batch_boxes) or not torch.isfinite(logits).all():
+                raise RuntimeError("MONAI returned invalid patch tumor logits")
+            scores = logits.sigmoid().reshape(-1).cpu().tolist()
+            patches.extend(
+                {"box": box, "tumor_score": score}
+                for box, score in zip(batch_boxes, scores, strict=True)
+            )
+    return {
+        "model_id": model_id,
+        "model_revision": REVISIONS[model_id],
+        "image_size": {"width": width, "height": height},
+        "patch_size": TUMOR_PATCH_SIZE,
+        "max_tumor_score": max(patch["tumor_score"] for patch in patches),
+        "patches": patches,
+    }
+
+
+@PATHOLOGY.register("monai_pathology_nuclei_classification")
+@TAG_MONAI.register("monai_pathology_nuclei_classification")
+@TASK_CLS.register("monai_pathology_nuclei_classification")
+@requires(["torch", "monai", "huggingface_hub"], extra="monai")
+def monai_pathology_nuclei_classification(
+    image: Annotated[
+        bytes,
+        Field(
+            description="Encoded 128x128 RGB H&E patch centered on a nucleus at CoNSeP's 40x scale."
+        ),
+    ],
+    mask: Annotated[
+        bytes,
+        Field(
+            description="Encoded 128x128 grayscale or indexed mask: zero background, nonzero target nucleus."
+        ),
+    ],
+) -> dict[str, Any]:
+    """Classify a target nucleus in a 128x128 RGB H&E colorectal tissue patch.
+
+    Supply a patch at CoNSeP's 40x scale, centered on the target nucleus.
+    Its matching mask uses
+    zero for background and nonzero values for the target nucleus.
+    Returns model provenance, predicted_class, and class_scores for other,
+    inflammatory, epithelial, and spindle_shaped nuclei. Scores sum to 1
+    and are not calibrated diagnostic probabilities.
+
+    See Also:
+        https://huggingface.co/MONAI/pathology_nuclei_classification
+        https://github.com/Project-MONAI/model-zoo/blob/dev/models/pathology_nuclei_classification/docs/README.md
+    """
+    import torch
+    from monai.apps.nuclick.transforms import AddLabelAsGuidanced
+
+    model_id = NUCLEI_CLASSIFIER_ID
+    pixels = np.asarray(decode_rgb(image), dtype=np.float32)
+    with Image.open(BytesIO(mask)) as decoded_mask:
+        if decoded_mask.mode not in ("1", "L", "I", "I;16", "P"):
+            raise ValueError("mask must be a grayscale or indexed nucleus mask")
+        labels = np.asarray(decoded_mask).copy()
+    if pixels.shape != (128, 128, 3) or labels.shape != (128, 128):
+        raise ValueError("image and mask must both be 128x128 pixels")
+    if not np.any(labels > 0):
+        raise ValueError("mask must contain a target nucleus")
+    data = AddLabelAsGuidanced(keys="image", source="label")(
+        # Match MONAI PILReader's default spatial indexing (channels, x, y).
+        {"image": pixels.transpose(2, 1, 0) / 127.5 - 1.0, "label": labels.T.copy()}
+    )
+    inputs = torch.as_tensor(data["image"]).unsqueeze(0).to(DEVICE)
+    with torch.inference_mode():
+        logits = _load_pathology_model(model_id)(inputs)
+        if logits.shape != (1, 4) or not torch.isfinite(logits).all():
+            raise RuntimeError("MONAI returned invalid nucleus class logits")
+        scores = logits.softmax(dim=1)[0].cpu().tolist()
+    class_scores = dict(zip(NUCLEI_CLASSES, scores, strict=True))
+    return {
+        "model_id": model_id,
+        "model_revision": REVISIONS[model_id],
+        "predicted_class": NUCLEI_CLASSES[int(np.argmax(scores))],
+        "class_scores": class_scores,
+    }
+
+
+@PATHOLOGY.register("monai_pathology_nuclei_segmentation_classification")
+@TAG_MONAI.register("monai_pathology_nuclei_segmentation_classification")
+@TASK_SEG.register("monai_pathology_nuclei_segmentation_classification")
+@TASK_CLS.register("monai_pathology_nuclei_segmentation_classification")
+@requires(["torch", "monai", "huggingface_hub", "skimage", "scipy"], extra="monai")
+def monai_pathology_nuclei_segmentation_classification(
+    image: Annotated[
+        bytes,
+        Field(description="Encoded RGB H&E tissue tile or ROI at CoNSeP's 40x scale."),
+    ],
+    batch_size: Annotated[
+        int,
+        Field(description="Number of HoVerNet windows scored together.", ge=1, le=16),
+    ] = 4,
+) -> dict[str, Any]:
+    """Identify individual nuclei and their types in an RGB H&E colorectal tissue region.
+
+    Supply a tile or ROI at CoNSeP's 40x scale.
+    Returns model provenance, instance_count, and two maps aligned with the
+    input image as [y][x]. In instance_map, each positive ID identifies one
+    nucleus. In type_map, IDs correspond to labels: background, other,
+    inflammatory, epithelial, and spindle_shaped. Zero denotes background
+    in both maps. Types follow CoNSeP categories and are research predictions.
+
+    See Also:
+        https://huggingface.co/MONAI/pathology_nuclei_segmentation_classification
+        https://github.com/Project-MONAI/model-zoo/blob/dev/models/pathology_nuclei_segmentation_classification/docs/README.md
+        https://doi.org/10.1016/j.media.2019.101563
+    """
+    import torch
+    from monai.apps.pathology.inferers import SlidingWindowHoVerNetInferer
+    from monai.apps.pathology.transforms import (
+        HoVerNetInstanceMapPostProcessing,
+        HoVerNetNuclearTypePostProcessing,
+    )
+
+    model_id = HOVERNET_ID
+    if (
+        isinstance(batch_size, bool)
+        or not isinstance(batch_size, int)
+        or not 1 <= batch_size <= 16
+    ):
+        raise ValueError("batch_size must be an integer from 1 to 16")
+    pixels = np.asarray(decode_rgb(image), dtype=np.float32)
+    # The released pipeline uses PILReader with reverse_indexing=True.
+    inputs = torch.from_numpy(pixels.transpose(2, 1, 0).copy()).unsqueeze(0) / 255.0
+    inferer = SlidingWindowHoVerNetInferer(
+        roi_size=256,
+        sw_batch_size=batch_size,
+        overlap=1.0 - 164.0 / 256.0,
+        padding_mode="constant",
+        cval=0,
+        # MONAI annotates this as a one-element tuple, but requires four pads.
+        extra_input_padding=(46, 46, 46, 46),  # ty: ignore[invalid-argument-type]
+        sw_device=DEVICE,
+        device="cpu",
+    )
+    with torch.inference_mode():
+        predictions = cast(
+            dict[str, torch.Tensor], inferer(inputs, _load_pathology_model(model_id))
+        )
+    info, instance_map = HoVerNetInstanceMapPostProcessing(
+        sobel_kernel_size=21, marker_threshold=0.4, marker_radius=2
+    )(predictions["nucleus_prediction"][0], predictions["horizontal_vertical"][0])
+    _, type_map = HoVerNetNuclearTypePostProcessing()(
+        predictions["type_prediction"][0], info, instance_map
+    )
+    if type_map is None:
+        raise RuntimeError("MONAI did not return a nucleus type map")
+    instances = (
+        np.asarray(torch.as_tensor(instance_map).cpu()).squeeze(0).T.astype(np.int32)
+    )
+    types = np.asarray(torch.as_tensor(type_map).cpu()).squeeze(0).T.astype(np.uint8)
+    if instances.shape != pixels.shape[:2] or types.shape != pixels.shape[:2]:
+        raise RuntimeError("MONAI returned nucleus maps with unexpected dimensions")
+    return {
+        "model_id": model_id,
+        "model_revision": REVISIONS[model_id],
+        "labels": dict(enumerate(("background", *NUCLEI_CLASSES))),
+        "instance_count": int(np.unique(instances[instances > 0]).size),
+        "instance_map": instances.tolist(),
+        "type_map": types.tolist(),
+    }

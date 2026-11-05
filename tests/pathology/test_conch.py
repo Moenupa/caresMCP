@@ -2,42 +2,32 @@
 
 import json
 import math
-from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import pytest
 
 pytest.importorskip("torch")
 pytest.importorskip("conch")
 
-from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators.file_io import save_results
+from caresmcp.constants import CACHE_ROOT
 from caresmcp.pathology import conch
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 
-SAMPLES = """
-https://prod-images-static.radiopaedia.org/images/74884531/6f22f016116baa92e86b44a6bec617b490d615e54ebdbdc31078981193d6a675.png
-https://prod-images-static.radiopaedia.org/images/74884532/8ed482a35146d868c83f7dd21128840039a515bbfa917c6831fdda93fbc3343f.png
-https://prod-images-static.radiopaedia.org/images/74884533/4870726dffb5b8d84541c6e78c459f1051e33b30e4f689dfd33e6b2927621009.png
-""".strip().splitlines()
-
-
-@pytest.fixture(scope="module")
-def pathology_tiles() -> list[tuple[str, bytes]]:
-    """Return breast fibromatosis tiles at each magnification from image URLs."""
-    return [(Path(urlparse(url).path).parent.name, _read_bytes(url)) for url in SAMPLES]
-
 
 @pytest.fixture(scope="module")
 def projected_tile_embeddings(
-    pathology_tiles: list[tuple[str, bytes]],
+    pathology_images: list[bytes],
 ) -> list[dict[str, Any]]:
     """Extract real projected embeddings for all pathology sample tiles."""
-    return [
+    results = [
         conch.conch_image_embed(image, embedding_space="projected")
-        for _, image in pathology_tiles
+        for image in pathology_images
     ]
+    for index, result in enumerate(results):
+        save_results(result, CACHE_ROOT / "conch_image_embed" / f"tile_{index}")
+    return results
 
 
 def _assert_unit_vector(vector: list[float]) -> None:
@@ -53,12 +43,12 @@ def _assert_json_safe(result: dict[str, Any]) -> None:
 
 
 def test_conch_extract_embedding_returns_projected_and_visual_features(
-    pathology_tiles: list[tuple[str, bytes]],
+    pathology_image: bytes,
     projected_tile_embeddings: list[dict[str, Any]],
 ) -> None:
     """Extract finite, normalized image features in both CONCH feature spaces."""
     projected = projected_tile_embeddings[0]
-    visual = conch.conch_image_embed(pathology_tiles[0][1], embedding_space="visual")
+    visual = conch.conch_image_embed(pathology_image, embedding_space="visual")
 
     assert projected["model_id"] == conch.MODEL_ID
     assert projected["embedding_space"] == "projected"
@@ -69,6 +59,8 @@ def test_conch_extract_embedding_returns_projected_and_visual_features(
     _assert_unit_vector(visual["embedding"])
     _assert_json_safe(projected)
     _assert_json_safe(visual)
+    save_results(projected, CACHE_ROOT / "conch_image_embed_projected")
+    save_results(visual, CACHE_ROOT / "conch_image_embed_visual")
 
 
 def test_conch_extract_text_embeddings_returns_normalized_vectors() -> None:
@@ -85,10 +77,11 @@ def test_conch_extract_text_embeddings_returns_normalized_vectors() -> None:
     for item in result["embeddings"]:
         _assert_unit_vector(item["embedding"])
     _assert_json_safe(result)
+    save_results(result, CACHE_ROOT / "conch_text_embed")
 
 
 def test_conch_score_candidate_texts_matches_real_embedding_cosines(
-    pathology_tiles: list[tuple[str, bytes]],
+    pathology_image: bytes,
     projected_tile_embeddings: list[dict[str, Any]],
 ) -> None:
     """Score descriptions against a tile and verify against real embeddings."""
@@ -98,9 +91,7 @@ def test_conch_score_candidate_texts_matches_real_embedding_cosines(
     ]
     image_vector = projected_tile_embeddings[0]["embedding"]
     text_result = conch.conch_text_embed(descriptions)
-    score_result = conch.conch_score_candidate_texts(
-        pathology_tiles[0][1], descriptions
-    )
+    score_result = conch.conch_score_candidate_texts(pathology_image, descriptions)
 
     assert score_result["score_type"] == "cosine_similarity"
     assert [item["text"] for item in score_result["scores"]] == descriptions
@@ -115,15 +106,16 @@ def test_conch_score_candidate_texts_matches_real_embedding_cosines(
         )
         assert score["similarity_score"] == pytest.approx(expected, abs=1e-4)
     _assert_json_safe(score_result)
+    save_results(score_result, CACHE_ROOT / "conch_score_candidate_texts")
 
 
 def test_conch_zero_shot_classify_returns_ranked_classes(
-    pathology_tiles: list[tuple[str, bytes]],
+    pathology_image: bytes,
 ) -> None:
     """Rank real pathology descriptions with prompt and synonym ensembles."""
     class_names = ["benign breast fibromatosis", "invasive breast carcinoma"]
     result = conch.conch_zero_shot_classify(
-        pathology_tiles[0][1],
+        pathology_image,
         class_names=class_names,
         prompt_templates=["a histopathology image of {class_name}"],
         class_synonyms=[["benign fibrous breast lesion"], ["breast cancer"]],
@@ -136,6 +128,7 @@ def test_conch_zero_shot_classify_returns_ranked_classes(
         math.isfinite(item["cosine_similarity"]) for item in result["class_scores"]
     )
     _assert_json_safe(result)
+    save_results(result, CACHE_ROOT / "conch_zero_shot_classify")
 
 
 def test_conch_mizero_classifies_real_tile_embeddings(
@@ -157,14 +150,15 @@ def test_conch_mizero_classifies_real_tile_embeddings(
         item["predicted_class"] in class_names for item in result["pooled_scores"]
     )
     _assert_json_safe(result)
+    save_results(result, CACHE_ROOT / "conch_mizero_classify_tiles")
 
 
 def test_conch_retrieves_real_image_embeddings_from_text(
-    pathology_tiles: list[tuple[str, bytes]],
+    pathology_images: list[bytes],
     projected_tile_embeddings: list[dict[str, Any]],
 ) -> None:
     """Rank sample tile embeddings for a real CONCH text query."""
-    image_ids = [tile_id for tile_id, _ in pathology_tiles]
+    image_ids = [f"tile_{index}" for index in range(len(pathology_images))]
     image_vectors = [item["embedding"] for item in projected_tile_embeddings]
     query = "a histopathology image of benign breast fibromatosis"
     result = conch.conch_retrieve_images_by_text(
@@ -181,3 +175,4 @@ def test_conch_retrieves_real_image_embeddings_from_text(
     assert len({match["image_id"] for match in matches}) == 2
     assert matches[0]["cosine_similarity"] >= matches[1]["cosine_similarity"]
     _assert_json_safe(result)
+    save_results(result, CACHE_ROOT / "conch_retrieve_images_by_text")
