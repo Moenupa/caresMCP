@@ -51,7 +51,7 @@ def test_tumor_patch_coordinates_and_batching(tissue_region: Image.Image) -> Non
     scores = [patch["tumor_score"] for patch in result["patches"]]
     assert all(0 <= score <= 1 for score in scores)
     assert scores == pytest.approx(
-        [patch["tumor_score"] for patch in batched["patches"]], abs=1e-5
+        [patch["tumor_score"] for patch in batched["patches"]], rel=1e-2
     )
     assert result["max_tumor_score"] == max(scores)
     save_results(

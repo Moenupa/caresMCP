@@ -429,7 +429,7 @@ def conch_mizero_classify_tiles(
         raise ValueError("top_j must contain unique positive integers")
 
     try:
-        image_embeddings = torch.tensor(tile_embeddings, dtype=torch.float32)
+        image_embeddings = torch.tensor(tile_embeddings, dtype=torch.float32, device=DEVICE)
     except (TypeError, ValueError) as exc:
         raise ValueError("tile_embeddings must be rectangular numeric vectors") from exc
     if image_embeddings.ndim != 2 or not torch.isfinite(image_embeddings).all():
