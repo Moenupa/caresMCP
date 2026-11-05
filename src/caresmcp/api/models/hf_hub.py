@@ -21,6 +21,27 @@ class HFModelType(Enum):
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
+def get_hf_model(
+    model_id: str,
+    trust_remote_code: bool = False,
+    torch_dtype: str | None = None,
+    *,
+    subfolder: str = "",
+) -> "PreTrainedModel":
+    """Load and cache an AutoModel checkpoint without requiring a processor."""
+    from transformers import AutoModel
+
+    kwargs: dict[str, Any] = {"trust_remote_code": trust_remote_code}
+    if torch_dtype is not None:
+        kwargs["torch_dtype"] = torch_dtype
+    if subfolder:
+        kwargs["subfolder"] = subfolder
+    model = AutoModel.from_pretrained(model_id, **kwargs).to(DEVICE)
+    model.eval()
+    return model
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
 def get_hf_model_and_processor(
     model_id: str,
     model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
