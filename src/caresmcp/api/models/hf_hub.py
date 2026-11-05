@@ -37,6 +37,9 @@ def get_hf_model_and_processor(
     ``AutoImageProcessor``. ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
 
+    Image processors load with ``use_fast=True``; checkpoints saved with a slow
+    processor would otherwise trigger a transformers deprecation warning.
+
     ``subfolder`` selects a model head. Its processor is loaded from the same
     folder unless ``processor_subfolder`` explicitly selects another folder.
 
@@ -76,6 +79,16 @@ def get_hf_model_and_processor(
 
     model_kwargs: dict[str, Any] = {}
     processor_kwargs: dict[str, Any] = {}
+    if model_type in (
+        HFModelType.IMAGE_CLASSIFICATION,
+        HFModelType.IMAGE_ENCODER,
+        HFModelType.SEMANTIC_SEGMENTATION,
+    ):
+        # transformers warns when `use_fast` is unset for checkpoints saved with
+        # a slow image processor, and fast processors become the default in an
+        # upcoming release. Opt in explicitly; transformers still falls back to
+        # the slow class when a checkpoint ships no fast implementation.
+        processor_kwargs["use_fast"] = True
     if trust_remote_code:
         model_kwargs["trust_remote_code"] = True
         processor_kwargs["trust_remote_code"] = True
