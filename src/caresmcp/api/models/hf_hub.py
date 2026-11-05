@@ -1,5 +1,7 @@
+import json
 from enum import Enum
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from caresmcp.constants import DEVICE, LRU_MAX_SIZE
@@ -24,6 +26,9 @@ def get_hf_model_and_processor(
     model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
+    *,
+    subfolder: str = "",
+    processor_subfolder: str | None = None,
 ) -> "tuple[PreTrainedModel, ProcessorMixin]":
     """Load and cache a Transformers model and its processor.
 
@@ -31,6 +36,9 @@ def get_hf_model_and_processor(
     processor classes by default. Image encoders use ``AutoModel`` with
     ``AutoImageProcessor``. ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
+
+    ``subfolder`` selects a model head. Its processor is loaded from the same
+    folder unless ``processor_subfolder`` explicitly selects another folder.
 
     Never support revision or local_files_only. Since it brings complexity we/agents dont need.
     """
@@ -73,6 +81,11 @@ def get_hf_model_and_processor(
         processor_kwargs["trust_remote_code"] = True
     if torch_dtype is not None:
         model_kwargs["torch_dtype"] = torch_dtype
+    if subfolder:
+        model_kwargs["subfolder"] = subfolder
+    processor_folder = subfolder if processor_subfolder is None else processor_subfolder
+    if processor_folder:
+        processor_kwargs["subfolder"] = processor_folder
 
     processor = processor_class.from_pretrained(model_id, **processor_kwargs)
     model = model_class.from_pretrained(model_id, **model_kwargs).to(DEVICE)
@@ -97,4 +110,14 @@ def get_hf_checkpoint(
         filename=filename,
         revision=revision,
     )
+    # safetensors handled in torch.load()
     return torch.load(artifact, map_location=map_location, weights_only=True)
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def get_hf_json(model_id: str, filename: str) -> Any:
+    """Load and cache JSON metadata shipped alongside Hub model weights."""
+    from huggingface_hub import hf_hub_download
+
+    artifact = hf_hub_download(repo_id=model_id, filename=filename)
+    return json.loads(Path(artifact).read_text())
