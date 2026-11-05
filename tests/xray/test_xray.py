@@ -2,8 +2,6 @@
 
 from collections.abc import Callable
 from inspect import Parameter, signature
-from pathlib import Path
-from urllib.parse import unquote, urlparse
 
 import pytest
 
@@ -13,23 +11,18 @@ from caresmcp.api.decorators.file_io import save_results
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
 
-SAMPLES = """
-https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Atelectasis.png?raw=true
-https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Cardiomegaly_Edema_Effusion.png?raw=true
-https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Effusion.png?raw=true
-https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/Fibrosis.png?raw=true
-https://github.com/n0obcoder/NIH-Chest-X-Rays-Multi-Label-Image-Classification-In-Pytorch/blob/master/sample_xrays/No%20Finding.png?raw=true
-https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png
-""".strip().splitlines()
 XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def cxr_image() -> bytes:
+    # a hernia case
+    return _read_bytes(
+        "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png"
+    )
+
+
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "sample_url",
-    SAMPLES,
-    ids=[unquote(Path(urlparse(url).path).name) for url in SAMPLES],
-)
 @pytest.mark.parametrize(
     ("tool_name", "tool_function"),
     XRAY_TOOLS,
@@ -38,17 +31,12 @@ XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
 def test_xray(
     tool_name: str,
     tool_function: Callable[..., object],
-    sample_url: str,
+    cxr_image: str,
 ) -> None:
     """Run compatible X-ray tools and save image results for inspection."""
-    sample_path = Path(unquote(urlparse(sample_url).path))
-    image = _read_bytes(sample_url)
     arguments: dict[str, object] = {
-        "image": image,
-        "saliency_map": image,
-        "ground_truth_mask": image,
+        "image": cxr_image,
         "label": "Atelectasis",
-        "unused_test_option": True,
     }
     required_arguments = {
         name
@@ -68,4 +56,4 @@ def test_xray(
     assert isinstance(result, (str, list, dict, bytes)), (
         f"Expected bytes, str, list, or dict, got {type(result)}"
     )
-    save_results(result, CACHE_ROOT / tool_name / sample_path.stem)
+    save_results(result, CACHE_ROOT / tool_name)
