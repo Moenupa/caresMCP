@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models import get_hf_model_and_processor
+from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS
 from caresmcp.util.moduleloader import requires
@@ -53,23 +54,15 @@ def hf_classifier(
     inputs = processor(images=decode_rgb(image), return_tensors="pt")
     inputs = {name: value.to(DEVICE) for name, value in inputs.items()}
     with torch.inference_mode():
-        logits = model(**inputs).logits[0]
-        scores = (
-            torch.sigmoid(logits)
-            if score_mode == "sigmoid"
-            else torch.softmax(logits, dim=-1)
-        )
-        score_values = scores.detach().float().cpu().tolist()
+        logits = model(**inputs).logits
 
     labels = [
         str(config_labels.get(index, config_labels.get(str(index), f"class_{index}")))
-        for index in range(len(score_values))
+        for index in range(logits.shape[-1])
     ]
     label_counts = Counter(labels)
     labels = [
         f"{label} (class {index})" if label_counts[label] > 1 else label
         for index, label in enumerate(labels)
     ]
-    return {
-        label: float(score) for label, score in zip(labels, score_values, strict=True)
-    }
+    return get_classification_scores(logits, dict(enumerate(labels)), score_mode)

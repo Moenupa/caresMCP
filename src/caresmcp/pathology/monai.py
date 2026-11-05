@@ -10,6 +10,7 @@ from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models.hf_hub import get_hf_checkpoint
+from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TAG_MONAI, TASK_CLS, TASK_SEG
 from caresmcp.util.moduleloader import requires
@@ -178,12 +179,13 @@ def monai_pathology_nuclei_classification(
         logits = _load_pathology_model(model_id)(inputs)
         if logits.shape != (1, 4) or not torch.isfinite(logits).all():
             raise RuntimeError("MONAI returned invalid nucleus class logits")
-        scores = logits.softmax(dim=1)[0].cpu().tolist()
-    class_scores = dict(zip(NUCLEI_CLASSES, scores, strict=True))
+        class_scores = get_classification_scores(
+            logits, dict(enumerate(NUCLEI_CLASSES)), "softmax"
+        )
     return {
         "model_id": model_id,
         "model_revision": REVISIONS[model_id],
-        "predicted_class": NUCLEI_CLASSES[int(np.argmax(scores))],
+        "predicted_class": max(class_scores, key=class_scores.__getitem__),
         "class_scores": class_scores,
     }
 
