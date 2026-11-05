@@ -42,7 +42,7 @@ ultrasound = [
     "caresmcp[hf,monai]",
 ]
 pathology = [
-    "caresmcp[torch]",
+    "caresmcp[torch,monai]",
     "cellpose>=4,<5",
     "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
 ]

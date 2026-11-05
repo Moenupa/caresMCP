@@ -1,13 +1,14 @@
-"""Saliency map utilities for chest X-ray localization evaluation."""
+"""Evaluate and segment chest X-ray saliency maps with CheXlocalize metrics."""
 
 from io import BytesIO
-from typing import Annotated, Any
+from typing import Annotated
 
 import cv2
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from pydantic import Field
 
+from caresmcp.api.imageio import convert_grayscale
 from caresmcp.registry import TASK_SEG, XRAY
 
 SALIENCY_MAP_FIELD = Field(description="Grayscale saliency map image")
@@ -31,10 +32,11 @@ def chexlocalize_evaluate(
     ground_truth_mask: Annotated[bytes, GROUND_TRUTH_MASK_FIELD],
     saliency_threshold: Annotated[float, SALIENCY_THRESHOLD_FIELD] = 0.5,
 ) -> dict[str, float]:
-    """Evaluate a saliency map against a radiologist reference mask.
+    """Measure saliency overlap and peak localization against a reference mask.
 
-    Inputs must be same-sized grayscale images; nonzero reference pixels mark
-    the finding. ``saliency_threshold`` is a cutoff on the [0, 1] saliency scale.
+    The saliency map and reference mask must have the same dimensions. Every
+    nonzero reference pixel is positive; saliency is thresholded on a normalized
+    [0, 1] scale.
 
     Returns:
         ``intersection_over_union``: overlap divided by union of the thresholded
@@ -48,21 +50,8 @@ def chexlocalize_evaluate(
     if not 0 <= saliency_threshold <= 1:
         raise ValueError("saliency_threshold must be between 0 and 1")
 
-    decoded: list[Any] = []
-    for label, image_bytes in (
-        ("saliency_map", saliency_map),
-        ("ground_truth_mask", ground_truth_mask),
-    ):
-        try:
-            with Image.open(BytesIO(image_bytes)) as source:
-                rgba = source.convert("RGBA")
-                grayscale = np.asarray(rgba.convert("L"), dtype=np.uint8)
-                alpha = np.asarray(rgba.getchannel("A"), dtype=np.uint8)
-                decoded.append((grayscale * alpha // 255).astype(np.uint8))
-        except (OSError, UnidentifiedImageError) as exc:
-            raise ValueError(f"{label} must contain a readable image") from exc
-
-    saliency, reference = decoded
+    saliency = convert_grayscale(saliency_map)
+    reference = convert_grayscale(ground_truth_mask)
     if saliency.shape != reference.shape:
         raise ValueError("saliency_map and ground_truth_mask must have the same size")
     reference_mask = reference > 0
@@ -87,11 +76,11 @@ def chexlocalize_segment(
     threshold: Annotated[float, SALIENCY_THRESHOLD_FIELD] = 0.5,
     smoothing_kernel_size: Annotated[int, SMOOTHING_KERNEL_SIZE_FIELD] = 0,
 ) -> bytes:
-    """Return a binary mask for a grayscale chest X-ray saliency map.
+    """Convert a chest X-ray saliency map into a binary localization mask.
 
-    ``threshold`` is a cutoff on the [0, 1] saliency scale.
-    ``smoothing_kernel_size`` is the neighborhood width in pixels; 0 disables
-    smoothing.
+    ``threshold`` is a cutoff on the normalized [0, 1] saliency scale.
+    ``smoothing_kernel_size`` sets the square neighborhood width in pixels;
+    values of 0 or 1 leave the map unsmoothed.
 
     Returns:
         A PNG mask with 255 for saliency at or above the cutoff and 0 elsewhere.
@@ -105,14 +94,7 @@ def chexlocalize_segment(
     if smoothing_kernel_size < 0:
         raise ValueError("smoothing_kernel_size must not be negative")
 
-    try:
-        with Image.open(BytesIO(saliency_map)) as source:
-            rgba = source.convert("RGBA")
-            grayscale = np.asarray(rgba.convert("L"), dtype=np.uint8)
-            alpha = np.asarray(rgba.getchannel("A"), dtype=np.uint8)
-            values = (grayscale * alpha // 255).astype(np.float32) / 255.0
-    except (OSError, UnidentifiedImageError) as exc:
-        raise ValueError("saliency_map must contain a readable image") from exc
+    values = convert_grayscale(saliency_map).astype(np.float32) / 255.0
 
     if smoothing_kernel_size > 1:
         values = cv2.blur(

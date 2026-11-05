@@ -7,9 +7,20 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def decode_rgb(image: bytes) -> Image.Image:
-    """Decode image bytes into an RGB PIL image."""
     with Image.open(BytesIO(image)) as pil_image:
         return pil_image.convert("RGB")
+
+
+def decode_rgba(image: bytes) -> Image.Image:
+    with Image.open(BytesIO(image)) as pil_image:
+        return pil_image.convert("RGBA")
+
+
+def convert_grayscale(image: bytes) -> np.ndarray:
+    rgba = decode_rgba(image)
+    grayscale = np.asarray(rgba.convert("L"), dtype=np.uint8)
+    alpha = np.asarray(rgba.getchannel("A"), dtype=np.uint8)
+    return (grayscale * alpha // 255).astype(np.uint8)
 
 
 def draw_legends(
