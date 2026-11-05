@@ -37,7 +37,7 @@ def _extract_cxr_embedding(
     model_id: CXRModel,
     pooling: Literal["cls", "mean"] = "cls",
 ) -> dict[str, Any]:
-    """Extract an image embedding using a supported chest radiograph encoder."""
+    """Return a chest radiograph feature vector with its encoder and pooling."""
     import torch
 
     model, processor = get_hf_model_and_processor(
@@ -77,7 +77,7 @@ def _retrieve_cxr_reports(
     reference_pooling: Literal["cls", "mean"] = "cls",
     top_k: int = 5,
 ) -> dict[str, Any]:
-    """Retrieve paired reports by image embedding similarity."""
+    """Return reference reports ordered by descending image cosine similarity."""
     import torch
     from torch.nn import functional
 
@@ -131,11 +131,9 @@ def cxr_encoder_image_embed(
 ) -> dict[str, Any]:
     """Create a visual embedding for a chest radiograph.
 
-    The embedding represents image features and does not provide disease
-    labels.
-
-    Returns:
-        The model ID, pooling method, and embedding vector.
+    ``embedding`` is an image feature vector for similarity comparisons using
+    the same encoder and pooling. ``cls`` selects the summary token; ``mean``
+    represents the average of the other image tokens.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino
@@ -164,12 +162,12 @@ def cxr_encoder_retrieve_similar_reports(
 ) -> dict[str, Any]:
     """Find reports paired with the most similar reference chest radiographs.
 
-    This ranks the supplied reports by cosine similarity between image
-    embeddings. It does not generate reports or diagnose findings.
+    Reference reports and image embeddings must correspond in list order.
+    Embeddings must use ``model_id`` and ``reference_pooling``.
 
     Returns:
-        The model ID, pooling method, and matching reports ordered by cosine
-        similarity.
+        Up to ``top_k`` supplied reports, ordered by descending image cosine
+        similarity in [-1, 1]; higher scores mean more similar image features.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino

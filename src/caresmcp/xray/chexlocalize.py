@@ -33,9 +33,13 @@ def chexlocalize_evaluate(
 ) -> dict[str, float]:
     """Evaluate a saliency map against a radiologist reference mask.
 
+    Inputs must be same-sized grayscale images; nonzero reference pixels mark
+    the finding. ``saliency_threshold`` is a cutoff on the [0, 1] saliency scale.
+
     Returns:
-        A mapping with intersection-over-union and pointing-game hit scores,
-        each in [0, 1].
+        ``intersection_over_union``: overlap divided by union of the thresholded
+        saliency and reference masks, in [0, 1]. ``pointing_game_hit``: 1 if the
+        saliency maximum lies inside the reference mask, otherwise 0.
 
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize
@@ -83,10 +87,14 @@ def chexlocalize_segment(
     threshold: Annotated[float, SALIENCY_THRESHOLD_FIELD] = 0.5,
     smoothing_kernel_size: Annotated[int, SMOOTHING_KERNEL_SIZE_FIELD] = 0,
 ) -> bytes:
-    """Convert a chest X-ray saliency map to a binary mask.
+    """Return a binary mask for a grayscale chest X-ray saliency map.
+
+    ``threshold`` is a cutoff on the [0, 1] saliency scale.
+    ``smoothing_kernel_size`` is the neighborhood width in pixels; 0 disables
+    smoothing.
 
     Returns:
-        A PNG mask with foreground value 255 and background value 0.
+        A PNG mask with 255 for saliency at or above the cutoff and 0 elsewhere.
 
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize

@@ -1,8 +1,4 @@
-"""Chest radiograph tools powered by TorchXRayVision.
-
-Good test samples:
-- Hernia: https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png
-"""
+"""Chest radiograph pathology scores, anatomical masks, and saliency overlays."""
 
 from io import BytesIO
 from typing import Annotated, Any, Literal
@@ -73,7 +69,7 @@ ANATOMICAL_TARGETS = (
 def _preprocess_xray(
     image: bytes, xrv: Any, transforms: Any, weight_or_size: int | ChestXrayWeights
 ) -> tuple[Any, int]:
-    """Decode and resize a radiograph using TorchXRayVision preprocessing."""
+    """Return a model-ready radiograph array and its square side length."""
 
     if isinstance(weight_or_size, str):
         weight_or_size = 512 if weight_or_size.startswith("resnet") else 224
@@ -100,13 +96,11 @@ def torchxrayvision_classify(
         ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
     ] = "densenet121-res224-all",
 ) -> dict[str, float]:
-    """Score by predicted pathology classes.
+    """Return pathology scores for a chest radiograph.
 
     Returns:
-        A mapping from labels to sigmoid-scaled scores, including:
-        Atelectasis, Consolidation, Infiltration, Pneumothorax, Edema, Emphysema,\
-        Fibrosis, Effusion, Pneumonia, Pleural_Thickening, Cardiomegaly, Nodule,\
-        Mass, Hernia, Lung Lesion, Fracture, Lung Opacity, Enlarged Cardiomediastinum
+        Pathology labels mapped to scores in [0, 1]; higher scores indicate
+        stronger model evidence for a finding. Labels depend on the weights.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -153,11 +147,11 @@ def torchxrayvision_segment_anatomy(
         ),
     ] = 0.5,
 ) -> bytes:
-    """Return a color-indexed PNG of 14 anatomical regions in a chest X-ray.
+    """Return a PNG mask of 14 anatomical regions in a chest radiograph.
 
-    The TorchXRayVision PSPNet predicts anatomical structures rather than
-    disease regions. Each pixel is assigned to its highest-scoring target when that score meets
-    ``probability_threshold``.
+    Colors identify structures in the included legend. Pixels below
+    ``probability_threshold`` are transparent; overlapping structures use the
+    highest-scoring label. The mask covers a square, center-cropped image.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -214,14 +208,11 @@ def torchxrayvision_localize(
         ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
     ] = "densenet121-res224-all",
 ) -> bytes:
-    """Return a Grad-CAM overlay for one TorchXRayVision pathology score.
+    """Return a PNG saliency overlay for the selected pathology label.
 
-    The heatmap highlights image regions that contribute positively to the
-    selected model output. It is a model explanation, not a pathology mask or
-    a radiologist-validated localization.
-
-    Returns:
-        A color PNG overlay on the square, center-cropped model input.
+    Warmer colors indicate stronger positive contributions to the model score,
+    not pathology boundaries. The overlay covers a square, center-cropped image.
+    The label must be available in the selected weights.
 
     See Also:
         https://github.com/mlmed/torchxrayvision

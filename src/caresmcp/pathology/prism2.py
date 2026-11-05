@@ -7,7 +7,9 @@ decisions. Access to the checkpoint requires accepting the Hugging Face terms
 and is not provided by this package.
 """
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
 
 from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
@@ -33,6 +35,17 @@ Prism2Operation = Literal[
     "base_embedding",
     "diagnostic_embedding",
 ]
+PATHOLOGY_TILE = Field(
+    description="Encoded RGB or grayscale pathology tile or ROI sampled at 20x magnification."
+)
+PRISM2_EMBEDDING_TYPE = Field(description="PRISM2 embedding type to return.")
+YES_NO_QUESTION = Field(min_length=1, description="A single yes/no question to score.")
+CAPTION_PROMPT = Field(
+    min_length=1, description="A single-turn prompt for pathology image generation."
+)
+MAX_NEW_TOKENS = Field(
+    ge=1, le=4096, description="Maximum number of new tokens to generate."
+)
 
 
 def _prepare_prism2_batch(image: bytes) -> tuple[Any, Any]:
@@ -140,23 +153,12 @@ def _run_prism2_operation(
 @TASK_EMBED.register("prism2_image_embed")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_embed(
-    image: bytes,
-    embedding_type: Literal["base", "diagnostic"] = "base",
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    embedding_type: Annotated[
+        Literal["base", "diagnostic"], PRISM2_EMBEDDING_TYPE
+    ] = "base",
 ) -> dict[str, Any]:
-    """Extract a PRISM2 embedding from one pathology tile or ROI image.
-
-    This tool is for non-commercial academic research and evaluation only. The
-    license excludes commercial, clinical, and Research Use Only (RUO) use.
-    Embeddings must not support diagnosis or patient-care decisions.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
-            magnification. The image is treated as one PRISM2 tile.
-        embedding_type: ``"base"`` returns a 2560-dimensional base embedding;
-            ``"diagnostic"`` returns a 3072-dimensional language-model embedding.
-
-    Returns:
-        The model identifier, embedding type, and embedding values.
+    """Encode a pathology tile or ROI as a PRISM2 embedding.
 
     See Also:
         https://huggingface.co/paige-ai/Prism2
@@ -176,23 +178,10 @@ def prism2_image_embed(
 @TASK_CLIP.register("prism2_score_yes_no_question")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_score_yes_no_question(
-    image: bytes,
-    question: str,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    question: Annotated[str, YES_NO_QUESTION],
 ) -> dict[str, Any]:
-    """Score a yes/no question for one pathology tile or ROI with PRISM2.
-
-    This tool is for non-commercial academic research and model evaluation only.
-    The license excludes commercial, clinical, and Research Use Only (RUO) use.
-    The score must not be used for diagnosis, clinical support, or patient-care
-    decisions.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
-            magnification. The image is treated as one PRISM2 tile.
-        question: A single yes/no question to score.
-
-    Returns:
-        The model identifier, question, and conditional probability of Yes.
+    """Score how likely a yes/no answer is for a pathology tile or ROI.
 
     See Also:
         https://huggingface.co/paige-ai/Prism2
@@ -207,26 +196,11 @@ def prism2_score_yes_no_question(
 @PATHOLOGY.register("prism2_image_caption")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_image_caption(
-    image: bytes,
-    prompt: str,
-    max_new_tokens: int = 200,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    prompt: Annotated[str, CAPTION_PROMPT],
+    max_new_tokens: Annotated[int, MAX_NEW_TOKENS] = 200,
 ) -> dict[str, Any]:
-    """Generate a single-turn response for a pathology tile or ROI image.
-
-    Generated text may contain errors. This tool is for non-commercial academic
-    research and evaluation only; the license excludes commercial, clinical,
-    and Research Use Only (RUO) use. Responses must not be used for diagnosis,
-    clinical support, or patient-care decisions.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or ROI sampled at 20x
-            magnification. The image is treated as one PRISM2 tile.
-        prompt: A single-turn prompt. Use ``"Write a report"`` for report
-            generation or provide a single question for question answering.
-        max_new_tokens: Maximum number of new tokens to generate, from 1 to 4096.
-
-    Returns:
-        The model identifier and generated response text.
+    """Generate text about a pathology tile or ROI from a prompt.
 
     See Also:
         https://huggingface.co/paige-ai/Prism2

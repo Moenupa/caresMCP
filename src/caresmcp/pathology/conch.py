@@ -2,7 +2,9 @@
 
 from functools import lru_cache, partial
 from importlib import import_module
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
@@ -12,6 +14,30 @@ from caresmcp.util.moduleloader import requires
 MODEL_ID = "MahmoodLab/conch"
 DEFAULT_PROMPT_TEMPLATES = ["a histopathology image of {class_name}"]
 DEFAULT_TOP_J = [1, 5, 10, 50, 100]
+PATHOLOGY_TILE = Field(description="Encoded RGB or grayscale pathology tile or ROI.")
+NONEMPTY_TEXTS = Field(min_length=1, description="Non-empty pathology descriptions.")
+CONCH_EMBEDDING_SPACE = Field(description="CONCH image embedding space to return.")
+NORMALIZE_EMBEDDING = Field(description="Whether to L2-normalize returned embeddings.")
+PROMPT_TEMPLATES = Field(min_length=1, description="Templates containing {class_name}.")
+CLASS_SYNONYMS = Field(
+    description="Optional synonym list for each class, in class order."
+)
+TILE_EMBEDDINGS = Field(
+    min_length=1, description="Projected CONCH image embeddings, one per tile."
+)
+TOP_J_VALUES = Field(min_length=1, description="Unique positive tile counts to pool.")
+QUERY_TEXT = Field(
+    min_length=1, description="Non-empty pathology description to search for."
+)
+CANDIDATE_IMAGE_IDS = Field(
+    min_length=1, description="Unique identifiers paired with candidate vectors."
+)
+CANDIDATE_IMAGE_EMBEDDINGS = Field(
+    min_length=1, description="Projected image embeddings paired with the identifiers."
+)
+TOP_K = Field(
+    ge=1, description="Maximum number of matching image identifiers to return."
+)
 
 
 @lru_cache(maxsize=1)
@@ -167,26 +193,17 @@ def _encode_image(
 @TASK_EMBED.register("conch_image_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_image_embed(
-    image: bytes,
-    embedding_space: Literal["projected", "visual"] = "projected",
-    normalize: bool = True,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    embedding_space: Annotated[
+        Literal["projected", "visual"], CONCH_EMBEDDING_SPACE
+    ] = "projected",
+    normalize: Annotated[bool, NORMALIZE_EMBEDDING] = True,
 ) -> dict[str, Any]:
-    """Extract a CONCH image embedding from one pathology tile or ROI.
-
-    The projected space is aligned with CONCH text embeddings. The visual space
-    is the image encoder representation before its contrastive projection.
-    Embeddings are representations, not diagnoses or calibrated probabilities.
-    CONCH weights are restricted to non-commercial academic research.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or region of interest.
-        embedding_space: Use the contrastive image-text space or the visual
-            representation before the contrastive projection.
-        normalize: L2-normalize the returned embedding.
+    """Encode a pathology tile or ROI in CONCH's projected or visual space.
 
     Returns:
-        Model provenance, embedding space, normalization setting, size, and
-        embedding values.
+        The embedding values and dimension. Projected vectors share a space
+        with CONCH text embeddings; visual vectors are unprojected image features.
 
     See Also:
         https://huggingface.co/MahmoodLab/CONCH
@@ -219,22 +236,13 @@ def conch_image_embed(
 @TASK_EMBED.register("conch_text_embed")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_text_embed(
-    texts: list[str],
-    normalize: bool = True,
+    texts: Annotated[list[str], NONEMPTY_TEXTS],
+    normalize: Annotated[bool, NORMALIZE_EMBEDDING] = True,
 ) -> dict[str, Any]:
-    """Extract CONCH text embeddings for pathology descriptions.
-
-    Text embeddings use the same projected space as projected image
-    embeddings. The vectors are representations, not diagnoses or calibrated
-    probabilities. CONCH weights are restricted to non-commercial academic
-    research.
-
-    Args:
-        texts: Non-empty pathology descriptions to encode.
-        normalize: L2-normalize each returned embedding.
+    """Encode pathology descriptions in CONCH's text space.
 
     Returns:
-        Model provenance and a JSON-safe embedding for each supplied text.
+        An embedding in the shared projected image-text space for each text.
 
     See Also:
         https://huggingface.co/MahmoodLab/CONCH
@@ -262,19 +270,10 @@ def conch_text_embed(
 @TASK_CLIP.register("conch_score_candidate_texts")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_score_candidate_texts(
-    image: bytes,
-    candidate_texts: list[str],
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    candidate_texts: Annotated[list[str], NONEMPTY_TEXTS],
 ) -> dict[str, Any]:
-    """Compare a pathology tile with candidate descriptions using CONCH.
-
-    Scores are cosine similarities, not probabilities or diagnostic confidence.
-    CONCH weights are restricted to non-commercial academic research.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or region of interest.
-        candidate_texts: Non-empty candidate descriptions to compare with the
-            image. Texts should describe visual content rather than request a
-            free-form response.
+    """Compare a pathology tile with candidate descriptions.
 
     Returns:
         The model identifier and candidate descriptions in supplied order,
@@ -319,24 +318,12 @@ def conch_score_candidate_texts(
 @TASK_CLIP.register("conch_zero_shot_classify")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_zero_shot_classify(
-    image: bytes,
-    class_names: list[str],
-    prompt_templates: list[str] | None = None,
-    class_synonyms: list[list[str]] | None = None,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    class_names: Annotated[list[str], NONEMPTY_TEXTS],
+    prompt_templates: Annotated[list[str] | None, PROMPT_TEMPLATES] = None,
+    class_synonyms: Annotated[list[list[str]] | None, CLASS_SYNONYMS] = None,
 ) -> dict[str, Any]:
-    """Rank candidate pathology classes using zero-shot prompt ensembles.
-
-    Similarity scores are not probabilities or diagnostic confidence. This
-    model is for non-commercial academic research and is not validated for
-    clinical decisions.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or region of interest.
-        class_names: Unique class labels to compare against the image.
-        prompt_templates: Optional templates containing ``{class_name}``.
-            Each template is evaluated for every class and synonym. If omitted,
-            a general histopathology prompt is used.
-        class_synonyms: Optional synonym list for each class, in class order.
+    """Rank candidate pathology classes by image-text similarity.
 
     Returns:
         The highest-scoring class and cosine similarity scores in supplied
@@ -382,27 +369,13 @@ def conch_zero_shot_classify(
 @PATHOLOGY.register("conch_mizero_classify_tiles")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_mizero_classify_tiles(
-    tile_embeddings: list[list[float]],
-    class_names: list[str],
-    prompt_templates: list[str] | None = None,
-    class_synonyms: list[list[str]] | None = None,
-    top_j: list[int] | None = None,
+    tile_embeddings: Annotated[list[list[float]], TILE_EMBEDDINGS],
+    class_names: Annotated[list[str], NONEMPTY_TEXTS],
+    prompt_templates: Annotated[list[str] | None, PROMPT_TEMPLATES] = None,
+    class_synonyms: Annotated[list[list[str]] | None, CLASS_SYNONYMS] = None,
+    top_j: Annotated[list[int] | None, TOP_J_VALUES] = None,
 ) -> dict[str, Any]:
-    """Classify a bag of pathology tiles with CONCH MI-Zero pooling.
-
-    Tile embeddings should come from one whole-slide image or ROI collection
-    and use CONCH's projected image-text space. This tool pools the highest
-    tile-level class similarities for each requested top-j value. Scores are
-    not probabilities or diagnostic confidence.
-
-    Args:
-        tile_embeddings: Non-empty projected CONCH image embeddings, one per
-            tile. These can be obtained with ``conch_image_embed``.
-        class_names: Unique class labels to compare against the tiles.
-        prompt_templates: Optional templates containing ``{class_name}``.
-        class_synonyms: Optional synonym list for each class, in class order.
-        top_j: Positive tile counts to pool. Values larger than the tile count
-            use all available tiles. Defaults to 1, 5, 10, 50, and 100.
+    """Rank pathology classes from a collection of tile embeddings.
 
     Returns:
         Model provenance, tile count, and pooled class scores for each top-j.
@@ -429,7 +402,9 @@ def conch_mizero_classify_tiles(
         raise ValueError("top_j must contain unique positive integers")
 
     try:
-        image_embeddings = torch.tensor(tile_embeddings, dtype=torch.float32, device=DEVICE)
+        image_embeddings = torch.tensor(
+            tile_embeddings, dtype=torch.float32, device=DEVICE
+        )
     except (TypeError, ValueError) as exc:
         raise ValueError("tile_embeddings must be rectangular numeric vectors") from exc
     if image_embeddings.ndim != 2 or not torch.isfinite(image_embeddings).all():
@@ -480,23 +455,14 @@ def conch_mizero_classify_tiles(
 @TASK_CLIP.register("conch_retrieve_images_by_text")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_retrieve_images_by_text(
-    query_text: str,
-    candidate_image_ids: list[str],
-    candidate_image_embeddings: list[list[float]],
-    top_k: int = 5,
+    query_text: Annotated[str, QUERY_TEXT],
+    candidate_image_ids: Annotated[list[str], CANDIDATE_IMAGE_IDS],
+    candidate_image_embeddings: Annotated[
+        list[list[float]], CANDIDATE_IMAGE_EMBEDDINGS
+    ],
+    top_k: Annotated[int, TOP_K] = 5,
 ) -> dict[str, Any]:
-    """Retrieve projected CONCH image embeddings that best match a text query.
-
-    Candidate vectors must come from ``conch_image_embed`` with the
-    ``projected`` embedding space. This enables text-to-image retrieval without
-    resending the original images.
-
-    Args:
-        query_text: Non-empty pathology description to search for.
-        candidate_image_ids: Unique identifiers paired with candidate vectors.
-        candidate_image_embeddings: Projected image embeddings paired with the
-            identifiers, in the same order.
-        top_k: Maximum number of matching image identifiers to return.
+    """Find candidate images that best match a pathology text query.
 
     Returns:
         The highest cosine similarity matches in descending order.

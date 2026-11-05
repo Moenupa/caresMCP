@@ -33,7 +33,7 @@ _FRAME_WIDTH = 112
 def _validate_channel_statistics(
     channel_mean: list[float], channel_std: list[float]
 ) -> None:
-    """Validate RGB pixel statistics used by the published checkpoint."""
+    """Require three finite RGB means and three positive, finite deviations."""
     if len(channel_mean) != 3 or len(channel_std) != 3:
         raise ValueError(
             "channel_mean and channel_std must each contain three RGB values"
@@ -57,7 +57,7 @@ def _decode_echonet_dynamic_video(
     cv2: Any,
     torch: Any,
 ) -> Any:
-    """Decode a centered 32-frame clip at a two-frame sampling period."""
+    """Return an EchoNet-Dynamic input tensor for an encoded echo video."""
 
     if not video:
         raise ValueError("video must contain a readable apical four-chamber echo")
@@ -122,7 +122,7 @@ def _decode_echonet_dynamic_video(
 
 @lru_cache(maxsize=1)
 def _load_echonet_dynamic_model() -> Any:
-    """Load and cache the released EchoNet-Dynamic EF checkpoint."""
+    """Return the pretrained EchoNet-Dynamic ejection fraction model."""
     import torch
     from torchvision.models.video import r2plus1d_18
 
@@ -146,7 +146,7 @@ def _load_echonet_dynamic_model() -> Any:
 
 @lru_cache(maxsize=1)
 def _load_echonet_dynamic_segmentation_model() -> Any:
-    """Load and cache the released EchoNet-Dynamic LV segmentation checkpoint."""
+    """Return the pretrained EchoNet-Dynamic left ventricle segmentation model."""
     import torch
     from torchvision.models.segmentation import deeplabv3_resnet50
 
@@ -204,10 +204,6 @@ def echonet_dynamic_predict_ef(
 ) -> dict[str, Any]:
     """Estimate left ventricular ejection fraction from an apical four-chamber video.
 
-    Returns:
-        Model name, estimated ejection fraction in percent, and the temporal
-        sampling used for the input clip.
-
     See Also:
         https://github.com/echonet/dynamic
         https://doi.org/10.1038/s41586-020-2145-8
@@ -259,8 +255,8 @@ def echonet_dynamic_segment_lv(
     """Segment the left ventricle in an apical four-chamber echocardiogram frame.
 
     Returns:
-        Palette PNG mask with transparent background and pixel values 0 for
-        background and 1 for the predicted left ventricle.
+        PNG mask at the input image size: 0 is transparent background and
+        1 (blue) is the predicted left ventricle.
 
     See Also:
         https://github.com/echonet/dynamic

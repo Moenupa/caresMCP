@@ -65,13 +65,12 @@ def monai_pathology_tumor_detection(
         int, Field(description="Number of tumor patches scored together.", ge=1, le=400)
     ] = 32,
 ) -> dict[str, Any]:
-    """Score tumor presence in an RGB H&E lymph-node tile or ROI at level-zero resolution.
+    """Score tumor-like content in an H&E lymph-node tile or ROI.
 
-    Returns model provenance, image size, and tumor scores from 0 to 1 for
-    224x224 patches. Each patch has a pixel box [left, top, right, bottom]
-    within the input image, with exclusive right and bottom bounds.
-    max_tumor_score is the highest patch score in the supplied region.
-    Scores are not calibrated diagnostic probabilities or slide-level predictions.
+    Returns:
+        A score from 0 to 1 for each 224×224 patch, its [left, top, right,
+        bottom] pixel box, and the highest patch score. Scores are not calibrated
+        probabilities.
 
     See Also:
         https://huggingface.co/MONAI/pathology_tumor_detection
@@ -146,14 +145,12 @@ def monai_pathology_nuclei_classification(
         ),
     ],
 ) -> dict[str, Any]:
-    """Classify a target nucleus in a 128x128 RGB H&E colorectal tissue patch.
+    """Classify the nucleus marked in a colorectal tissue patch.
 
-    Supply a patch at CoNSeP's 40x scale, centered on the target nucleus.
-    Its matching mask uses
-    zero for background and nonzero values for the target nucleus.
-    Returns model provenance, predicted_class, and class_scores for other,
-    inflammatory, epithelial, and spindle_shaped nuclei. Scores sum to 1
-    and are not calibrated diagnostic probabilities.
+    Returns:
+        The predicted class and scores for other, inflammatory, epithelial,
+        and spindle-shaped nuclei. Scores sum to 1 but are not calibrated
+        probabilities.
 
     See Also:
         https://huggingface.co/MONAI/pathology_nuclei_classification
@@ -206,14 +203,13 @@ def monai_pathology_nuclei_segmentation_classification(
         Field(description="Number of HoVerNet windows scored together.", ge=1, le=16),
     ] = 4,
 ) -> dict[str, Any]:
-    """Identify individual nuclei and their types in an RGB H&E colorectal tissue region.
+    """Segment nuclei and assign a type to each in colorectal tissue.
 
-    Supply a tile or ROI at CoNSeP's 40x scale.
-    Returns model provenance, instance_count, and two maps aligned with the
-    input image as [y][x]. In instance_map, each positive ID identifies one
-    nucleus. In type_map, IDs correspond to labels: background, other,
-    inflammatory, epithelial, and spindle_shaped. Zero denotes background
-    in both maps. Types follow CoNSeP categories and are research predictions.
+    Returns:
+        The nucleus count and maps aligned with the input as [y][x]. Positive
+        IDs in ``instance_map`` identify nuclei. ``type_map`` uses 0 for
+        background, then 1–4 for other, inflammatory, epithelial, and
+        spindle-shaped nuclei.
 
     See Also:
         https://huggingface.co/MONAI/pathology_nuclei_segmentation_classification

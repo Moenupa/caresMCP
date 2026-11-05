@@ -1,10 +1,11 @@
 import math
 from functools import lru_cache
 from io import BytesIO
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
@@ -12,6 +13,19 @@ from caresmcp.registry import PATHOLOGY, TASK_SEG
 from caresmcp.util.moduleloader import requires
 
 PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]
+PATHOLOGY_TILE = Field(description="Encoded RGB or grayscale pathology tile or ROI.")
+CELLPOSE_MODEL = Field(description="Pretrained Cellpose model to use.")
+CELL_DIAMETER = Field(
+    gt=0,
+    description="Expected cell diameter in pixels, or None for automatic scale handling.",
+)
+FLOW_THRESHOLD = Field(
+    description="Maximum flow error accepted for a segmented instance."
+)
+CELLPROB_THRESHOLD = Field(
+    description="Cell probability cutoff used to form instances."
+)
+MIN_CELL_SIZE = Field(ge=0, description="Minimum instance area in pixels.")
 
 
 @lru_cache(maxsize=2)
@@ -29,30 +43,15 @@ def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
 @TASK_SEG.register("cellpose_segment_pathology_cells")
 @requires("cellpose", extra="pathology")
 def cellpose_segment_pathology_cells(
-    image: bytes,
-    pretrained_model: PRETRAINED_MODELS = "cpsam",
-    diameter: float | None = None,
-    flow_threshold: float = 0.4,
-    cellprob_threshold: float = 0.0,
-    min_size: int = 15,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    pretrained_model: Annotated[PRETRAINED_MODELS, CELLPOSE_MODEL] = "cpsam",
+    diameter: Annotated[float | None, CELL_DIAMETER] = None,
+    flow_threshold: Annotated[float, FLOW_THRESHOLD] = 0.4,
+    cellprob_threshold: Annotated[float, CELLPROB_THRESHOLD] = 0.0,
+    min_size: Annotated[int, MIN_CELL_SIZE] = 15,
 ) -> bytes:
-    """Return a PNG overlay showing Cellpose-SAM instance boundaries.
+    """Segment cells in a pathology image and show their boundaries.
 
-    The pretrained Cellpose-SAM model segments instances in one two-dimensional
-    RGB pathology tile or region of interest. It does not assign cell types or
-    produce a diagnostic interpretation.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile image.
-        diameter: Expected cell diameter in pixels, or ``None`` for automatic
-            scale handling.
-        flow_threshold: Maximum flow error accepted for a segmented instance.
-        cellprob_threshold: Cell probability cutoff used to form instances.
-        min_size: Minimum instance area in pixels.
-
-    Returns:
-        An RGB PNG of the input tile with segmented instance boundaries and
-        the total instance count overlaid.
 
     See Also:
         https://cellpose.readthedocs.io/en/latest/models.html

@@ -29,7 +29,7 @@ _PANECHO_DEPS = ["torch", "torchvision", "timm"]
 
 
 def _panecho_transform() -> "Compose":
-    """Build shared preprocessing for RGB echo frames."""
+    """Return the PanEcho input transform for RGB echo frames."""
     from torchvision import transforms
 
     return transforms.Compose(
@@ -49,7 +49,7 @@ def _panecho_transform() -> "Compose":
 
 
 def _decode_panecho_video(video: bytes) -> Any:
-    """Decode and normalize 16 uniformly sampled frames from an echo video."""
+    """Return a PanEcho input tensor for an encoded echo video."""
     import torch
 
     if not video:
@@ -101,14 +101,14 @@ def _decode_panecho_video(video: bytes) -> Any:
 
 
 def _decode_panecho_image(image: bytes) -> "Tensor":
-    """Decode and normalize one image for the PanEcho image encoder."""
+    """Return a PanEcho input tensor for an encoded echo frame."""
     transform = _panecho_transform()
     tensor = transform(decode_rgb(image))
     return tensor.unsqueeze(0).to(DEVICE)
 
 
 def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
-    """Convert PanEcho outputs to JSON-safe, labeled prediction values."""
+    """Return task measurements and class probabilities keyed by task name."""
     task_by_name = {task.task_name: task for task in model.tasks}
     predictions: dict[str, Any] = {}
     for task_name, output in outputs.items():
@@ -144,13 +144,9 @@ def panecho_predict_video(
 ) -> dict[str, Any]:
     """Predict echocardiography measurements and findings from one video.
 
-    PanEcho returns regression estimates and class probabilities for its
-    echocardiography reporting tasks. Use ``panecho_predict_study`` to
-    combine predictions from multiple videos in the same study.
-
     Returns:
-        Model name and a mapping of task names to measurements or class
-        probability mappings. Measurements use the units described by PanEcho.
+        Predictions keyed by task name: numeric measurements in PanEcho's
+        task-specific units or probabilities keyed by class label.
 
     See Also:
         https://github.com/CarDS-Yale/PanEcho
@@ -186,10 +182,10 @@ def panecho_predict_study(
 ) -> dict[str, Any]:
     """Predict echocardiography measurements and findings for one study.
 
-    Each video receives equal weight in the study predictions.
-
     Returns:
-        Model name, number of videos, aggregation method, and task predictions.
+        Study predictions keyed by task name: mean measurements in PanEcho's
+        task-specific units or mean probabilities keyed by class label,
+        with equal weight for each video.
 
     See Also:
         https://github.com/CarDS-Yale/PanEcho
@@ -232,9 +228,6 @@ def panecho_video_embed(
 ) -> dict[str, Any]:
     """Extract a 768-dimensional PanEcho feature vector from an echo video.
 
-    Returns:
-        Model name and a JSON-safe 768-dimensional feature vector.
-
     See Also:
         https://github.com/CarDS-Yale/PanEcho
     """
@@ -262,9 +255,6 @@ def panecho_image_embed(
     ],
 ) -> dict[str, Any]:
     """Extract a 768-dimensional PanEcho feature vector from one echo frame.
-
-    Returns:
-        Model name and a JSON-safe feature vector for the image.
 
     See Also:
         https://github.com/CarDS-Yale/PanEcho

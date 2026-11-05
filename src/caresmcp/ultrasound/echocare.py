@@ -17,7 +17,7 @@ ULTRASOUND_IMG = Field(description="Ultrasound image or frame")
 
 
 def _decode_echocare_image(image: bytes, torch: Any) -> Any:
-    """Decode an RGB image and apply the EchoCare input transform."""
+    """Return an EchoCare input tensor for an encoded ultrasound frame."""
     from io import BytesIO
 
     if not image:
@@ -36,7 +36,7 @@ def _decode_echocare_image(image: bytes, torch: Any) -> Any:
 
 
 def _load_echocare_encoder(checkpoint: Any) -> Any:
-    """Load and cache the official EchoCare Swin Transformer encoder."""
+    """Return the EchoCare encoder for the supplied checkpoint."""
     from monai.networks.nets.swin_unetr import SwinTransformer
 
     model = SwinTransformer(
@@ -67,10 +67,6 @@ def _load_echocare_encoder(checkpoint: Any) -> Any:
 @requires(["torch", "monai", "transformers"], extra="ultrasound")
 def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, Any]:
     """Extract a 2048-dimensional EchoCare embedding from an ultrasound image.
-
-    Returns:
-        Model identifier and a 2048-dimensional embedding obtained by global
-        average pooling the final Swin Transformer feature map.
 
     See Also:
         https://github.com/CAIR-HKISI/EchoCare

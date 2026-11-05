@@ -1,7 +1,9 @@
 """Embedding tools for pathology foundation models."""
 
 from functools import lru_cache
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
@@ -16,6 +18,9 @@ PathologyEncoder = Literal[
     "bioptimus/H-optimus-0",
 ]
 PathologyPooling = Literal["model", "cls", "mean", "cls_mean"]
+PATHOLOGY_TILE = Field(description="Encoded RGB or grayscale pathology tile or ROI.")
+PATHOLOGY_ENCODER = Field(description="Supported Hugging Face pathology encoder.")
+PATHOLOGY_POOLING = Field(description="Token pooling method for the selected encoder.")
 
 
 @lru_cache(maxsize=2)
@@ -141,27 +146,12 @@ def _extract_pathology_embedding_tensor(
 @TASK_EMBED.register("pathology_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def pathology_image_embed(
-    image: bytes,
-    model_id: PathologyEncoder,
-    pooling: PathologyPooling | None = None,
+    image: Annotated[bytes, PATHOLOGY_TILE],
+    model_id: Annotated[PathologyEncoder, PATHOLOGY_ENCODER],
+    pooling: Annotated[PathologyPooling | None, PATHOLOGY_POOLING] = None,
 ) -> dict[str, Any]:
-    """Extract one feature vector from a pathology tile or region of interest.
+    """Encode a pathology tile or ROI as a feature vector.
 
-    The embedding is a model representation, not a diagnosis or calibrated
-    disease probability. Check the selected checkpoint's license and access
-    requirements before use.
-
-    Args:
-        image: Encoded RGB or grayscale pathology tile or region of interest.
-        model_id: Hugging Face model ID: ``bioptimus/H0-mini``,
-            ``MahmoodLab/UNI``, ``paige-ai/Virchow``, ``paige-ai/Virchow2``,
-            or ``bioptimus/H-optimus-0``.
-        pooling: For Virchow models, use the class token, mean patch token, or
-            their concatenation. If omitted, Virchow uses ``cls_mean`` and the
-            other encoders use their model output.
-
-    Returns:
-        The model identifier, pooling method, embedding size, and feature vector.
 
     See Also:
         https://huggingface.co/bioptimus/H0-mini
