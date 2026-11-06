@@ -6,9 +6,9 @@ import struct
 import zlib
 from typing import Literal
 
+from caresmcp.api.decorators import requires
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI
-from caresmcp.util.moduleloader import requires
 
 logger = logging.getLogger(__name__)
 

@@ -4,11 +4,11 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models import HFMODEL_ID_DESC, HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
-from caresmcp.util.moduleloader import requires
 
 CXRModel = Literal[
     "microsoft/rad-dino",

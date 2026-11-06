@@ -11,11 +11,11 @@ import numpy as np
 from PIL import Image
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
-from caresmcp.util.moduleloader import requires
 
 if TYPE_CHECKING:
     from torch import Tensor

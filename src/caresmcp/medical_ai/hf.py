@@ -1,12 +1,12 @@
 from collections import Counter
 from typing import Any, Literal
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.api.models import get_hf_model_and_processor
 from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS
-from caresmcp.util.moduleloader import requires
 
 
 @MEDAI.register("hf_classifier")

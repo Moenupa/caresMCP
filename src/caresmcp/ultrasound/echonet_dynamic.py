@@ -11,10 +11,10 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import encode_label_mask
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_SEG, ULTRASOUND
-from caresmcp.util.moduleloader import requires
 
 _EF_CHECKPOINT_URL = (
     "https://github.com/echonet/dynamic/releases/download/v1.0.0/"

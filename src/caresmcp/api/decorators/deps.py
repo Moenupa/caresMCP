@@ -1,5 +1,3 @@
-"""Utilities for functions backed by optional Python packages."""
-
 from collections.abc import Callable
 from functools import wraps
 from importlib.util import find_spec
@@ -7,23 +5,6 @@ from typing import ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
-
-
-def get_torch_device() -> str:
-    return get_cuda_device() or "cpu"
-
-
-def get_cuda_device() -> str | None:
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            return "cuda"
-
-    except ImportError:
-        return None
-
-    return None
 
 
 def requires(

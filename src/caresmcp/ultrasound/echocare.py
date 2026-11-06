@@ -6,10 +6,10 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.models import get_hf_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
-from caresmcp.util.moduleloader import requires
 
 _MODEL_ID = "Moenupa/EchoCare"
 _IMAGE_SIZE = 256

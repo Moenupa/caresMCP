@@ -5,10 +5,10 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_EMBED
-from caresmcp.util.moduleloader import requires
 
 PathologyEncoder = Literal[
     "bioptimus/H0-mini",

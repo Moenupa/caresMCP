@@ -6,10 +6,10 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
-from caresmcp.util.moduleloader import requires
 
 MODEL_ID = "MahmoodLab/conch"
 DEFAULT_PROMPT_TEMPLATES = ["a histopathology image of {class_name}"]

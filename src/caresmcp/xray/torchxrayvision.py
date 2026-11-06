@@ -7,10 +7,10 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import draw_legends
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
 from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
-from caresmcp.util.moduleloader import requires
 
 CHEST_XRAY_IMAGE_FIELD = Field(description="Chest radiograph image")
 TORCHXRAYVISION_WEIGHTS_FIELD = Field(

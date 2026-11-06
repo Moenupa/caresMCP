@@ -7,10 +7,10 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
-from caresmcp.util.moduleloader import requires
 
 PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]
 PATHOLOGY_TILE = Field(description="Encoded RGB or grayscale pathology tile or ROI.")

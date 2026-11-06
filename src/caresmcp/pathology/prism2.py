@@ -11,10 +11,10 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from caresmcp.api.decorators import requires
 from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
-from caresmcp.util.moduleloader import requires
 
 from .pathology_encoder import (
     _extract_pathology_embedding_tensor,
