@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.imageio import decode_rgb
-from caresmcp.api.models import HFModelType, get_hf_model_and_processor
+from caresmcp.api.models import HFMODEL_ID_DESC, HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
 from caresmcp.util.moduleloader import requires
@@ -17,7 +17,6 @@ CXRModel = Literal[
 ]
 
 CHEST_RADIOGRAPH_FIELD = Field(description="Chest radiograph image")
-CXR_MODEL_FIELD = Field(description="Supported Hugging Face chest X-ray encoder")
 CXR_POOLING_FIELD = Field(
     description="Use the CLS token or mean-pool the non-CLS tokens"
 )
@@ -126,7 +125,9 @@ def _retrieve_cxr_reports(
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_image_embed(
     image: Annotated[bytes, CHEST_RADIOGRAPH_FIELD],
-    model_id: Annotated[CXRModel, CXR_MODEL_FIELD] = "microsoft/rad-dino",
+    model_id: Annotated[
+        CXRModel, Field(description=HFMODEL_ID_DESC)
+    ] = "microsoft/rad-dino",
     pooling: Annotated[Literal["cls", "mean"], CXR_POOLING_FIELD] = "cls",
 ) -> dict[str, Any]:
     """Create a visual embedding for a chest radiograph.
@@ -156,7 +157,9 @@ def cxr_encoder_retrieve_similar_reports(
     reference_image_embeddings: Annotated[
         list[list[float]], REFERENCE_EMBEDDINGS_FIELD
     ],
-    model_id: Annotated[CXRModel, CXR_MODEL_FIELD] = "microsoft/rad-dino",
+    model_id: Annotated[
+        CXRModel, Field(description=HFMODEL_ID_DESC)
+    ] = "microsoft/rad-dino",
     reference_pooling: Annotated[Literal["cls", "mean"], CXR_POOLING_FIELD] = "cls",
     top_k: Annotated[int, TOP_K_FIELD] = 5,
 ) -> dict[str, Any]:

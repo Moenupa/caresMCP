@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from transformers import PreTrainedModel, ProcessorMixin
 
 
+HFMODEL_ID_DESC = "Huggingface Model Path"
+
+
 class HFModelType(Enum):
     """Transformers model and processor class combinations used internally."""
 
