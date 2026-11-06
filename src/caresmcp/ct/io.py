@@ -3,7 +3,7 @@
 import math
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,6 +11,9 @@ from PIL import Image
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import is_grayscale
+
+if TYPE_CHECKING:
+    from pydicom.dataset import Dataset
 
 CTInputFormat = Literal["auto", "image", "dicom"]
 CTRasterUnits = Literal["display", "hu"]
@@ -81,21 +84,20 @@ def _validate_slice_pixels(pixels: NDArray[Any]) -> NDArray[np.float32]:
     return pixels
 
 
-def _validate_dicom_calibration(dataset: Any) -> None:
-    if not hasattr(dataset, "PixelData"):
+def _validate_dicom_calibration(dataset: "Dataset") -> None:
+    if "PixelData" not in dataset:
         raise ValueError("DICOM input does not contain pixel data")
     if (
-        getattr(dataset, "Modality", None) != "CT"
-        or str(getattr(dataset, "RescaleType", "HU")).upper() != "HU"
+        "Modality" not in dataset
+        or dataset.Modality != "CT"
+        or str(dataset.get("RescaleType", "HU")).upper() != "HU"
     ):
         raise ValueError("DICOM input must contain CT values in HU")
-    modality_lut = getattr(dataset, "ModalityLUTSequence", None)
+    modality_lut = dataset.get("ModalityLUTSequence")
     if modality_lut:
-        if str(getattr(modality_lut[0], "ModalityLUTType", "")).upper() != "HU":
+        if str(modality_lut[0].get("ModalityLUTType", "")).upper() != "HU":
             raise ValueError("DICOM modality LUT must declare HU output")
-    elif not all(
-        hasattr(dataset, field) for field in ("RescaleSlope", "RescaleIntercept")
-    ):
+    elif "RescaleSlope" not in dataset or "RescaleIntercept" not in dataset:
         raise ValueError("DICOM CT input requires an HU calibration")
     else:
         slope = float(dataset.RescaleSlope)
@@ -117,16 +119,12 @@ def _decode_dicom(image: bytes) -> DecodedCTSlice:
         raise ValueError("Invalid CT DICOM") from exc
 
     spacing = None
-    spacing_value = _finite_sequence(getattr(dataset, "PixelSpacing", None), length=2)
+    spacing_value = _finite_sequence(dataset.get("PixelSpacing"), length=2)
     if spacing_value is not None and all(value > 0 for value in spacing_value):
         spacing = (spacing_value[0], spacing_value[1])
-    orientation = _finite_sequence(
-        getattr(dataset, "ImageOrientationPatient", None), length=6
-    )
-    position = _finite_sequence(
-        getattr(dataset, "ImagePositionPatient", None), length=3
-    )
-    slice_thickness = _positive_float(getattr(dataset, "SliceThickness", None))
+    orientation = _finite_sequence(dataset.get("ImageOrientationPatient"), length=6)
+    position = _finite_sequence(dataset.get("ImagePositionPatient"), length=3)
+    slice_thickness = _positive_float(dataset.get("SliceThickness"))
     return DecodedCTSlice(
         values=_validate_slice_pixels(pixels),
         intensity_units="hu",

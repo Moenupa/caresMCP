@@ -87,7 +87,9 @@ def _read_bytes(value: Any) -> bytes:
         # Match browser headers and TLS fingerprints for hosts that reject urllib.
         with requests.Session(impersonate="chrome") as session:
             try:
-                response = session.get(value, timeout=HTTP_TIMEOUT, allow_redirects=True)
+                response = session.get(
+                    value, timeout=HTTP_TIMEOUT, allow_redirects=True
+                )
                 response.raise_for_status()
             except requests.RequestsError:
                 # URLs may contain credentials or signed query parameters.
