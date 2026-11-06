@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.api.models import HFMODEL_ID_DESC, HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLIP, TASK_EMBED, XRAY
@@ -45,7 +45,7 @@ def _extract_cxr_embedding(
         trust_remote_code=model_id.startswith("m42-health/"),
     )
 
-    inputs = processor(images=decode_rgb(image), return_tensors="pt")
+    inputs = processor(images=decode_as(image, mode="RGB"), return_tensors="pt")
     inputs = {name: value.to(DEVICE) for name, value in inputs.items()}
     with torch.inference_mode():
         output = model(**inputs)

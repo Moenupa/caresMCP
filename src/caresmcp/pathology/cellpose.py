@@ -1,4 +1,3 @@
-import math
 from functools import lru_cache
 from io import BytesIO
 from typing import Annotated, Any, Literal
@@ -8,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
 
@@ -20,12 +19,15 @@ CELL_DIAMETER = Field(
     description="Expected cell diameter in pixels, or None for automatic scale handling.",
 )
 FLOW_THRESHOLD = Field(
-    description="Maximum flow error accepted for a segmented instance."
+    allow_inf_nan=False,
+    description="Maximum flow error accepted for a segmented instance.",
 )
 CELLPROB_THRESHOLD = Field(
-    description="Cell probability cutoff used to form instances."
+    allow_inf_nan=False, description="Cell probability cutoff used to form instances."
 )
-MIN_CELL_SIZE = Field(ge=0, description="Minimum instance area in pixels.")
+MIN_CELL_SIZE = Field(
+    ge=0, allow_inf_nan=False, description="Minimum instance area in pixels."
+)
 
 
 @lru_cache(maxsize=2)
@@ -52,27 +54,11 @@ def cellpose_segment_pathology_cells(
 ) -> bytes:
     """Segment cells in a pathology image and show their boundaries.
 
-
     See Also:
         https://cellpose.readthedocs.io/en/latest/models.html
         https://cellpose.readthedocs.io/en/latest/outputs.html
     """
-
-    if diameter is not None and (not math.isfinite(diameter) or diameter <= 0):
-        raise ValueError("diameter must be a finite positive number or None")
-    if not math.isfinite(flow_threshold):
-        raise ValueError("flow_threshold must be finite")
-    if not math.isfinite(cellprob_threshold):
-        raise ValueError("cellprob_threshold must be finite")
-    if min_size < 0:
-        raise ValueError("min_size must be non-negative")
-
-    try:
-        rgb_image = decode_rgb(image)
-    except (OSError, ValueError) as exc:
-        raise ValueError("image must contain a readable pathology tile") from exc
-
-    pixels = np.asarray(rgb_image, dtype=np.uint8).copy()
+    pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.uint8).copy()
     model = _load_cellpose_model(pretrained_model=pretrained_model)
     result = model.eval(
         pixels,

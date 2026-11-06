@@ -1,26 +1,25 @@
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def decode_rgb(image: bytes) -> Image.Image:
+def decode_as(image: bytes, mode: Literal["RGB", "RGBA"] | None = None) -> Image.Image:
     with Image.open(BytesIO(image)) as pil_image:
-        return pil_image.convert("RGB")
-
-
-def decode_rgba(image: bytes) -> Image.Image:
-    with Image.open(BytesIO(image)) as pil_image:
-        return pil_image.convert("RGBA")
+        return pil_image if mode is None else pil_image.convert(mode)
 
 
 def convert_grayscale(image: bytes) -> np.ndarray:
-    rgba = decode_rgba(image)
+    rgba = decode_as(image, mode="RGBA")
     grayscale = np.asarray(rgba.convert("L"), dtype=np.uint8)
     alpha = np.asarray(rgba.getchannel("A"), dtype=np.uint8)
     return (grayscale * alpha // 255).astype(np.uint8)
+
+
+def is_grayscale(mode: str) -> bool:
+    return mode in ("1", "L", "I", "F") or mode.startswith("I;16")
 
 
 def draw_legends(

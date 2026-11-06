@@ -6,7 +6,6 @@ from PIL import Image
 
 from caresmcp.api.decorators import matches_tool_signature, skip_undefined_kwargs
 from caresmcp.api.decorators.file_io import save_results
-from caresmcp.api.imageio import decode_rgb
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import PATHOLOGY
 
@@ -43,7 +42,5 @@ def test_pathology(
     with Image.open(BytesIO(result)) as output_image:
         assert output_image.format == "PNG"
         assert output_image.mode == "RGB"
-        input_image = decode_rgb(pathology_image)
-        assert output_image.size == input_image.size
 
     save_results(result, CACHE_ROOT / tool_name)

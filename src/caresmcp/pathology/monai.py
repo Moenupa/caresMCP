@@ -9,7 +9,7 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.api.models.hf_hub import get_hf_checkpoint
 from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
@@ -81,14 +81,7 @@ def monai_pathology_tumor_detection(
     import torch
 
     model_id = TUMOR_MODEL_ID
-    if (
-        isinstance(batch_size, bool)
-        or not isinstance(batch_size, int)
-        or not 1 <= batch_size <= 400
-    ):
-        raise ValueError("batch_size must be an integer from 1 to 400")
-
-    pixels = np.asarray(decode_rgb(image))
+    pixels = np.asarray(decode_as(image, mode="RGB"))
     height, width = pixels.shape[:2]
     boxes = [
         [x, y, min(x + TUMOR_PATCH_SIZE, width), min(y + TUMOR_PATCH_SIZE, height)]
@@ -161,7 +154,7 @@ def monai_pathology_nuclei_classification(
     from monai.apps.nuclick.transforms import AddLabelAsGuidanced
 
     model_id = NUCLEI_CLASSIFIER_ID
-    pixels = np.asarray(decode_rgb(image), dtype=np.float32)
+    pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.float32)
     with Image.open(BytesIO(mask)) as decoded_mask:
         if decoded_mask.mode not in ("1", "L", "I", "I;16", "P"):
             raise ValueError("mask must be a grayscale or indexed nucleus mask")
@@ -226,13 +219,7 @@ def monai_pathology_nuclei_segmentation_classification(
     )
 
     model_id = HOVERNET_ID
-    if (
-        isinstance(batch_size, bool)
-        or not isinstance(batch_size, int)
-        or not 1 <= batch_size <= 16
-    ):
-        raise ValueError("batch_size must be an integer from 1 to 16")
-    pixels = np.asarray(decode_rgb(image), dtype=np.float32)
+    pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.float32)
     # The released pipeline uses PILReader with reverse_indexing=True.
     inputs = torch.from_numpy(pixels.transpose(2, 1, 0).copy()).unsqueeze(0) / 255.0
     inferer = SlidingWindowHoVerNetInferer(

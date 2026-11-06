@@ -2,7 +2,7 @@ from collections import Counter
 from typing import Any, Literal
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.api.models import get_hf_model_and_processor
 from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
@@ -51,7 +51,7 @@ def hf_classifier(
             "Checkpoint has no id2label config, consider using a different model or checkpoint."
         )
 
-    inputs = processor(images=decode_rgb(image), return_tensors="pt")
+    inputs = processor(images=decode_as(image, mode="RGB"), return_tensors="pt")
     inputs = {name: value.to(DEVICE) for name, value in inputs.items()}
     with torch.inference_mode():
         logits = model(**inputs).logits

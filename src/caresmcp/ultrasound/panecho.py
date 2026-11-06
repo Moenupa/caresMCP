@@ -12,7 +12,7 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
@@ -103,7 +103,7 @@ def _decode_panecho_video(video: bytes) -> Any:
 def _decode_panecho_image(image: bytes) -> "Tensor":
     """Return a PanEcho input tensor for an encoded echo frame."""
     transform = _panecho_transform()
-    tensor = transform(decode_rgb(image))
+    tensor = transform(decode_as(image, mode="RGB"))
     return tensor.unsqueeze(0).to(DEVICE)
 
 

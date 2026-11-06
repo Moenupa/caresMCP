@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_EMBED
 
@@ -88,10 +88,7 @@ def _extract_pathology_embedding_tensor(
             "cls, mean, and cls_mean pooling are only supported by Virchow"
         )
 
-    try:
-        tile = decode_rgb(image)
-    except (OSError, ValueError) as exc:
-        raise ValueError("image must contain a readable pathology tile") from exc
+    tile = decode_as(image, mode="RGB")
     if model_id == "bioptimus/H-optimus-0" and tile.size != (224, 224):
         raise ValueError("H-optimus-0 requires 224 by 224 pixel tiles")
 

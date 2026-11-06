@@ -46,8 +46,8 @@ pathology = [
     "cellpose>=4,<5",
     "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
 ]
-medical-dicom = [
-    "pydicom>=3.0",
+dicom = [
+    "pydicom>=3,<4",
 ]
 
 [project.scripts]

@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_rgb
+from caresmcp.api.imageio import decode_as
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
 
@@ -60,11 +60,11 @@ def _prepare_conch_image(image: bytes, preprocess: Any) -> Any:
     """Decode and transform image bytes for CONCH."""
     import torch
 
-    try:
-        decoded = decode_rgb(image)
-    except (OSError, ValueError) as exc:
-        raise ValueError("image must contain a readable pathology tile") from exc
-    return preprocess(decoded).unsqueeze(0).to(DEVICE, dtype=torch.float32)
+    return (
+        preprocess(decode_as(image, mode="RGB"))
+        .unsqueeze(0)
+        .to(DEVICE, dtype=torch.float32)
+    )
 
 
 def _validate_texts(texts: list[str], name: str) -> None:
