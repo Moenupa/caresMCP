@@ -14,7 +14,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import encode_label_mask
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_SEG, ULTRASOUND
+from caresmcp.registry import TASK_REG, TASK_SEG, ULTRASOUND
 
 _EF_CHECKPOINT_URL = (
     "https://github.com/echonet/dynamic/releases/download/v1.0.0/"
@@ -184,6 +184,7 @@ def _load_echonet_dynamic_segmentation_model() -> Any:
 
 
 @ULTRASOUND.register("echonet_dynamic_predict_ef")
+@TASK_REG.register("echonet_dynamic_predict_ef")
 @requires(["torch", "torchvision"], extra="ultrasound")
 def echonet_dynamic_predict_ef(
     video: Annotated[

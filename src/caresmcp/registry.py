@@ -29,6 +29,7 @@ REGISTRIES = {
 TAG_MONAI = catalogue.create(pkg_name, "tag_monai")
 
 TASK_CLS = catalogue.create(pkg_name, "task_classify")
+TASK_REG = catalogue.create(pkg_name, "task_regression")
 TASK_SEG = catalogue.create(pkg_name, "task_segment")
 TASK_CLIP = catalogue.create(pkg_name, "task_clip")
 TASK_EMBED = catalogue.create(pkg_name, "task_embed")
