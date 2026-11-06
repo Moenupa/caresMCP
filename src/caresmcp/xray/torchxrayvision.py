@@ -1,14 +1,13 @@
 """Chest radiograph pathology scores, anatomical masks, and saliency overlays."""
 
-from io import BytesIO
 from typing import Annotated, Any, Literal
 
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import draw_legends
+from caresmcp.api.imageio import decode_as, draw_legends, encode_as
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
 from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
 
@@ -74,11 +73,7 @@ def _preprocess_xray(
     if isinstance(weight_or_size, str):
         weight_or_size = 512 if weight_or_size.startswith("resnet") else 224
     assert isinstance(weight_or_size, int), f"Expected int, got {type(weight_or_size)}"
-    try:
-        with Image.open(BytesIO(image)) as source:
-            pixels = np.asarray(source.convert("L"))
-    except (OSError, UnidentifiedImageError) as exc:
-        raise ValueError("image must contain a readable chest radiograph") from exc
+    pixels = np.asarray(decode_as(image, "L"))
 
     normalized = xrv.datasets.normalize(pixels, maxval=255, reshape=True)
     transform = transforms.Compose(
@@ -191,9 +186,7 @@ def torchxrayvision_segment_anatomy(
         title="Anatomical targets",
     )
 
-    output = BytesIO()
-    canvas.save(output, format="PNG", transparency=0)
-    return output.getvalue()
+    return encode_as(canvas, transparency=0)
 
 
 @XRAY.register("torchxrayvision_localize")
@@ -297,6 +290,4 @@ def torchxrayvision_localize(
     alpha = 0.45 * heatmap_array[..., None]
     result = np.uint8(np.clip((1 - alpha) * overlay + alpha * color_map, 0, 1) * 255)
 
-    output_image = BytesIO()
-    Image.fromarray(result, mode="RGB").save(output_image, format="PNG")
-    return output_image.getvalue()
+    return encode_as(Image.fromarray(result, mode="RGB"))

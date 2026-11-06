@@ -1,5 +1,4 @@
 from functools import lru_cache
-from io import BytesIO
 from typing import Annotated, Any, Literal
 
 import numpy as np
@@ -7,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_as
+from caresmcp.api.imageio import decode_as, encode_as
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
 
@@ -112,7 +111,4 @@ def cellpose_segment_pathology_cells(
         fill=(255, 255, 255),
         font=font,
     )
-
-    output = BytesIO()
-    output_image.save(output, format="PNG")
-    return output.getvalue()
+    return encode_as(output_image)

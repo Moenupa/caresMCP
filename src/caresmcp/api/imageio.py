@@ -6,9 +6,19 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def decode_as(image: bytes, mode: Literal["RGB", "RGBA"] | None = None) -> Image.Image:
+def decode_as(
+    image: bytes, mode: Literal["RGB", "RGBA", "L"] | None = None
+) -> Image.Image:
     with Image.open(BytesIO(image)) as pil_image:
         return pil_image if mode is None else pil_image.convert(mode)
+
+
+def encode_as(
+    image: Image.Image, *, format: Literal["PNG"] = "PNG", **save_kwargs
+) -> bytes:
+    obj = BytesIO()
+    image.save(obj, format=format, **save_kwargs)
+    return obj.getvalue()
 
 
 def convert_grayscale(image: bytes) -> np.ndarray:
