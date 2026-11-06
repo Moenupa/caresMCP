@@ -8,6 +8,8 @@ from urllib.parse import unquote_to_bytes, urlsplit
 
 from curl_cffi import requests
 
+from caresmcp.constants import HTTP_TIMEOUT
+
 from .base import adapt_inputs
 
 
@@ -85,7 +87,7 @@ def _read_bytes(value: Any) -> bytes:
         # Match browser headers and TLS fingerprints for hosts that reject urllib.
         with requests.Session(impersonate="chrome") as session:
             try:
-                response = session.get(value, timeout=15, allow_redirects=True)
+                response = session.get(value, timeout=HTTP_TIMEOUT, allow_redirects=True)
                 response.raise_for_status()
             except requests.RequestsError:
                 # URLs may contain credentials or signed query parameters.
