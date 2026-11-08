@@ -2,14 +2,13 @@
 
 from typing import Annotated
 
-from pydantic import Field, validate_call
+from pydantic import Field
 
 from caresmcp.api.imageio import decode_as, encode_as
 from caresmcp.registry import IMAGE_PROC
 
 
 @IMAGE_PROC.register("inspect")
-@validate_call
 def inspect(image: bytes) -> dict[str, object]:
     """Get metadata for a 2D image."""
     pil_image = decode_as(image)
@@ -22,7 +21,6 @@ def inspect(image: bytes) -> dict[str, object]:
 
 
 @IMAGE_PROC.register("crop")
-@validate_call
 def crop(
     image: bytes,
     left: Annotated[int, Field(ge=0)],
@@ -45,7 +43,6 @@ def crop(
 
 
 @IMAGE_PROC.register("cropcenter")
-@validate_call
 def cropcenter(
     image: bytes,
     width: Annotated[int, Field(gt=0)],

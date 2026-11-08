@@ -26,6 +26,10 @@ SMOOTHING_KERNEL_SIZE_FIELD = Field(
 )
 
 
+def _normalized_saliency(image: bytes) -> np.ndarray:
+    return convert_grayscale(image).astype(np.float64) / 255.0
+
+
 @XRAY.register("chexlocalize_evaluate")
 def chexlocalize_evaluate(
     saliency_map: Annotated[bytes, SALIENCY_MAP_FIELD],
@@ -41,16 +45,14 @@ def chexlocalize_evaluate(
     Returns:
         ``intersection_over_union``: overlap divided by union of the thresholded
         saliency and reference masks, in [0, 1]. ``pointing_game_hit``: 1 if the
-        saliency maximum lies inside the reference mask, otherwise 0.
+        saliency maximum lies inside the reference mask, otherwise 0. Ties use
+        the first maximum in row-major order, including constant maps.
 
     See Also:
         https://github.com/rajpurkarlab/cheXlocalize
     """
 
-    if not 0 <= saliency_threshold <= 1:
-        raise ValueError("saliency_threshold must be between 0 and 1")
-
-    saliency = convert_grayscale(saliency_map)
+    saliency = _normalized_saliency(saliency_map)
     reference = convert_grayscale(ground_truth_mask)
     if saliency.shape != reference.shape:
         raise ValueError("saliency_map and ground_truth_mask must have the same size")
@@ -59,7 +61,7 @@ def chexlocalize_evaluate(
     if reference_pixels == 0:
         raise ValueError("ground_truth_mask must contain at least one positive pixel")
 
-    predicted_mask = saliency >= round(saliency_threshold * 255)
+    predicted_mask = saliency >= saliency_threshold
     intersection = int(np.logical_and(predicted_mask, reference_mask).sum())
     union = int(np.logical_or(predicted_mask, reference_mask).sum())
     peak_y, peak_x = np.unravel_index(int(saliency.argmax()), saliency.shape)
@@ -89,12 +91,7 @@ def chexlocalize_segment(
         https://github.com/rajpurkarlab/cheXlocalize
     """
 
-    if not 0 <= threshold <= 1:
-        raise ValueError("threshold must be between 0 and 1")
-    if smoothing_kernel_size < 0:
-        raise ValueError("smoothing_kernel_size must not be negative")
-
-    values = convert_grayscale(saliency_map).astype(np.float32) / 255.0
+    values = _normalized_saliency(saliency_map)
 
     if smoothing_kernel_size > 1:
         values = cv2.blur(

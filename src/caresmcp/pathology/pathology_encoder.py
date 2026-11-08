@@ -1,12 +1,12 @@
 """Embedding tools for pathology foundation models."""
 
-from functools import lru_cache
 from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
+from caresmcp.api.models import get_timm_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_EMBED
 
@@ -23,16 +23,13 @@ PATHOLOGY_ENCODER = Field(description="Supported Hugging Face pathology encoder.
 PATHOLOGY_POOLING = Field(description="Token pooling method for the selected encoder.")
 
 
-@lru_cache(maxsize=2)
 def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
-    """Load a published pathology encoder and its checkpoint transforms."""
-    import timm
     import torch
     from timm.data import resolve_data_config
     from timm.data.transforms_factory import create_transform
     from torchvision import transforms
 
-    model_kwargs: dict[str, Any] = {"pretrained": True}
+    model_kwargs: dict[str, Any] = {}
     if model_id == "MahmoodLab/UNI":
         model_kwargs.update(init_values=1e-5, dynamic_img_size=True)
     elif model_id == "bioptimus/H-optimus-0":
@@ -42,9 +39,7 @@ def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
 
         model_kwargs.update(mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
 
-    model = timm.create_model(f"hf-hub:{model_id}", **model_kwargs)
-    model = model.to(DEVICE)
-    model.eval()
+    model = get_timm_model(f"hf-hub:{model_id}", **model_kwargs)
     if model_id == "bioptimus/H-optimus-0":
         transform = transforms.Compose(
             [
@@ -141,14 +136,13 @@ def _extract_pathology_embedding_tensor(
 
 @PATHOLOGY.register("pathology_image_embed")
 @TASK_EMBED.register("pathology_image_embed")
-@requires(["torch", "transformers"], extra="hf")
+@requires(["torch", "torchvision", "timm"], extra="pathology")
 def pathology_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
     model_id: Annotated[PathologyEncoder, PATHOLOGY_ENCODER],
     pooling: Annotated[PathologyPooling | None, PATHOLOGY_POOLING] = None,
 ) -> dict[str, Any]:
     """Encode a pathology tile or ROI as a feature vector.
-
 
     See Also:
         https://huggingface.co/bioptimus/H0-mini

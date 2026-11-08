@@ -3,7 +3,7 @@
 import math
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, validate_call
+from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.models.hf_hub import (
@@ -66,7 +66,6 @@ def _window_metadata(
 
 @CT.register("ct_slice_image_embed")
 @TASK_EMBED.register("ct_slice_image_embed")
-@validate_call
 @requires(["torch", "transformers"], extra="hf")
 def ct_slice_image_embed(
     image: Annotated[bytes, CT_IMAGE],
@@ -134,7 +133,6 @@ def ct_slice_image_embed(
 
 @CT.register("classify_ct_slice")
 @TASK_CLS.register("classify_ct_slice")
-@validate_call
 @requires(["torch", "transformers"], extra="hf")
 def classify_ct_slice(
     image: Annotated[bytes, CT_IMAGE],

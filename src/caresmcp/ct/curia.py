@@ -3,7 +3,7 @@
 from typing import Annotated, Any, Literal
 
 import numpy as np
-from pydantic import Field, validate_call
+from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.models.hf_hub import (
@@ -79,7 +79,6 @@ def _curia_hu_input(decoded: DecodedCTSlice, plane: CuriaCTPlane) -> np.ndarray:
 
 @CT.register("classify_ct_slice_with_curia")
 @TASK_CLS.register("classify_ct_slice_with_curia")
-@validate_call
 @requires(["torch", "transformers", "huggingface_hub"], extra="hf")
 def classify_ct_slice_with_curia(
     dicom_or_raster: Annotated[bytes, DICOM_OR_RASTER],

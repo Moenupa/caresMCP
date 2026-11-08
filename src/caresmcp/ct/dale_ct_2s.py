@@ -6,7 +6,7 @@ non-commercial research use. This tool does not provide a diagnosis.
 
 from typing import Annotated, Any
 
-from pydantic import Field, validate_call
+from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import get_timm_model
@@ -52,7 +52,6 @@ def _preprocess_dale_ct_2s(hu: Any) -> Any:
 
 @CT.register("dale_ct_2s_image_embed")
 @TASK_EMBED.register("dale_ct_2s_image_embed")
-@validate_call
 @requires(["torch", "timm", "transformers"], extra="ct")
 def dale_ct_2s_image_embed(
     image: Annotated[

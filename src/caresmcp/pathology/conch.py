@@ -13,9 +13,7 @@ from caresmcp.registry import PATHOLOGY, TASK_EMBED, TASK_RET
 NonemptyText = Annotated[str, Field(min_length=1, pattern=r"\S")]
 
 MODEL_ID = "MahmoodLab/conch"
-PATHOLOGY_TILE = Field(
-    description="Pathology tile or region-of-interest image."
-)
+PATHOLOGY_TILE = Field(description="Pathology tile or region-of-interest image.")
 NONEMPTY_TEXTS = Field(
     min_length=1,
     description="Pathology descriptions, each containing non-empty text.",
@@ -80,7 +78,7 @@ def _encode_image(
 
 @PATHOLOGY.register("conch_image_embed")
 @TASK_EMBED.register("conch_image_embed")
-@requires(["torch", "conch"], extra="pathology-conch")
+@requires(["torch", "conch"], extra="pathology")
 def conch_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
     embedding_space: Annotated[
@@ -117,7 +115,7 @@ def conch_image_embed(
 
 @PATHOLOGY.register("conch_text_embed")
 @TASK_EMBED.register("conch_text_embed")
-@requires(["torch", "conch"], extra="pathology-conch")
+@requires(["torch", "conch"], extra="pathology")
 def conch_text_embed(
     texts: Annotated[list[NonemptyText], NONEMPTY_TEXTS],
     normalize: Annotated[bool, NORMALIZE_EMBEDDING] = True,
@@ -149,7 +147,7 @@ def conch_text_embed(
 
 @PATHOLOGY.register("conch_score_candidate_texts")
 @TASK_RET.register("conch_score_candidate_texts")
-@requires(["torch", "conch"], extra="pathology-conch")
+@requires(["torch", "conch"], extra="pathology")
 def conch_score_candidate_texts(
     image: Annotated[bytes, PATHOLOGY_TILE],
     candidate_texts: Annotated[list[NonemptyText], NONEMPTY_TEXTS],

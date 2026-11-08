@@ -18,7 +18,7 @@ CXRModel = Literal[
 
 CHEST_RADIOGRAPH_FIELD = Field(description="Chest radiograph image")
 CXR_POOLING_FIELD = Field(
-    description="Use the CLS token or mean-pool the non-CLS tokens"
+    description="Use the CLS token or mean-pool image patch tokens"
 )
 REFERENCE_REPORTS_FIELD = Field(
     min_length=1,
@@ -55,10 +55,16 @@ def _extract_cxr_embedding(
         raise ValueError(
             "model must return last_hidden_state with shape [batch, tokens, features]"
         )
-    if pooling == "cls" or tokens.shape[1] == 1:
+    if pooling == "cls":
         vector = tokens[:, 0, :]
     else:
-        vector = tokens[:, 1:, :].mean(dim=1)
+        # DINOv2 variants may insert register tokens between CLS and patches.
+        first_patch = 1 + getattr(model.config, "num_register_tokens", 0)
+        if tokens.shape[1] <= first_patch:
+            raise ValueError("model must return image patch tokens for mean pooling")
+        vector = tokens[:, first_patch:, :].mean(dim=1)
+    if vector.shape[-1] == 0 or not torch.isfinite(vector).all():
+        raise ValueError("model must return a nonempty finite embedding")
 
     embedding = vector[0].detach().float().cpu().tolist()
     return {
@@ -134,7 +140,8 @@ def cxr_encoder_image_embed(
 
     ``embedding`` is an image feature vector for similarity comparisons using
     the same encoder and pooling. ``cls`` selects the summary token; ``mean``
-    represents the average of the other image tokens.
+    represents the average of image patch tokens, excluding CLS and register
+    tokens.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino

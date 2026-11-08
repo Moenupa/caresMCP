@@ -141,7 +141,7 @@ def _run_prism2_operation(
 
 @PATHOLOGY.register("prism2_image_embed")
 @TASK_EMBED.register("prism2_image_embed")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="pathology")
 def prism2_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
     embedding_type: Annotated[
@@ -166,7 +166,7 @@ def prism2_image_embed(
 
 @PATHOLOGY.register("prism2_score_yes_no_question")
 @TASK_CLS.register("prism2_score_yes_no_question")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="pathology")
 def prism2_score_yes_no_question(
     image: Annotated[bytes, PATHOLOGY_TILE],
     question: Annotated[str, YES_NO_QUESTION],
