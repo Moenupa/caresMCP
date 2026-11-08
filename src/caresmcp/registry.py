@@ -31,8 +31,11 @@ TAG_MONAI = catalogue.create(pkg_name, "tag_monai")
 TASK_CLS = catalogue.create(pkg_name, "task_classify")
 TASK_REG = catalogue.create(pkg_name, "task_regression")
 TASK_SEG = catalogue.create(pkg_name, "task_segment")
-TASK_CLIP = catalogue.create(pkg_name, "task_clip")
+TASK_RET = catalogue.create(pkg_name, "task_retrieve")
+TASK_CAP = catalogue.create(pkg_name, "task_caption")
 TASK_EMBED = catalogue.create(pkg_name, "task_embed")
+TASK_LOC = catalogue.create(pkg_name, "task_localize")
+TASK_DEN = catalogue.create(pkg_name, "task_denoise")
 
 TAGS = {name: value for name, value in locals().items() if name.startswith("TAG_")}
 TASKS = {name: value for name, value in locals().items() if name.startswith("TASK_")}

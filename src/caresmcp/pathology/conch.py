@@ -9,7 +9,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
 from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_EMBED, TASK_RET
 
 MODEL_ID = "MahmoodLab/conch"
 DEFAULT_PROMPT_TEMPLATES = ["a histopathology image of {class_name}"]
@@ -267,7 +267,7 @@ def conch_text_embed(
 
 
 @PATHOLOGY.register("conch_score_candidate_texts")
-@TASK_CLIP.register("conch_score_candidate_texts")
+@TASK_RET.register("conch_score_candidate_texts")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_score_candidate_texts(
     image: Annotated[bytes, PATHOLOGY_TILE],
@@ -315,7 +315,7 @@ def conch_score_candidate_texts(
 
 
 @PATHOLOGY.register("conch_zero_shot_classify")
-@TASK_CLIP.register("conch_zero_shot_classify")
+@TASK_RET.register("conch_zero_shot_classify")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_zero_shot_classify(
     image: Annotated[bytes, PATHOLOGY_TILE],
@@ -452,7 +452,7 @@ def conch_mizero_classify_tiles(
 
 
 @PATHOLOGY.register("conch_retrieve_images_by_text")
-@TASK_CLIP.register("conch_retrieve_images_by_text")
+@TASK_RET.register("conch_retrieve_images_by_text")
 @requires(["torch", "conch"], extra="pathology-conch")
 def conch_retrieve_images_by_text(
     query_text: Annotated[str, QUERY_TEXT],

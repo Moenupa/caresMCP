@@ -9,7 +9,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as, draw_legends, encode_as
 from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
-from caresmcp.registry import TASK_CLS, TASK_SEG, XRAY
+from caresmcp.registry import TASK_CLS, TASK_LOC, TASK_SEG, XRAY
 
 CHEST_XRAY_IMAGE_FIELD = Field(description="Chest radiograph image")
 TORCHXRAYVISION_WEIGHTS_FIELD = Field(
@@ -190,6 +190,7 @@ def torchxrayvision_segment_anatomy(
 
 
 @XRAY.register("torchxrayvision_localize")
+@TASK_LOC.register("torchxrayvision_localize")
 @requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
 def torchxrayvision_localize(
     image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],

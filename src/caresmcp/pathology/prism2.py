@@ -14,7 +14,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_CLIP, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_CLS, TASK_EMBED
 
 from .pathology_encoder import (
     _extract_pathology_embedding_tensor,
@@ -83,16 +83,6 @@ def _run_prism2_operation(
     """Run a requested PRISM2 operation on one pathology tile or ROI."""
     import torch
 
-    if operation not in (
-        "response",
-        "yes_no_score",
-        "base_embedding",
-        "diagnostic_embedding",
-    ):
-        raise ValueError(
-            "operation must be 'response', 'yes_no_score', 'base_embedding', "
-            "or 'diagnostic_embedding'"
-        )
     if operation in ("response", "yes_no_score") and (
         prompt is None or not prompt.strip()
     ):
@@ -175,7 +165,7 @@ def prism2_image_embed(
 
 
 @PATHOLOGY.register("prism2_score_yes_no_question")
-@TASK_CLIP.register("prism2_score_yes_no_question")
+@TASK_CLS.register("prism2_score_yes_no_question")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
 def prism2_score_yes_no_question(
     image: Annotated[bytes, PATHOLOGY_TILE],

@@ -9,7 +9,7 @@ from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 
 from caresmcp.api.imageio import encode_as
-from caresmcp.registry import CT, TASK_SEG
+from caresmcp.registry import CT, TASK_DEN, TASK_SEG
 
 from .io import (
     CTInputFormat,
@@ -252,6 +252,7 @@ def measure_ct_hu_regions(
 
 
 @CT.register("denoise_ct_slice")
+@TASK_DEN.register("denoise_ct_slice")
 def denoise_ct_slice(
     image: CTImage,
     method: Annotated[
