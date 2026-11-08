@@ -10,9 +10,16 @@ if TYPE_CHECKING:
 def get_classification_scores(
     logits: "Tensor",
     labels: Mapping[Any, str],
-    score_mode: Literal["softmax", "sigmoid"],
+    score_mode: Literal["softmax", "sigmoid", "identity"],
+    *,
+    skip_empty_labels: bool = False,
 ) -> dict[str, float]:
-    """Convert finite single-item logits to uniquely labeled scores."""
+    """Convert single-item outputs to labeled scores rounded to four decimals.
+
+    Use ``identity`` for scores already normalized by the model. Set
+    ``skip_empty_labels`` when empty labels identify unsupported output channels;
+    otherwise missing labels receive an index-based name.
+    """
     import torch
 
     if logits.ndim != 2 or logits.shape[0] != 1 or logits.shape[1] == 0:
@@ -30,5 +37,8 @@ def get_classification_scores(
         values = values.sigmoid()
     return {
         name: round(score, 4)
-        for name, score in zip(names, values[0].detach().cpu().tolist(), strict=True)
+        for i, (name, score) in enumerate(
+            zip(names, values[0].detach().cpu().tolist(), strict=True)
+        )
+        if not skip_empty_labels or labels.get(i) or labels.get(str(i))
     }

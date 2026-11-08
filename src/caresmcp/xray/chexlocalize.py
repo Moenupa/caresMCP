@@ -9,7 +9,7 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.imageio import convert_grayscale
-from caresmcp.registry import TASK_SEG, XRAY
+from caresmcp.registry import TASK_EVAL, TASK_SEG, XRAY
 
 SALIENCY_MAP_FIELD = Field(description="Grayscale saliency map image")
 GROUND_TRUTH_MASK_FIELD = Field(
@@ -31,6 +31,7 @@ def _normalized_saliency(image: bytes) -> np.ndarray:
 
 
 @XRAY.register("chexlocalize_evaluate")
+@TASK_EVAL.register("chexlocalize_evaluate")
 def chexlocalize_evaluate(
     saliency_map: Annotated[bytes, SALIENCY_MAP_FIELD],
     ground_truth_mask: Annotated[bytes, GROUND_TRUTH_MASK_FIELD],

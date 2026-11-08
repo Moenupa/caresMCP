@@ -36,6 +36,7 @@ TASK_CAP = catalogue.create(pkg_name, "task_caption")
 TASK_EMBED = catalogue.create(pkg_name, "task_embed")
 TASK_LOC = catalogue.create(pkg_name, "task_localize")
 TASK_DEN = catalogue.create(pkg_name, "task_denoise")
+TASK_EVAL = catalogue.create(pkg_name, "task_evaluate")
 
 TAGS = {name: value for name, value in locals().items() if name.startswith("TAG_")}
 TASKS = {name: value for name, value in locals().items() if name.startswith("TASK_")}
