@@ -51,6 +51,7 @@ def get_hf_model_and_processor(
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
     *,
+    use_fast: bool = True,
     subfolder: str = "",
     processor_subfolder: str | None = None,
 ) -> "tuple[PreTrainedModel, ProcessorMixin]":
@@ -112,7 +113,7 @@ def get_hf_model_and_processor(
         # a slow image processor, and fast processors become the default in an
         # upcoming release. Opt in explicitly; transformers still falls back to
         # the slow class when a checkpoint ships no fast implementation.
-        processor_kwargs["use_fast"] = True
+        processor_kwargs["use_fast"] = use_fast
     if trust_remote_code:
         model_kwargs["trust_remote_code"] = True
         processor_kwargs["trust_remote_code"] = True

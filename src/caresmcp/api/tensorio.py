@@ -20,7 +20,7 @@ def get_classification_scores(
     if not torch.isfinite(logits).all():
         raise ValueError("classifier returned non-finite logits")
     names: list[str] = [
-        labels.get(i) or labels.get(str(i)) or f"unnamed_{i}"
+        labels.get(i) or labels.get(str(i)) or f"unnamed_label_{i}"
         for i in range(logits.shape[1])
     ]
     values = logits.float()
@@ -28,4 +28,7 @@ def get_classification_scores(
         values = values.softmax(dim=-1)
     elif score_mode == "sigmoid":
         values = values.sigmoid()
-    return dict(zip(names, values[0].detach().cpu().tolist(), strict=True))
+    return {
+        name: round(score, 4)
+        for name, score in zip(names, values[0].detach().cpu().tolist(), strict=True)
+    }
