@@ -7,6 +7,7 @@ from .hf_hub import (
 )
 from .timm import get_timm_model
 from .torch_hub import get_torch_model
+from .torchxrayvision import get_torchxrayvision_model
 
 __all__ = [
     "HFMODEL_ID_DESC",
@@ -16,4 +17,5 @@ __all__ = [
     "get_hf_model_and_processor",
     "get_timm_model",
     "get_torch_model",
+    "get_torchxrayvision_model",
 ]

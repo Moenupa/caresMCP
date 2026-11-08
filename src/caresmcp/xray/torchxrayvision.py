@@ -1,6 +1,6 @@
 """Chest radiograph pathology scores, anatomical masks, and saliency overlays."""
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 import numpy as np
 from PIL import Image
@@ -8,7 +8,9 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as, draw_legends, encode_as
-from caresmcp.constants import DEVICE, MODEL_CACHE_DIR
+from caresmcp.api.models import get_torchxrayvision_model
+from caresmcp.api.tensorio import get_classification_scores
+from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLS, TASK_LOC, TASK_SEG, XRAY
 
 CHEST_XRAY_IMAGE_FIELD = Field(description="Chest radiograph image")
@@ -47,7 +49,7 @@ ChestXrayLabels = Literal[
     "Enlarged Cardiomediastinum",
 ]
 
-ANATOMICAL_TARGETS = (
+AnatomicalTarget = Literal[
     "Left Clavicle",
     "Right Clavicle",
     "Left Scapula",
@@ -62,7 +64,9 @@ ANATOMICAL_TARGETS = (
     "Mediastinum",
     "Weasand",
     "Spine",
-)
+]
+
+ANATOMICAL_TARGETS = get_args(AnatomicalTarget)
 
 
 def _preprocess_xray(
@@ -72,7 +76,6 @@ def _preprocess_xray(
 
     if isinstance(weight_or_size, str):
         weight_or_size = 512 if weight_or_size.startswith("resnet") else 224
-    assert isinstance(weight_or_size, int), f"Expected int, got {type(weight_or_size)}"
     pixels = np.asarray(decode_as(image, "L"))
 
     normalized = xrv.datasets.normalize(pixels, maxval=255, reshape=True)
@@ -90,12 +93,8 @@ def torchxrayvision_classify(
     weights: Annotated[
         ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
     ] = "densenet121-res224-all",
-) -> dict[str, float]:
-    """Return pathology scores for a chest radiograph.
-
-    Returns:
-        Pathology labels mapped to scores in [0, 1]; higher scores indicate
-        stronger model evidence for a finding. Labels depend on the weights.
+) -> dict:
+    """Return pathology multi-label scores for a chest radiograph.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -107,25 +106,20 @@ def torchxrayvision_classify(
     image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=weights)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
-    if weights.startswith("resnet"):
-        model = xrv.models.ResNet(
-            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR.as_posix()
-        )
-    else:
-        model = xrv.models.DenseNet(
-            weights=weights, apply_sigmoid=True, cache_dir=MODEL_CACHE_DIR.as_posix()
-        )
-    model = model.to(DEVICE)
-    model.eval()
-
+    model = get_torchxrayvision_model(weights, apply_sigmoid=True)
     with torch.no_grad():
-        scores = model(tensor)[0].detach().cpu().tolist()
+        scores = model(tensor)
 
-    pathologies = list(model.pathologies)
-    if len(pathologies) != len(scores):
-        raise RuntimeError("Model output count does not match its pathology labels")
-    # round decimal scores to 4 places for readability
-    return {name: round(float(score), 4) for name, score in zip(pathologies, scores)}
+    return {
+        "model_id": weights,
+        "score_mode": "sigmoid",
+        "scores": get_classification_scores(
+            scores,
+            dict(enumerate(model.pathologies)),
+            "identity",
+            skip_empty_labels=True,
+        ),
+    }
 
 
 @XRAY.register("torchxrayvision_segment_anatomy")
@@ -141,12 +135,27 @@ def torchxrayvision_segment_anatomy(
             description="Minimum sigmoid score for a pixel to receive a target label",
         ),
     ] = 0.5,
+    output: Annotated[
+        Literal["legend", "label_mask"],
+        Field(
+            description="PNG with a color legend, or a label mask with IDs 1–14 "
+            "in anatomical target order (0 is background)"
+        ),
+    ] = "legend",
+    region: Annotated[
+        AnatomicalTarget | None,
+        Field(
+            description="Return a binary PNG for this structure, independently "
+            "thresholded to preserve overlaps; overrides output"
+        ),
+    ] = None,
 ) -> bytes:
     """Return a PNG mask of 14 anatomical regions in a chest radiograph.
 
-    Colors identify structures in the included legend. Pixels below
-    ``probability_threshold`` are transparent; overlapping structures use the
-    highest-scoring label. The mask covers a square, center-cropped image.
+    Colors identify structures in the legend. Background is transparent, and
+    overlapping structures use the highest-scoring label. Masks cover a
+    512-pixel square center crop, with the legend panel added on the right.
+    Binary region masks use white for the structure and black for background.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -158,12 +167,15 @@ def torchxrayvision_segment_anatomy(
 
     image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=512)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
-    model = xrv.baseline_models.chestx_det.PSPNet(cache_dir=MODEL_CACHE_DIR.as_posix())
-    model = model.to(DEVICE)
-    model.eval()
-
+    model = get_torchxrayvision_model("anatomy")
     with torch.no_grad():
         probabilities = torch.sigmoid(model(tensor)[0])
+        if region is not None:
+            region_index = ANATOMICAL_TARGETS.index(region)
+            mask = probabilities[region_index] >= probability_threshold
+            return encode_as(
+                Image.fromarray(mask.to(torch.uint8).cpu().numpy() * 255, mode="L")
+            )
         confidence, labels = probabilities.max(dim=0)
         labels = torch.where(
             confidence >= probability_threshold,
@@ -180,11 +192,9 @@ def torchxrayvision_segment_anatomy(
 
     mask_image = Image.fromarray(mask, mode="P")
     mask_image.putpalette(palette)
-    canvas = draw_legends(
-        mask_image,
-        ANATOMICAL_TARGETS,
-        title="Anatomical targets",
-    )
+    if output == "label_mask":
+        return encode_as(mask_image, transparency=0)
+    canvas = draw_legends(mask_image, ANATOMICAL_TARGETS, title="Anatomical targets")
 
     return encode_as(canvas, transparency=0)
 
@@ -201,12 +211,19 @@ def torchxrayvision_localize(
     weights: Annotated[
         ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
     ] = "densenet121-res224-all",
+    output: Annotated[
+        Literal["overlay", "saliency"],
+        Field(
+            description="Color saliency overlay or 8-bit grayscale saliency PNG (0–255)"
+        ),
+    ] = "overlay",
 ) -> bytes:
     """Return a PNG saliency overlay for the selected pathology label.
 
     Warmer colors indicate stronger positive contributions to the model score,
-    not pathology boundaries. The overlay covers a square, center-cropped image.
-    The label must be available in the selected weights.
+    not pathology boundaries; brighter grayscale pixels have the same meaning.
+    Outputs cover a square center crop, 224 pixels for DenseNet or 512 for
+    ResNet, without a legend.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -221,24 +238,12 @@ def torchxrayvision_localize(
     )
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
-    if weights.startswith("resnet"):
-        model = xrv.models.ResNet(weights=weights, cache_dir=MODEL_CACHE_DIR.as_posix())
-        target_layer = model.model.layer4
-    else:
-        model = xrv.models.DenseNet(
-            weights=weights, cache_dir=MODEL_CACHE_DIR.as_posix()
-        )
-        target_layer = model.features.denseblock4
-    model = model.to(DEVICE)
-    model.eval()
-
-    pathologies = list(model.pathologies)
-    if label not in pathologies:
-        raise ValueError(
-            "label must be one of the supported labels: " + ", ".join(pathologies)
-        )
-    class_index = pathologies.index(label)
-
+    model = get_torchxrayvision_model(weights)
+    target_layer = (
+        model.model.layer4
+        if weights.startswith("resnet")
+        else model.features.denseblock4
+    )
     activations: list[Any] = []
 
     def capture_activation(
@@ -248,16 +253,12 @@ def torchxrayvision_localize(
     ) -> None:
         activations.append(output)
 
-    assert isinstance(target_layer, torch.nn.Module), (
-        f"Expected torch.nn.Module, got {type(target_layer)}"
-    )
+    pathologies = list(model.pathologies)
+    class_index = pathologies.index(label)
     hook = target_layer.register_forward_hook(capture_activation)
     try:
         with torch.enable_grad():
-            model.zero_grad(set_to_none=True)
             scores = model(tensor)
-            if len(activations) != 1:
-                raise RuntimeError("Could not capture the model's final feature map")
             feature_map = activations[0]
             gradients = torch.autograd.grad(
                 scores[0, class_index], feature_map, retain_graph=False
@@ -277,6 +278,9 @@ def torchxrayvision_localize(
     if maximum > 0:
         heatmap = heatmap / maximum
     heatmap_array = heatmap.detach().cpu().numpy().clip(0, 1)
+
+    if output == "saliency":
+        return encode_as(Image.fromarray(np.uint8(heatmap_array * 255), mode="L"))
 
     base = np.asarray(image_array[0], dtype=np.float32)
     base = np.clip((base + 1024.0) / 2048.0, 0, 1)
