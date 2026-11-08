@@ -20,7 +20,10 @@ MODEL_CACHE_DIR = CACHE_ROOT / "models"
 LRU_MAX_SIZE = 8
 HTTP_TIMEOUT = 15
 
-os.environ.setdefault("CELLPOSE_LOCAL_MODELS_PATH", str(MODEL_CACHE_DIR))
+os.environ.setdefault(
+    "CELLPOSE_LOCAL_MODELS_PATH", MODEL_CACHE_DIR.absolute().as_posix()
+)
+os.environ.setdefault("HF_HUB_CACHE", MODEL_CACHE_DIR.absolute().as_posix())
 
 
 def torch_autocast(dtype=None):
