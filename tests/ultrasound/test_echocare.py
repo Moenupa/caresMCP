@@ -3,9 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from caresmcp.api.decorators import save_returns
 from caresmcp.api.decorators.bytes_io import _read_bytes
-from caresmcp.api.decorators.file_io import save_results
-from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.ultrasound.echocare import echocare_image_embed
 
@@ -28,7 +27,8 @@ def test_echocare_tool_is_registered() -> None:
     SAMPLES,
     ids=[Path(url).parent.stem for url in SAMPLES],
 )
-def test_echocare_with_real_ultrasound_image(sample_url: str) -> None:
+@save_returns("echocare_image_embed")
+def test_echocare_with_real_ultrasound_image(sample_url: str):
     """Extract an embedding from a real example when weights are available."""
     image = _read_bytes(sample_url)
 
@@ -39,6 +39,4 @@ def test_echocare_with_real_ultrasound_image(sample_url: str) -> None:
 
     assert len(result["embedding"]) == 2048
     assert all(math.isfinite(value) for value in result["embedding"])
-    save_results(
-        result, CACHE_ROOT / "echocare_image_embed" / Path(sample_url).parent.stem
-    )
+    return result

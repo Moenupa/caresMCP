@@ -4,9 +4,11 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import matches_tool_signature, skip_undefined_kwargs
-from caresmcp.api.decorators.file_io import save_results
-from caresmcp.constants import CACHE_ROOT
+from caresmcp.api.decorators import (
+    matches_tool_signature,
+    save_returns,
+    skip_undefined_kwargs,
+)
 from caresmcp.registry import PATHOLOGY
 
 PATHOLOGY_TOOLS = tuple(
@@ -27,11 +29,12 @@ PATHOLOGY_TOOLS = tuple(
     PATHOLOGY_TOOLS,
     ids=[name for name, _ in PATHOLOGY_TOOLS],
 )
+@save_returns("pathology")
 def test_pathology(
     tool_name: str,
     tool_function: Callable[..., object],
     pathology_image: bytes,
-) -> None:
+):
     """Run pathology tools on image URLs and save outputs."""
     try:
         result = skip_undefined_kwargs(tool_function)(image=pathology_image)
@@ -43,4 +46,4 @@ def test_pathology(
         assert output_image.format == "PNG"
         assert output_image.mode == "RGB"
 
-    save_results(result, CACHE_ROOT / tool_name)
+    return result

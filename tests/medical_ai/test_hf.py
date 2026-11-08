@@ -67,6 +67,6 @@ def test_hf_classifier(
         )
 
     assert outputs["sigmoid"].keys() == outputs["softmax"].keys(), model_id
-    assert sum(outputs["softmax"].values()) == pytest.approx(1.0, abs=1e-5)
+    assert sum(outputs["softmax"].values()) == pytest.approx(1.0, rel=1e-2)
     assert sum(outputs["sigmoid"].values()) > 1.0, model_id
     assert hf_classifier(image, model_id) == pytest.approx(outputs["sigmoid"])

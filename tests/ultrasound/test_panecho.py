@@ -6,9 +6,7 @@ from typing import Any
 
 import pytest
 
-from caresmcp.api.decorators import adapt_byte_inputs
-from caresmcp.api.decorators.file_io import save_results
-from caresmcp.constants import CACHE_ROOT
+from caresmcp.api.decorators import adapt_byte_inputs, save_returns
 from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.ultrasound.panecho import (
     panecho_image_embed,
@@ -39,9 +37,10 @@ def test_panecho_tools_are_registered() -> None:
 
 @pytest.mark.slow
 @pytest.mark.cuda
+@save_returns("panecho")
 def test_panecho_predict_video(
     video_predictions: dict[str, Any],
-) -> None:
+):
     """Return finite measurements and valid class probabilities."""
     assert video_predictions["model"] == "PanEcho"
     assert video_predictions["predictions"]
@@ -51,18 +50,19 @@ def test_panecho_predict_video(
         if isinstance(pred, dict):
             assert pred
             assert all(0 <= value <= 1 for value in values)
-    save_results(video_predictions, CACHE_ROOT / "panecho_predict_video")
+    return video_predictions
 
 
 @pytest.mark.slow
 @pytest.mark.cuda
 @pytest.mark.parametrize("video_count", [1, 2])
+@save_returns("panecho")
 def test_panecho_predict_study(
     video_predictions: dict[str, Any],
     ultrasound_video: bytes,
     video_count: int,
     tmp_path: Path,
-) -> None:
+):
     """Predict studies from real video bytes and adapted file inputs."""
     if video_count == 1:
         study_predictions = panecho_predict_study([ultrasound_video])
@@ -80,7 +80,7 @@ def test_panecho_predict_study(
     )
     for task_name, expected in video_predictions["predictions"].items():
         assert study_predictions["predictions"][task_name] == pytest.approx(expected)
-    save_results(study_predictions, CACHE_ROOT / "panecho_predict_study")
+    return study_predictions
 
 
 def test_panecho_predict_study_requires_videos() -> None:

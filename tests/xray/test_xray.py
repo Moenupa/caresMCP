@@ -5,10 +5,8 @@ from inspect import Parameter, signature
 
 import pytest
 
-from caresmcp.api.decorators import skip_undefined_kwargs
+from caresmcp.api.decorators import save_returns, skip_undefined_kwargs
 from caresmcp.api.decorators.bytes_io import _read_bytes
-from caresmcp.api.decorators.file_io import save_results
-from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import XRAY
 
 XRAY_TOOLS = [(k, v) for k, v in XRAY.get_all().items() if "embedding" not in k]
@@ -28,11 +26,12 @@ def cxr_image() -> bytes:
     XRAY_TOOLS,
     ids=[name for name, _ in XRAY_TOOLS],
 )
+@save_returns("xray")
 def test_xray(
     tool_name: str,
     tool_function: Callable[..., object],
     cxr_image: str,
-) -> None:
+):
     """Run compatible X-ray tools and save image results for inspection."""
     arguments: dict[str, object] = {
         "image": cxr_image,
@@ -56,4 +55,4 @@ def test_xray(
     assert isinstance(result, (str, list, dict, bytes)), (
         f"Expected bytes, str, list, or dict, got {type(result)}"
     )
-    save_results(result, CACHE_ROOT / tool_name)
+    return result

@@ -9,8 +9,7 @@ from PIL import Image
 
 pytest.importorskip("monai")
 
-from caresmcp.api.decorators.file_io import save_results
-from caresmcp.constants import CACHE_ROOT
+from caresmcp.api.decorators import save_returns
 from caresmcp.pathology.monai import (
     monai_pathology_nuclei_classification,
     monai_pathology_nuclei_segmentation_classification,
@@ -40,7 +39,8 @@ def nuclei(tissue_region: Image.Image) -> dict[str, Any]:
     return monai_pathology_nuclei_segmentation_classification(_png(tissue_region))
 
 
-def test_tumor_patch_coordinates_and_batching(tissue_region: Image.Image) -> None:
+@save_returns("monai_pathology")
+def test_tumor_patch_coordinates_and_batching(tissue_region: Image.Image):
     """Cover an ROI including padded edge patches with stable model scores."""
     image = _png(tissue_region)
     result = monai_pathology_tumor_detection(image, batch_size=1)
@@ -54,13 +54,11 @@ def test_tumor_patch_coordinates_and_batching(tissue_region: Image.Image) -> Non
         [patch["tumor_score"] for patch in batched["patches"]], rel=1e-2
     )
     assert result["max_tumor_score"] == max(scores)
-    save_results(
-        {"single": result, "batched": batched},
-        CACHE_ROOT / "monai_pathology_tumor_detection",
-    )
+    return {"single": result, "batched": batched}
 
 
-def test_hovernet_maps(nuclei: dict[str, Any]) -> None:
+@save_returns("monai_pathology")
+def test_hovernet_maps(nuclei: dict[str, Any]):
     """Return image-aligned instance and type maps with an explicit legend."""
     instances = np.asarray(nuclei["instance_map"])
     types = np.asarray(nuclei["type_map"])
@@ -69,12 +67,11 @@ def test_hovernet_maps(nuclei: dict[str, Any]) -> None:
     assert set(np.unique(types)) <= set(nuclei["labels"])
     assert nuclei["instance_count"] == len(np.unique(instances[instances > 0]))
     assert nuclei["instance_count"] > 0
-    save_results(
-        nuclei, CACHE_ROOT / "monai_pathology_nuclei_segmentation_classification"
-    )
+    return nuclei
 
 
-def test_nuclei_classifier(tissue_region: Image.Image, nuclei: dict[str, Any]) -> None:
+@save_returns("monai_pathology")
+def test_nuclei_classifier(tissue_region: Image.Image, nuclei: dict[str, Any]):
     """Classify a real nucleus using its HoVerNet-predicted foreground mask."""
     instances = np.asarray(nuclei["instance_map"])
     positions = np.argwhere(instances > 0)
@@ -92,4 +89,4 @@ def test_nuclei_classifier(tissue_region: Image.Image, nuclei: dict[str, Any]) -
     assert all(0 <= value <= 1 for value in scores.values())
     assert sum(scores.values()) == pytest.approx(1.0)
     assert result["predicted_class"] == max(scores, key=scores.__getitem__)
-    save_results(result, CACHE_ROOT / "monai_pathology_nuclei_classification")
+    return result
