@@ -22,7 +22,9 @@ def compute_gradcam(
 
     activations: list[Tensor] = []
 
-    def capture_activation(_module: Any, _inputs: tuple[Any, ...], output: "Tensor") -> None:
+    def capture_activation(
+        _module: Any, _inputs: tuple[Any, ...], output: "Tensor"
+    ) -> None:
         activations.append(output)
 
     hook = target_layer.register_forward_hook(capture_activation)
