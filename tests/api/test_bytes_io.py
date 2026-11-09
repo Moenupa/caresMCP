@@ -96,3 +96,24 @@ def test_multiple_byte_parameters(image_sources):
         [image_sources["bytes"]] * len(sources),
         path,
     )
+
+
+@pytest.mark.parametrize(
+    "source_name", ["bytes", "path", "path_string", "data_uri", "url"]
+)
+def test_nullable_byte_sources(image_sources, source_name):
+    """Adapt nullable single/list inputs from each real-image source format."""
+
+    @adapt_byte_inputs
+    def read_optional(
+        image: Annotated[bytes | None, "optional image"] = None,
+        images: list[bytes] | None = None,
+    ):
+        return image, images
+
+    source: Any = image_sources[source_name]
+    image, images = read_optional(source, [source])
+    assert image == image_sources["bytes"]
+    assert images == [image_sources["bytes"]]
+    assert read_optional(None, None) == (None, None)
+    assert read_optional() == (None, None)

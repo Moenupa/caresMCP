@@ -35,6 +35,7 @@ def get_biovil_image_model(model_id: BioViLModel) -> Any:
         joint_feature_size=128,
     )
     filename, revision = BIOVIL_CHECKPOINTS[model_id]
+    # get_hf_checkpoint is already lru_cached.
     state = get_hf_checkpoint(model_id, filename, revision=revision)
     model.load_state_dict(state, strict=True)
     return model.to(DEVICE).eval()

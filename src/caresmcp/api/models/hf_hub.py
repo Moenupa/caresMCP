@@ -18,6 +18,7 @@ class HFModelType(Enum):
 
     IMAGE_CLASSIFICATION = "image_classification"
     IMAGE_ENCODER = "image_encoder"
+    IMAGE_PRETRAINING = "image_pretraining"
     AUTO = "auto"
     SAM = "sam"
     SEMANTIC_SEGMENTATION = "semantic_segmentation"
@@ -59,7 +60,9 @@ def get_hf_model_and_processor(
 
     Image-classification checkpoints use their task-specific model and image
     processor classes by default. Image encoders use ``AutoModel`` with
-    ``AutoImageProcessor``. ``HFModelType.AUTO`` uses ``AutoModel`` and
+    ``AutoImageProcessor``. Image pretraining uses ``AutoModelForPreTraining``
+    with its image processor, including reconstruction decoders.
+    ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
 
     Image processors load with ``use_fast=True``; checkpoints saved with a slow
@@ -89,6 +92,11 @@ def get_hf_model_and_processor(
 
             model_class = AutoModelForImageClassification
             processor_class = AutoImageProcessor
+        case HFModelType.IMAGE_PRETRAINING:
+            from transformers import AutoImageProcessor, AutoModelForPreTraining
+
+            model_class = AutoModelForPreTraining
+            processor_class = AutoImageProcessor
         case HFModelType.IMAGE_ENCODER:
             from transformers import AutoImageProcessor, AutoModel
 
@@ -107,6 +115,7 @@ def get_hf_model_and_processor(
     if model_type in (
         HFModelType.IMAGE_CLASSIFICATION,
         HFModelType.IMAGE_ENCODER,
+        HFModelType.IMAGE_PRETRAINING,
         HFModelType.SEMANTIC_SEGMENTATION,
     ):
         # transformers warns when `use_fast` is unset for checkpoints saved with

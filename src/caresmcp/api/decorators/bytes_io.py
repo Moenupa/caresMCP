@@ -3,7 +3,8 @@ import binascii
 from collections.abc import Callable
 from inspect import signature
 from os import PathLike
-from typing import Annotated, Any, get_args, get_origin, get_type_hints
+from types import UnionType
+from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 from urllib.parse import unquote_to_bytes, urlsplit
 
 from curl_cffi import requests
@@ -14,7 +15,7 @@ from .base import adapt_inputs
 
 
 def adapt_byte_inputs[**P, R](function: Callable[P, R]) -> Callable[P, R]:
-    """Adapt ``bytes`` and ``list[bytes]`` inputs from paths, data URIs, or URLs.
+    """Adapt byte inputs, including nullable ones, from paths, data URIs, or URLs.
 
     Args:
         function: Function whose supplied byte-valued arguments should be adapted.
@@ -45,16 +46,26 @@ def _byte_input_names(function: Callable[..., Any]) -> tuple[str, ...]:
 
 
 def _is_bytes_annotation(annotation: Any) -> bool:
-    """Return whether an annotation declares bytes or a list of bytes."""
+    """Recognize byte sources and nullable byte-source collections."""
     if get_origin(annotation) is Annotated:
         annotation = get_args(annotation)[0]
+    if get_origin(annotation) in (Union, UnionType):
+        variants = get_args(annotation)
+        non_null = [variant for variant in variants if variant is not type(None)]
+        return (
+            type(None) in variants
+            and len(non_null) == 1
+            and _is_bytes_annotation(non_null[0])
+        )
     if get_origin(annotation) is list:
         return get_args(annotation) == (bytes,)
     return annotation is bytes or annotation in ("bytes", "list[bytes]")
 
 
-def _read_byte_input(value: Any) -> bytes | list[bytes]:
-    """Read a single byte source or a list of byte sources."""
+def _read_byte_input(value: Any) -> bytes | list[bytes] | None:
+    """Read byte sources while preserving an omitted optional source."""
+    if value is None:
+        return None
     if isinstance(value, list):
         return [_read_bytes(item) for item in value]
     return _read_bytes(value)
