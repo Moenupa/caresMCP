@@ -9,6 +9,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as, draw_legends, encode_as
 from caresmcp.api.models import get_torchxrayvision_model
+from caresmcp.api.saliency import blend_saliency, compute_gradcam
 from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLS, TASK_LOC, TASK_SEG, XRAY
@@ -244,40 +245,10 @@ def torchxrayvision_localize(
         if weights.startswith("resnet")
         else model.features.denseblock4
     )
-    activations: list[Any] = []
-
-    def capture_activation(
-        _module: Any,
-        _inputs: tuple[Any, ...],
-        output: Any,
-    ) -> None:
-        activations.append(output)
-
-    pathologies = list(model.pathologies)
-    class_index = pathologies.index(label)
-    hook = target_layer.register_forward_hook(capture_activation)
-    try:
-        with torch.enable_grad():
-            scores = model(tensor)
-            feature_map = activations[0]
-            gradients = torch.autograd.grad(
-                scores[0, class_index], feature_map, retain_graph=False
-            )[0]
-            channel_weights = gradients.mean(dim=(2, 3), keepdim=True)
-            heatmap = torch.relu((channel_weights * feature_map).sum(dim=1))[0]
-    finally:
-        hook.remove()
-
-    heatmap = torch.nn.functional.interpolate(
-        heatmap[None, None],
-        size=(input_size, input_size),
-        mode="bilinear",
-        align_corners=False,
-    )[0, 0]
-    maximum = heatmap.max()
-    if maximum > 0:
-        heatmap = heatmap / maximum
-    heatmap_array = heatmap.detach().cpu().numpy().clip(0, 1)
+    class_index = list(model.pathologies).index(label)
+    heatmap_array = compute_gradcam(
+        model, tensor, target_layer, class_index, (input_size, input_size)
+    )
 
     if output == "saliency":
         return encode_as(Image.fromarray(np.uint8(heatmap_array * 255), mode="L"))
@@ -287,12 +258,4 @@ def torchxrayvision_localize(
     base_image = Image.fromarray(np.uint8(base * 255), mode="L").convert("RGB")
     base_image = base_image.resize((input_size, input_size), Image.Resampling.BILINEAR)
 
-    red = np.clip(1.5 * heatmap_array, 0, 1)
-    green = np.clip(1.5 - np.abs(2 * heatmap_array - 1.0) * 1.5, 0, 1)
-    blue = np.clip(1.0 - 1.5 * heatmap_array, 0, 1)
-    color_map = np.stack((red, green, blue), axis=-1)
-    overlay = np.asarray(base_image, dtype=np.float32) / 255.0
-    alpha = 0.45 * heatmap_array[..., None]
-    result = np.uint8(np.clip((1 - alpha) * overlay + alpha * color_map, 0, 1) * 255)
-
-    return encode_as(Image.fromarray(result, mode="RGB"))
+    return encode_as(blend_saliency(base_image, heatmap_array))
