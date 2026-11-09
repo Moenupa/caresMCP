@@ -8,7 +8,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
 from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_EMBED, TASK_RET
+from caresmcp.registry import PATHOLOGY, TASK_EMB, TASK_RET
 
 NonemptyText = Annotated[str, Field(min_length=1, pattern=r"\S")]
 
@@ -77,7 +77,7 @@ def _encode_image(
 
 
 @PATHOLOGY.register("conch_image_embed")
-@TASK_EMBED.register("conch_image_embed")
+@TASK_EMB.register("conch_image_embed")
 @requires(["torch", "conch"], extra="pathology")
 def conch_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
@@ -114,7 +114,7 @@ def conch_image_embed(
 
 
 @PATHOLOGY.register("conch_text_embed")
-@TASK_EMBED.register("conch_text_embed")
+@TASK_EMB.register("conch_text_embed")
 @requires(["torch", "conch"], extra="pathology")
 def conch_text_embed(
     texts: Annotated[list[NonemptyText], NONEMPTY_TEXTS],

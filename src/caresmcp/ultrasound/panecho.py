@@ -15,7 +15,7 @@ from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
 from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMBED, ULTRASOUND
+from caresmcp.registry import TASK_EMB, ULTRASOUND
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -216,7 +216,7 @@ def panecho_predict_study(
 
 
 @ULTRASOUND.register("panecho_video_embed")
-@TASK_EMBED.register("panecho_video_embed")
+@TASK_EMB.register("panecho_video_embed")
 @requires(_PANECHO_DEPS, extra="ultrasound")
 def panecho_video_embed(
     video: Annotated[
@@ -246,7 +246,7 @@ def panecho_video_embed(
 
 
 @ULTRASOUND.register("panecho_image_embed")
-@TASK_EMBED.register("panecho_image_embed")
+@TASK_EMB.register("panecho_image_embed")
 @requires(_PANECHO_DEPS, extra="ultrasound")
 def panecho_image_embed(
     image: Annotated[

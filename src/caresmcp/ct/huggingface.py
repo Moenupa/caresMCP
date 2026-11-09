@@ -14,7 +14,7 @@ from caresmcp.api.models.hf_hub import (
 from caresmcp.api.models.timm import get_timm_model
 from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
-from caresmcp.registry import CT, TASK_CLS, TASK_EMBED
+from caresmcp.registry import CT, TASK_CLS, TASK_EMB
 
 from .io import (
     CTInputFormat,
@@ -65,7 +65,7 @@ def _window_metadata(
 
 
 @CT.register("ct_slice_image_embed")
-@TASK_EMBED.register("ct_slice_image_embed")
+@TASK_EMB.register("ct_slice_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def ct_slice_image_embed(
     image: Annotated[bytes, CT_IMAGE],

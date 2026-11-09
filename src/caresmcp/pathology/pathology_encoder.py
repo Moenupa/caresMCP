@@ -2,17 +2,26 @@
 
 from typing import Annotated, Any, Literal
 
+from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
-from caresmcp.api.models import get_timm_model
+from caresmcp.api.models import (
+    HFModelType,
+    get_hf_model_and_processor,
+    get_timm_model,
+)
 from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_EMB
 
 PathologyEncoder = Literal[
     "bioptimus/H0-mini",
     "MahmoodLab/UNI",
+    "MahmoodLab/UNI2-h",
+    "owkin/phikon",
+    "owkin/phikon-v2",
+    "histai/hibou-b",
     "paige-ai/Virchow",
     "paige-ai/Virchow2",
     "bioptimus/H-optimus-0",
@@ -29,9 +38,40 @@ def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
     from timm.data.transforms_factory import create_transform
     from torchvision import transforms
 
+    if model_id in ("owkin/phikon", "owkin/phikon-v2", "histai/hibou-b"):
+        model, processor = get_hf_model_and_processor(
+            model_id,
+            model_type=HFModelType.IMAGE_ENCODER,
+            trust_remote_code=model_id == "histai/hibou-b",
+            use_fast=False,
+        )
+
+        def transform(image):
+            return processor(images=image, return_tensors="pt")["pixel_values"][0]
+
+        return model, transform
+
     model_kwargs: dict[str, Any] = {}
     if model_id == "MahmoodLab/UNI":
         model_kwargs.update(init_values=1e-5, dynamic_img_size=True)
+    elif model_id == "MahmoodLab/UNI2-h":
+        from timm.layers import SwiGLUPacked
+
+        model_kwargs.update(
+            img_size=224,
+            patch_size=14,
+            depth=24,
+            num_heads=24,
+            init_values=1e-5,
+            embed_dim=1536,
+            mlp_ratio=2.66667 * 2,
+            num_classes=0,
+            no_embed_class=True,
+            mlp_layer=SwiGLUPacked,
+            act_layer=torch.nn.SiLU,
+            reg_tokens=8,
+            dynamic_img_size=True,
+        )
     elif model_id == "bioptimus/H-optimus-0":
         model_kwargs.update(init_values=1e-5, dynamic_img_size=False)
     elif model_id in ("paige-ai/Virchow", "paige-ai/Virchow2"):
@@ -58,7 +98,7 @@ def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
 
 
 def _extract_pathology_embedding_tensor(
-    image: bytes,
+    image: bytes | Image.Image,
     model_id: PathologyEncoder,
     pooling: PathologyPooling | None = None,
 ) -> tuple[PathologyPooling, Any]:
@@ -83,7 +123,11 @@ def _extract_pathology_embedding_tensor(
             "cls, mean, and cls_mean pooling are only supported by Virchow"
         )
 
-    tile = decode_as(image, mode="RGB")
+    tile = (
+        image.convert("RGB")
+        if isinstance(image, Image.Image)
+        else decode_as(image, mode="RGB")
+    )
     if model_id == "bioptimus/H-optimus-0" and tile.size != (224, 224):
         raise ValueError("H-optimus-0 requires 224 by 224 pixel tiles")
 
@@ -95,6 +139,9 @@ def _extract_pathology_embedding_tensor(
     else:
         with torch.inference_mode():
             output = model(batch)
+
+    if model_id in ("owkin/phikon", "owkin/phikon-v2", "histai/hibou-b"):
+        output = output.last_hidden_state[:, 0, :]
 
     if (
         not isinstance(output, torch.Tensor)
@@ -135,8 +182,8 @@ def _extract_pathology_embedding_tensor(
 
 
 @PATHOLOGY.register("pathology_image_embed")
-@TASK_EMBED.register("pathology_image_embed")
-@requires(["torch", "torchvision", "timm"], extra="pathology")
+@TASK_EMB.register("pathology_image_embed")
+@requires(["torch", "torchvision", "timm", "transformers"], extra="pathology")
 def pathology_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
     model_id: Annotated[PathologyEncoder, PATHOLOGY_ENCODER],
@@ -147,6 +194,10 @@ def pathology_image_embed(
     See Also:
         https://huggingface.co/bioptimus/H0-mini
         https://huggingface.co/MahmoodLab/UNI
+        https://huggingface.co/MahmoodLab/UNI2-h
+        https://huggingface.co/owkin/phikon
+        https://huggingface.co/owkin/phikon-v2
+        https://huggingface.co/histai/hibou-b
         https://huggingface.co/paige-ai/Virchow
         https://huggingface.co/paige-ai/Virchow2
         https://huggingface.co/bioptimus/H-optimus-0

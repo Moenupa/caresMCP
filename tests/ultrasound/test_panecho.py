@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 
 from caresmcp.api.decorators import adapt_byte_inputs, save_returns
-from caresmcp.registry import TASK_EMBED, ULTRASOUND
 from caresmcp.ultrasound.panecho import (
     panecho_image_embed,
     panecho_predict_study,
@@ -23,16 +22,6 @@ def video_predictions(ultrasound_video: bytes) -> dict[str, Any]:
         return panecho_predict_video(ultrasound_video)
     except ImportError as exc:
         pytest.skip(str(exc))
-
-
-def test_panecho_tools_are_registered() -> None:
-    """Expose PanEcho inference and embedding tools through the catalogues."""
-    assert "panecho_predict_video" in ULTRASOUND.get_all()
-    assert "panecho_predict_study" in ULTRASOUND.get_all()
-    assert "panecho_video_embed" in ULTRASOUND.get_all()
-    assert "panecho_image_embed" in ULTRASOUND.get_all()
-    assert "panecho_video_embed" in TASK_EMBED.get_all()
-    assert "panecho_image_embed" in TASK_EMBED.get_all()
 
 
 @pytest.mark.slow

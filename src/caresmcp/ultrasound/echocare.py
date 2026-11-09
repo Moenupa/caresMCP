@@ -9,7 +9,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import get_hf_checkpoint
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMBED, ULTRASOUND
+from caresmcp.registry import TASK_EMB, ULTRASOUND
 
 _MODEL_ID = "Moenupa/EchoCare"
 _IMAGE_SIZE = 256
@@ -63,7 +63,7 @@ def _load_echocare_encoder(checkpoint: Any) -> Any:
 
 
 @ULTRASOUND.register("echocare_image_embed")
-@TASK_EMBED.register("echocare_image_embed")
+@TASK_EMB.register("echocare_image_embed")
 @requires(["torch", "monai", "transformers"], extra="ultrasound")
 def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, Any]:
     """Extract a 2048-dimensional EchoCare embedding from an ultrasound image.

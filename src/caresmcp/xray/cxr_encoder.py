@@ -8,7 +8,7 @@ from caresmcp.api.decorators import requires
 from caresmcp.api.imageio import decode_as
 from caresmcp.api.models import HFMODEL_ID_DESC, HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMBED, TASK_RET, XRAY
+from caresmcp.registry import TASK_EMB, TASK_RET, XRAY
 
 CXRModel = Literal[
     "microsoft/rad-dino",
@@ -127,7 +127,7 @@ def _retrieve_cxr_reports(
 
 
 @XRAY.register("cxr_encoder_image_embed")
-@TASK_EMBED.register("cxr_encoder_image_embed")
+@TASK_EMB.register("cxr_encoder_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def cxr_encoder_image_embed(
     image: Annotated[bytes, CHEST_RADIOGRAPH_FIELD],

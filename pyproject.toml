@@ -34,8 +34,14 @@ clip = ["open-clip-torch>=4.2.1,<5"]
 
 mri = ["caresmcp[hf,monai,timm,sam,itk]"]
 ct = ["caresmcp[torch,hf,timm]"]
-xray = ["caresmcp[torch]", "torchxrayvision>=1.5,<1.6"]
-ultrasound = ["caresmcp[hf,monai]"]
+xray = [
+    "caresmcp[hf,clip,itk]",
+    "torchxrayvision>=1.5,<1.6",
+    "flexray>=1.0.2,<1.1",
+    "onnxruntime>=1.20,<2",
+    "hi-ml-multimodal>=0.2.2,<0.3",
+]
+ultrasound = ["caresmcp[hf,monai,timm]"]
 pathology = [
     "caresmcp[torch,monai,timm]",
     "cellpose>=4,<5",

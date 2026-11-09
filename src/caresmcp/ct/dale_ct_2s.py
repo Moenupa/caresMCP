@@ -11,7 +11,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import get_timm_model
 from caresmcp.constants import DEVICE
-from caresmcp.registry import CT, TASK_EMBED
+from caresmcp.registry import CT, TASK_EMB
 
 from .io import CTInputFormat, CTRasterUnits, _decode_ct_slice
 
@@ -51,7 +51,7 @@ def _preprocess_dale_ct_2s(hu: Any) -> Any:
 
 
 @CT.register("dale_ct_2s_image_embed")
-@TASK_EMBED.register("dale_ct_2s_image_embed")
+@TASK_EMB.register("dale_ct_2s_image_embed")
 @requires(["torch", "timm", "transformers"], extra="ct")
 def dale_ct_2s_image_embed(
     image: Annotated[

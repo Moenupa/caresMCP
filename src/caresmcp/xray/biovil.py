@@ -15,7 +15,7 @@ from caresmcp.api.models._biovil import (
     get_biovil_text_model,
 )
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMBED, TASK_LOC, TASK_RET, XRAY
+from caresmcp.registry import TASK_EMB, TASK_LOC, TASK_RET, XRAY
 
 
 def _biovil_image_tensor(image: bytes, crop_size: int):
@@ -33,7 +33,7 @@ def _biovil_image_tensor(image: bytes, crop_size: int):
 
 
 @XRAY.register("biovil_image_embed")
-@TASK_EMBED.register("biovil_image_embed")
+@TASK_EMB.register("biovil_image_embed")
 @requires(["torch", "health_multimodal", "transformers"], extra="xray")
 def biovil_image_embed(
     image: Annotated[bytes, Field(description="Current chest radiograph image")],

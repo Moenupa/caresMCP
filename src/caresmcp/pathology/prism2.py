@@ -14,7 +14,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
-from caresmcp.registry import PATHOLOGY, TASK_CLS, TASK_EMBED
+from caresmcp.registry import PATHOLOGY, TASK_CLS, TASK_EMB
 
 from .pathology_encoder import (
     _extract_pathology_embedding_tensor,
@@ -140,7 +140,7 @@ def _run_prism2_operation(
 
 
 @PATHOLOGY.register("prism2_image_embed")
-@TASK_EMBED.register("prism2_image_embed")
+@TASK_EMB.register("prism2_image_embed")
 @requires(_PRISM2_REQUIRED_PACKAGES, extra="pathology")
 def prism2_image_embed(
     image: Annotated[bytes, PATHOLOGY_TILE],
