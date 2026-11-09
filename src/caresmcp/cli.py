@@ -14,6 +14,7 @@ from rich.table import Table
 
 from caresmcp.api.decorators import adapt_byte_inputs
 from caresmcp.api.decorators.file_io import get_kwargs_from_file, save_results
+from caresmcp.api.io import rich_table_to_df
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
 
@@ -78,7 +79,10 @@ def _supported_models(function: Callable[..., Any]) -> str:
 
 
 @app.command("list")
-def list_functions(category: str | None = typer.Argument(None)) -> None:
+def list_functions(
+    category: str | None = typer.Argument(None),
+    output: Path | None = None,
+) -> None:
     """Print registered tools and prompts grouped by catalogue category."""
     if category is not None and category not in REGISTRIES:
         valid_categories = ", ".join(REGISTRIES)
@@ -102,7 +106,7 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             summary = (function.__doc__ or "").strip().splitlines()
             description = summary[0] if summary else ""
             tags = ", ".join(
-                f"[white on {TAG_COLORS[tag_name]}] {tag_name.split('_')[-1]} [/]"
+                f"[white on {TAG_COLORS[tag_name]}]{tag_name.split('_')[-1]}[/]"
                 for tag_name, tag_registry in sorted((TAGS | TASKS).items())
                 if name in tag_registry.get_all()
             )
@@ -116,6 +120,8 @@ def list_functions(category: str | None = typer.Argument(None)) -> None:
             )
 
     console.print(table)
+    if output is not None:
+        rich_table_to_df(table).to_csv(output, sep="\t", index=False)
 
 
 @app.command("debug")
