@@ -5,7 +5,11 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as, get_classification_scores
-from caresmcp.api.models import HFMODEL_ID_DESC, get_hf_model_and_processor
+from caresmcp.api.models import (
+    HFMODEL_ID_DESC,
+    SOFTMAX_DESC,
+    get_hf_model_and_processor,
+)
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS
 
@@ -17,8 +21,7 @@ def hf_classifier(
     image: Annotated[bytes, Field(description="Image to classify")],
     model_id: Annotated[str, Field(description=HFMODEL_ID_DESC)],
     score_mode: Annotated[
-        Literal["sigmoid", "softmax"],
-        Field(description="Sigmoid for multi-label; softmax for exclusive classes."),
+        Literal["sigmoid", "softmax"], Field(description=SOFTMAX_DESC)
     ] = "sigmoid",
 ) -> dict[str, Any]:
     """Run a trained Transformers image-classification head on a CXR.
