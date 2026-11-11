@@ -1,3 +1,4 @@
+from .annotation import unpack_literal
 from .image import (
     convert_grayscale,
     decode_as,
@@ -20,4 +21,5 @@ __all__ = [
     "has_todo",
     "is_grayscale",
     "rich_table_to_df",
+    "unpack_literal",
 ]

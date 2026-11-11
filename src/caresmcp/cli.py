@@ -1,9 +1,6 @@
 """Command-line entry point for listing registries and running the MCP server."""
 
-from collections.abc import Callable
-from inspect import signature, unwrap
 from pathlib import Path
-from typing import Any, Literal, get_args, get_origin, get_type_hints
 
 import seaborn as sns
 import typer
@@ -13,7 +10,7 @@ from rich.table import Table
 
 from caresmcp.api.decorators import adapt_byte_inputs
 from caresmcp.api.decorators.file_io import get_kwargs_from_file, save_results
-from caresmcp.api.io import has_todo, rich_table_to_df
+from caresmcp.api.io import has_todo, rich_table_to_df, unpack_literal
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
 
@@ -42,34 +39,6 @@ TAG_COLORS = {
         sns.color_palette("husl", desat=0.5, n_colors=len(TASKS)).as_hex(),
     )
 }
-MODEL_PARAMETER_NAMES = {
-    "architecture",
-    "encoder",
-    "model",
-    "model_id",
-    "pretrained_model",
-    "weights",
-}
-
-
-def _supported_models(function: Callable[..., Any]) -> str:
-    """Return declared model choices from Literal-annotated model parameters."""
-    try:
-        annotations = get_type_hints(unwrap(function))
-    except (NameError, TypeError):
-        annotations = {}
-
-    model_values: list[str] = []
-    for name, parameter in signature(function).parameters.items():
-        if name not in MODEL_PARAMETER_NAMES:
-            continue
-
-        annotation = annotations.get(name, parameter.annotation)
-        if get_origin(annotation) is Literal:
-            model_values.extend(
-                value for value in get_args(annotation) if isinstance(value, str)
-            )
-    return ",\n".join(model_values)
 
 
 @app.command("list")
@@ -107,7 +76,7 @@ def list_functions(
             table.add_row(
                 f"[{color}]{cat_name}[/]",
                 f"[{color}]{name}[/]",
-                _supported_models(function),
+                ",\n".join(unpack_literal(function)),
                 tags,
                 description,
                 style="dim" if has_todo(description) else None,
