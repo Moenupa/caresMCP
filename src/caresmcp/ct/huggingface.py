@@ -14,7 +14,7 @@ from caresmcp.constants import DEVICE
 from caresmcp.registry import CT, TASK_CLS
 
 from ._arg import (
-    ClassifyCtSliceModelIdArg,
+    CTClassifier,
     CTImage,
     RasterRescaleIntercept,
     RasterRescaleSlope,
@@ -22,7 +22,6 @@ from ._arg import (
     WindowCenter,
     WindowWidth,
 )
-from ._arg import CTClassifier as CTClassifier  # noqa: PLC0414
 from .io import (
     CTRasterUnits,
     _decode_ct_slice,
@@ -46,7 +45,7 @@ def _window_metadata(
 @requires(["torch", "transformers"], extra="hf")
 def classify_ct_slice(
     image_or_dicom: CTImage,
-    model_id: ClassifyCtSliceModelIdArg = "oohtmeel/swin-tiny-patch4-finetuned-lung-cancer-ct-scans",
+    model_id: CTClassifier = "oohtmeel/swin-tiny-patch4-finetuned-lung-cancer-ct-scans",
     rescale_slope: RasterRescaleSlope = 1.0,
     rescale_intercept: RasterRescaleIntercept = 0.0,
     window_center: WindowCenter = 40.0,

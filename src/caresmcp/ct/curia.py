@@ -1,6 +1,6 @@
 """Curia's supported two-dimensional CT classification heads."""
 
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -16,7 +16,6 @@ from caresmcp.registry import CT, TASK_CLS
 
 from ._arg import (
     ClassifyCtSliceWithCuriaAnatomicalPlaneArg,
-    ClassifyCtSliceWithCuriaClassificationTaskArg,
     CTImage,
     CuriaCTPlane,
     RasterRescaleIntercept,
@@ -25,6 +24,11 @@ from ._arg import (
 from .io import DecodedCTSlice, _decode_ct_slice, _is_dicom
 
 CURIA_MODEL_ID = "raidium/curia"
+CuriaCTTask = Literal[
+    "ct_anatomy_classification",
+    "covid_pneumonia_classification",
+    "intracranial_hemorrhage_classification",
+]
 
 
 def _curia_hu_input(decoded: DecodedCTSlice, plane: CuriaCTPlane) -> np.ndarray:
@@ -59,7 +63,7 @@ def _curia_hu_input(decoded: DecodedCTSlice, plane: CuriaCTPlane) -> np.ndarray:
 @requires(["torch", "transformers", "huggingface_hub"], extra="hf")
 def classify_ct_slice_with_curia(
     image_or_dicom: CTImage,
-    classification_task: ClassifyCtSliceWithCuriaClassificationTaskArg = "ct_anatomy_classification",
+    classification_task: CuriaCTTask = "ct_anatomy_classification",
     anatomical_plane: ClassifyCtSliceWithCuriaAnatomicalPlaneArg = "axial",
     raster_hu_rescale_slope: RasterRescaleSlope = 1.0,
     raster_hu_rescale_intercept: RasterRescaleIntercept = 0.0,

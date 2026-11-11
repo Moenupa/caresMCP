@@ -10,9 +10,7 @@ from PIL import Image
 
 from caresmcp.api.decorators import save_returns
 from caresmcp.ct.classical import (
-    CTMotionModel,
     measure_ct_hu_regions,
-    register_ct_slices,
     segment_ct_hu_range,
     window_ct_slice,
 )
@@ -49,12 +47,6 @@ def sample(request: pytest.FixtureRequest) -> CTSample:
 def image_pixels(data: bytes) -> np.ndarray:
     with Image.open(BytesIO(data)) as image:
         return np.array(image)
-
-
-def image_bytes(pixels: np.ndarray, format: str = "PNG") -> bytes:
-    output = BytesIO()
-    Image.fromarray(pixels).save(output, format=format)
-    return output.getvalue()
 
 
 @pytest.fixture
@@ -140,39 +132,3 @@ def test_measure_ct_hu_regions(sample: CTSample, tissue_mask: bytes):
     assert limited["qualifying_region_count"] == len(regions)
     assert limited["regions_truncated"] == (len(regions) > limit)
     return {"all_regions": result, "limited": limited}
-
-
-@pytest.mark.parametrize("motion_model", ["translation", "rigid", "affine"])
-@save_returns("ct_classical", unpack=True)
-def test_register_ct_slices(ct_heart_image: bytes, motion_model: CTMotionModel):
-    """Recover a known motion of real anatomy in the documented moving-to-fixed direction."""
-    fixed = image_pixels(ct_heart_image)
-    height, width = fixed.shape
-    forward = cv2.getRotationMatrix2D(
-        (width / 2, height / 2), 0 if motion_model == "translation" else 2, 1
-    )
-    forward[:, 2] += [4, -3]
-    if motion_model == "affine":
-        forward[0, 1] += 0.01
-    moving = cv2.warpAffine(fixed, forward, (width, height))
-    result = register_ct_slices(
-        fixed_image_or_dicom=ct_heart_image,
-        moving_image_or_dicom=image_bytes(moving),
-        motion_model=motion_model,
-    )
-
-    recovered = np.asarray(result["moving_to_fixed_matrix"])
-    aligned = cv2.warpAffine(moving, recovered, (width, height))
-    # Check displacement across the image, without relying on matrix coefficients
-    # whose error depends on rotation center and image dimensions.
-    landmarks = np.array([[0.2, 0.2], [0.8, 0.2], [0.5, 0.8]]) * [width, height]
-    homogeneous = np.column_stack([landmarks, np.ones(len(landmarks))])
-    moved = homogeneous @ forward.T
-    restored = np.column_stack([moved, np.ones(len(moved))]) @ recovered.T
-    np.testing.assert_allclose(restored, landmarks, atol=0.5)
-    return {
-        "transform": result,
-        "fixed": image_bytes(fixed),
-        "moving": image_bytes(moving),
-        "aligned": image_bytes(aligned),
-    }

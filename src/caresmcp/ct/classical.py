@@ -1,4 +1,4 @@
-"""Classical CT preprocessing, segmentation, measurement, and registration tools."""
+"""Classical CT preprocessing, segmentation, and measurement tools."""
 
 from typing import Any, Self
 
@@ -19,17 +19,11 @@ from ._arg import (
     RasterRescaleIntercept,
     RasterRescaleSlope,
     RasterUnits,
-    RegisterCtSlicesConvergenceEpsilonArg,
-    RegisterCtSlicesFixedImageArg,
-    RegisterCtSlicesMaximumIterationsArg,
-    RegisterCtSlicesMotionModelArg,
-    RegisterCtSlicesMovingImageArg,
     SegmentCtHuRangeClosingKernelSizeArg,
     SegmentCtHuRangeKeepLargestComponentArg,
     WindowCenter,
     WindowWidth,
 )
-from ._arg import CTMotionModel as CTMotionModel  # noqa: PLC0414
 from .io import (
     _decode_ct_slice,
     _hu_range_mask,
@@ -194,96 +188,4 @@ def measure_ct_hu_regions(
         "qualifying_region_count": len(candidates),
         "regions_truncated": len(candidates) > len(selected),
         "regions": regions,
-    }
-
-
-@CT.register("register_ct_slices")
-def register_ct_slices(
-    fixed_image_or_dicom: RegisterCtSlicesFixedImageArg,
-    moving_image_or_dicom: RegisterCtSlicesMovingImageArg,
-    motion_model: RegisterCtSlicesMotionModelArg = "rigid",
-    fixed_rescale_slope: RasterRescaleSlope = 1.0,
-    fixed_rescale_intercept: RasterRescaleIntercept = 0.0,
-    moving_rescale_slope: RasterRescaleSlope = 1.0,
-    moving_rescale_intercept: RasterRescaleIntercept = 0.0,
-    window_center: WindowCenter = 40.0,
-    window_width: WindowWidth = 400.0,
-    maximum_iterations: RegisterCtSlicesMaximumIterationsArg = 500,
-    convergence_epsilon: RegisterCtSlicesConvergenceEpsilonArg = 1e-6,
-    raster_units: RasterUnits = "display",
-) -> dict[str, Any]:
-    """Estimate a two-dimensional transform aligning one CT slice to another.
-
-    The returned matrix maps moving-image coordinates to fixed-image
-    coordinates and can be used with OpenCV warpAffine without inverse
-    warping. HU inputs are windowed; display inputs retain their intensities.
-    Inputs must have matching dimensions and similar anatomy with a small
-    initial displacement. Spacing and orientation metadata are not used to
-    resample the images. A high correlation alone does not establish anatomical
-    alignment; inspect the transformed image before using the result.
-
-    Returns:
-        Enhanced correlation coefficient and a 2-by-3 moving-to-fixed matrix.
-    """
-
-    fixed_slice = _decode_ct_slice(
-        fixed_image_or_dicom,
-        fixed_rescale_slope,
-        fixed_rescale_intercept,
-        raster_units,
-    )
-    moving_slice = _decode_ct_slice(
-        moving_image_or_dicom,
-        moving_rescale_slope,
-        moving_rescale_intercept,
-        raster_units,
-    )
-    if fixed_slice.values.shape != moving_slice.values.shape:
-        raise ValueError(
-            "fixed_image_or_dicom and moving_image_or_dicom must have the same dimensions"
-        )
-    if fixed_slice.intensity_units != moving_slice.intensity_units:
-        raise ValueError(
-            "fixed_image_or_dicom and moving_image_or_dicom must use the same intensity units"
-        )
-    if fixed_slice.intensity_units == "hu":
-        fixed = _window_values(fixed_slice.values, window_center, window_width)
-        moving = _window_values(moving_slice.values, window_center, window_width)
-    else:
-        fixed = fixed_slice.values
-        moving = moving_slice.values
-    fixed = fixed.astype(np.float32) / 255
-    moving = moving.astype(np.float32) / 255
-    motion_types = {
-        "translation": cv2.MOTION_TRANSLATION,
-        "rigid": cv2.MOTION_EUCLIDEAN,
-        "affine": cv2.MOTION_AFFINE,
-    }
-    warp = np.eye(2, 3, dtype=np.float32)
-    criteria = (
-        cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
-        maximum_iterations,
-        convergence_epsilon,
-    )
-    try:
-        correlation, warp = cv2.findTransformECC(
-            fixed,
-            moving,
-            warp,
-            motion_types[motion_model],
-            criteria,
-        )
-    except cv2.error as exc:
-        raise ValueError("CT slice registration did not converge") from exc
-    if not np.isfinite(correlation) or not np.isfinite(warp).all():
-        raise ValueError("CT slice registration returned non-finite results")
-    if abs(float(np.linalg.det(warp[:, :2]))) < 1e-8:
-        raise ValueError("CT slice registration returned a singular transform")
-    warp = cv2.invertAffineTransform(warp)
-    return {
-        "motion_model": motion_model,
-        "correlation": float(correlation),
-        "moving_to_fixed_matrix": [
-            [float(value) for value in row] for row in warp.tolist()
-        ],
     }

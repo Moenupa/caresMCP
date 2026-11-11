@@ -4,7 +4,7 @@ import pytest
 
 from caresmcp.api.decorators import save_returns
 from caresmcp.ct.curia import (
-    ClassifyCtSliceWithCuriaClassificationTaskArg,
+    CuriaCTTask,
     classify_ct_slice_with_curia,
 )
 
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.slow
 @save_returns("ct_curia")
 def test_classify_dicom(
     ct_lung_cancer_dicom: bytes,
-    classification_task: ClassifyCtSliceWithCuriaClassificationTaskArg,
+    classification_task: CuriaCTTask,
     expected_head: str,
 ):
     for package in ("torch", "transformers", "huggingface_hub"):

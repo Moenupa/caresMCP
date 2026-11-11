@@ -6,7 +6,6 @@ from pydantic import Field
 
 from .io import CTRasterUnits
 
-CTMotionModel = Literal["translation", "rigid", "affine"]
 CuriaCTPlane = Literal["axial", "coronal", "sagittal"]
 CTClassifier = Literal[
     "oohtmeel/swin-tiny-patch4-finetuned-lung-cancer-ct-scans",
@@ -34,7 +33,7 @@ CTImage = Annotated[
     bytes,
     Field(
         min_length=1,
-        description="Single CT DICOM slice or grayscale raster image bytes.",
+        description="Single CT DICOM slice or grayscale raster image.",
     ),
 ]
 RasterUnits = Annotated[
@@ -88,40 +87,8 @@ MeasureCtHuRegionsMaximumRegionsArg = Annotated[
     int,
     Field(ge=1, description="Maximum regions returned, ordered by decreasing area."),
 ]
-RegisterCtSlicesFixedImageArg = Annotated[
-    bytes, Field(min_length=1, description="Reference CT slice bytes.")
-]
-RegisterCtSlicesMovingImageArg = Annotated[
-    bytes,
-    Field(min_length=1, description="CT slice bytes to align to the reference."),
-]
-RegisterCtSlicesMotionModelArg = Annotated[
-    CTMotionModel,
-    Field(
-        description="Translation, rigid rotation plus translation, or affine transform."
-    ),
-]
-RegisterCtSlicesMaximumIterationsArg = Annotated[
-    int, Field(ge=1, description="Maximum ECC optimization iterations.")
-]
-RegisterCtSlicesConvergenceEpsilonArg = Annotated[
-    float,
-    Field(
-        gt=0,
-        allow_inf_nan=False,
-        description="Stop when correlation changes by less than this value.",
-    ),
-]
-ClassifyCtSliceWithCuriaClassificationTaskArg = Annotated[
-    CuriaCTTask,
-    Field(description="Anatomy, COVID/pneumonia, or hemorrhage classification head."),
-]
 ClassifyCtSliceWithCuriaAnatomicalPlaneArg = Annotated[
     CuriaCTPlane, Field(description="Anatomical plane of the supplied CT slice.")
-]
-ClassifyCtSliceModelIdArg = Annotated[
-    CTClassifier,
-    Field(description="Swin Tiny or IQ-OTH/NCCD ViT lung CT checkpoint repository."),
 ]
 ClassifyCtHeadHemorrhagePreviousImageArg = Annotated[
     bytes,
