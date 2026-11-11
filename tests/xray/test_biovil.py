@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.xray.biovil import BioViLModel, biovil_image_embed
+from caresmcp.xray.biovil import BioViLModel
+from caresmcp.xray.embeddings import xray_image_embed
 
 pytestmark = pytest.mark.slow
 
@@ -15,7 +16,7 @@ pytestmark = pytest.mark.slow
 @save_returns("biovil")
 def test_biovil_image_embed(cxr_image: bytes, model_id: BioViLModel):
     """Check the normalized projected vector from each official checkpoint."""
-    result = biovil_image_embed(cxr_image, model_id=model_id)
+    result = xray_image_embed(cxr_image, model_id=model_id)
     vector = np.asarray(result["embedding"])
     assert vector.shape == (128,)
     assert np.isfinite(vector).all()
@@ -28,8 +29,14 @@ def test_biovil_image_embed(cxr_image: bytes, model_id: BioViLModel):
 @save_returns("biovil", unpack=True)
 def test_biovil_temporal_embed(cxr_image: bytes, cxr_image_followup: bytes):
     """Exercise the paired-study pathway with two NIH images of the same patient."""
-    single = biovil_image_embed(cxr_image_followup)
-    temporal = biovil_image_embed(cxr_image_followup, prior_image=cxr_image)
+    single = xray_image_embed(
+        cxr_image_followup, model_id="microsoft/BiomedVLP-BioViL-T"
+    )
+    temporal = xray_image_embed(
+        cxr_image_followup,
+        model_id="microsoft/BiomedVLP-BioViL-T",
+        prior_image=cxr_image,
+    )
     for result in (single, temporal):
         vector = np.asarray(result["embedding"])
         assert vector.shape == (128,)

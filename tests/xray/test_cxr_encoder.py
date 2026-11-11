@@ -1,39 +1,39 @@
-from typing import get_args
+"""Verify the unified encoder and generic matcher with real NIH radiographs."""
 
 import numpy as np
 import pytest
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.xray.cxr_encoder import (
-    CXRModel,
-    cxr_encoder_image_embed,
-    cxr_encoder_retrieve_similar_reports,
-)
+from caresmcp.xray.embeddings import xray_image_embed, xray_image_similarity
 
 pytestmark = pytest.mark.slow
 
 
-@pytest.mark.parametrize("model_id", get_args(CXRModel))
 @pytest.mark.parametrize("pooling", ["cls", "mean"])
 @save_returns("cxr_encoder", unpack=True)
-def test_cxr_encoder(cxr_image: bytes, model_id: CXRModel, pooling):
-    """Check finite embeddings and retrieval of the image's own paired caption."""
+def test_cxr_encoder(cxr_image: bytes, cxr_image_followup: bytes, pooling):
+    """Rank two real images and reject genuinely different pooling representations."""
     pytest.importorskip("transformers")
-    embedding = cxr_encoder_image_embed(cxr_image, model_id=model_id, pooling=pooling)
-    assert embedding["model_id"] == model_id
+    embedding = xray_image_embed(cxr_image, pooling=pooling)
+    followup = xray_image_embed(cxr_image_followup, pooling=pooling)
+    assert embedding["model_id"] == "microsoft/rad-dino"
     assert embedding["pooling"] == pooling
     vector = np.asarray(embedding["embedding"])
-    assert vector.ndim == 1 and vector.size > 0
+    assert vector.shape == (768,)
     assert np.isfinite(vector).all() and np.linalg.norm(vector) > 0
-    report = "NIH ChestX-ray14 example image 00000003_000."
-    retrieval = cxr_encoder_retrieve_similar_reports(
-        cxr_image,
-        reference_reports=[report],
-        reference_image_embeddings=[embedding["embedding"]],
-        model_id=model_id,
-        reference_pooling=pooling,
+    return {"embedding": embedding, "followup": followup}
+
+
+@save_returns("cxr_similarity")
+def test_cxr_similarity(cxr_image: bytes, cxr_image_followup: bytes):
+    """Compare real radiographs against their independently extracted embeddings."""
+    embedding = xray_image_embed(cxr_image)
+    followup = xray_image_embed(cxr_image_followup)
+    vector = np.asarray(embedding["embedding"])
+    similarity = xray_image_similarity(cxr_image, cxr_image_followup)
+    other_vector = np.asarray(followup["embedding"])
+    expected = np.dot(vector, other_vector) / (
+        np.linalg.norm(vector) * np.linalg.norm(other_vector)
     )
-    assert len(retrieval["matches"]) == 1
-    assert retrieval["matches"][0]["report"] == report
-    assert retrieval["matches"][0]["cosine_similarity"] == pytest.approx(1, abs=1e-5)
-    return {"embedding": embedding, "retrieval": retrieval}
+    assert similarity["cosine_similarity"] == pytest.approx(expected, abs=1e-5)
+    return similarity

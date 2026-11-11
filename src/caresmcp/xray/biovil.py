@@ -15,7 +15,7 @@ from caresmcp.api.models._biovil import (
     get_biovil_text_model,
 )
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMB, TASK_LOC, TASK_RET, XRAY
+from caresmcp.registry import TASK_LOC, TASK_RET, XRAY
 
 
 def _biovil_image_tensor(image: bytes, crop_size: int):
@@ -32,10 +32,7 @@ def _biovil_image_tensor(image: bytes, crop_size: int):
     return transform(grayscale).unsqueeze(0).to(DEVICE)
 
 
-@XRAY.register("biovil_image_embed")
-@TASK_EMB.register("biovil_image_embed")
-@requires(["torch", "health_multimodal", "transformers"], extra="xray")
-def biovil_image_embed(
+def _embed_biovil_image(
     image: Annotated[bytes, Field(description="Current chest radiograph image")],
     model_id: Annotated[
         BioViLModel,
@@ -67,7 +64,6 @@ def biovil_image_embed(
         raise ValueError("prior_image is supported only by BioViL-T")
     crop_size = 448 if temporal else 480
     current = _biovil_image_tensor(image, crop_size)
-    filename, revision = BIOVIL_CHECKPOINTS[model_id]
     model = get_biovil_image_model(model_id)
     with torch.inference_mode():
         if temporal:
@@ -83,8 +79,6 @@ def biovil_image_embed(
         vector = torch.nn.functional.normalize(vector, dim=0)
     return {
         "model_id": model_id,
-        "checkpoint": filename,
-        "checkpoint_revision": revision,
         "prior_image_used": prior_image is not None,
         "representation": "l2_normalized_projected_global_embedding",
         "embedding": vector.cpu().tolist(),
