@@ -1,16 +1,16 @@
 """Exercise Curia's public CT interface with real CT samples."""
 
-from typing import Literal
-
 import pytest
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.ct.curia import CuriaCTTask, classify_ct_slice_with_curia
+from caresmcp.ct.curia import (
+    ClassifyCtSliceWithCuriaClassificationTaskArg,
+    classify_ct_slice_with_curia,
+)
 
 pytestmark = pytest.mark.slow
 
 
-@pytest.mark.parametrize("input_format", ["auto", "dicom"])
 @pytest.mark.parametrize(
     "classification_task,expected_head",
     [
@@ -22,9 +22,8 @@ pytestmark = pytest.mark.slow
 @save_returns("ct_curia")
 def test_classify_dicom(
     ct_lung_cancer_dicom: bytes,
-    classification_task: CuriaCTTask,
+    classification_task: ClassifyCtSliceWithCuriaClassificationTaskArg,
     expected_head: str,
-    input_format: Literal["auto", "dicom"],
 ):
     for package in ("torch", "transformers", "huggingface_hub"):
         pytest.importorskip(package)
@@ -32,7 +31,6 @@ def test_classify_dicom(
     result = classify_ct_slice_with_curia(
         ct_lung_cancer_dicom,
         classification_task=classification_task,
-        input_format=input_format,
     )
 
     assert result["model_id"] == "raidium/curia"

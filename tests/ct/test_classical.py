@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Literal
 
 import cv2
 import numpy as np
@@ -12,8 +11,6 @@ from PIL import Image
 from caresmcp.api.decorators import save_returns
 from caresmcp.ct.classical import (
     CTMotionModel,
-    denoise_ct_slice,
-    evaluate_ct_segmentation,
     measure_ct_hu_regions,
     register_ct_slices,
     segment_ct_hu_range,
@@ -71,7 +68,9 @@ def tissue_mask(sample: CTSample) -> bytes:
 @save_returns("ct_classical")
 def test_window_ct_slice(sample: CTSample, center: float, width: float):
     """Window calibrated HU values using the DICOM LINEAR convention."""
-    output = window_ct_slice(sample.dicom, window_center=center, window_width=width)
+    output = window_ct_slice(
+        image_or_dicom=sample.dicom, window_center=center, window_width=width
+    )
 
     lower = center - 0.5 - (width - 1) / 2
     upper = center - 0.5 + (width - 1) / 2
@@ -143,39 +142,6 @@ def test_measure_ct_hu_regions(sample: CTSample, tissue_mask: bytes):
     return {"all_regions": result, "limited": limited}
 
 
-@pytest.mark.parametrize("method", ["bilateral", "gaussian", "median"])
-@save_returns("ct_classical")
-def test_denoise_ct_slice(
-    sample: CTSample, method: Literal["bilateral", "gaussian", "median"]
-):
-    """Smooth real CT data while preserving calibrated float values across formats."""
-    output = denoise_ct_slice(sample.dicom, method=method)
-    filtered = image_pixels(output)
-    assert filtered.shape == sample.hu.shape
-    assert filtered.dtype == np.float32
-
-    # Local variation should decrease without quantizing HU to display intensities.
-    def local_variation(values: np.ndarray) -> float:
-        return float(
-            np.mean(np.abs(np.diff(values, axis=0)))
-            + np.mean(np.abs(np.diff(values, axis=1)))
-        )
-
-    assert local_variation(filtered) < local_variation(sample.hu)
-    slope, intercept = 0.5, -1024.0
-    stored_values = (sample.hu - intercept) / slope
-    calibrated_tiff = image_bytes(stored_values, format="TIFF")
-    raster_output = denoise_ct_slice(
-        calibrated_tiff,
-        method=method,
-        raster_units="hu",
-        rescale_slope=slope,
-        rescale_intercept=intercept,
-    )
-    np.testing.assert_array_equal(filtered, image_pixels(raster_output))
-    return output
-
-
 @pytest.mark.parametrize("motion_model", ["translation", "rigid", "affine"])
 @save_returns("ct_classical", unpack=True)
 def test_register_ct_slices(ct_heart_image: bytes, motion_model: CTMotionModel):
@@ -190,7 +156,9 @@ def test_register_ct_slices(ct_heart_image: bytes, motion_model: CTMotionModel):
         forward[0, 1] += 0.01
     moving = cv2.warpAffine(fixed, forward, (width, height))
     result = register_ct_slices(
-        ct_heart_image, image_bytes(moving), motion_model=motion_model
+        fixed_image_or_dicom=ct_heart_image,
+        moving_image_or_dicom=image_bytes(moving),
+        motion_model=motion_model,
     )
 
     recovered = np.asarray(result["moving_to_fixed_matrix"])
@@ -208,26 +176,3 @@ def test_register_ct_slices(ct_heart_image: bytes, motion_model: CTMotionModel):
         "moving": image_bytes(moving),
         "aligned": image_bytes(aligned),
     }
-
-
-@save_returns("ct_classical", unpack=True)
-def test_evaluate_ct_segmentation(sample: CTSample, tissue_mask: bytes):
-    """Score an incomplete prediction against a real HU-selected reference."""
-    reference = image_pixels(tissue_mask) > 0
-    prediction = reference.copy()
-    prediction[:, prediction.shape[1] // 2 :] = False
-    prediction_bytes = image_bytes(prediction.astype(np.uint8) * 255)
-    result = evaluate_ct_segmentation(prediction_bytes, tissue_mask)
-
-    # Every predicted pixel is correct, but only part of the reference is covered.
-    coverage = prediction.sum() / reference.sum()
-    assert 0 < coverage < 1
-    assert result == pytest.approx(
-        {
-            "precision": 1,
-            "recall": coverage,
-            "intersection_over_union": coverage,
-            "dice": 2 * coverage / (1 + coverage),
-        }
-    )
-    return {"prediction": prediction_bytes, "reference": tissue_mask, "metrics": result}

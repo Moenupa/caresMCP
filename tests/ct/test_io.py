@@ -7,7 +7,6 @@ import pytest
 from PIL import Image
 
 from caresmcp.ct.io import (
-    CTInputFormat,
     _decode_ct_slice,
     _decode_mask,
     _hu_range_mask,
@@ -24,14 +23,13 @@ def ct_dicom(request: pytest.FixtureRequest) -> bytes:
     return request.getfixturevalue(request.param)
 
 
-@pytest.mark.parametrize("input_format", ["auto", "dicom"])
-def test_decode_dicom(ct_dicom: bytes, input_format: CTInputFormat) -> None:
+def test_decode_dicom(ct_dicom: bytes) -> None:
     """DICOM decoding retains calibrated pixels and acquisition geometry."""
     import pydicom
     from pydicom.pixels import apply_modality_lut
 
     dataset = pydicom.dcmread(BytesIO(ct_dicom))
-    decoded = _decode_ct_slice(ct_dicom, input_format=input_format)
+    decoded = _decode_ct_slice(ct_dicom)
     np.testing.assert_array_equal(
         decoded.require_hu(), apply_modality_lut(dataset.pixel_array, dataset)
     )
@@ -43,10 +41,9 @@ def test_decode_dicom(ct_dicom: bytes, input_format: CTInputFormat) -> None:
     assert decoded.slice_thickness_mm == pytest.approx(dataset.SliceThickness)
 
 
-@pytest.mark.parametrize("input_format", ["auto", "image"])
-def test_decode_image(ct_heart_image: bytes, input_format: CTInputFormat) -> None:
+def test_decode_image(ct_heart_image: bytes) -> None:
     """Display decoding and model preparation preserve the source pixels."""
-    decoded = _decode_ct_slice(ct_heart_image, input_format=input_format)
+    decoded = _decode_ct_slice(ct_heart_image)
     with Image.open(BytesIO(ct_heart_image)) as image:
         np.testing.assert_array_equal(decoded.values, np.asarray(image))
         np.testing.assert_array_equal(

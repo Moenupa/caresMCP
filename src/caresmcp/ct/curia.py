@@ -1,9 +1,8 @@
 """Curia's supported two-dimensional CT classification heads."""
 
-from typing import Annotated, Any, Literal
+from typing import Any
 
 import numpy as np
-from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import get_classification_scores
@@ -15,39 +14,17 @@ from caresmcp.api.models.hf_hub import (
 from caresmcp.constants import DEVICE
 from caresmcp.registry import CT, TASK_CLS
 
-from .io import DecodedCTSlice, _decode_ct_slice
+from ._arg import (
+    ClassifyCtSliceWithCuriaAnatomicalPlaneArg,
+    ClassifyCtSliceWithCuriaClassificationTaskArg,
+    CTImage,
+    CuriaCTPlane,
+    RasterRescaleIntercept,
+    RasterRescaleSlope,
+)
+from .io import DecodedCTSlice, _decode_ct_slice, _is_dicom
 
-CuriaCTTask = Literal[
-    "ct_anatomy_classification",
-    "covid_pneumonia_classification",
-    "intracranial_hemorrhage_classification",
-]
-CuriaCTPlane = Literal["axial", "coronal", "sagittal"]
-
-
-DICOM_OR_RASTER = Field(
-    min_length=1,
-    description="Single CT DICOM slice or calibrated grayscale raster bytes.",
-)
-HUGGINGFACE_MODEL_ID = Field(description="Curia checkpoint repository.")
-CLASSIFICATION_TASK = Field(
-    description="Anatomy, COVID/pneumonia, or hemorrhage classification head."
-)
-ANATOMICAL_PLANE = Field(description="Anatomical plane of the supplied CT slice.")
-CT_INPUT_FORMAT = Field(
-    description="Auto-detect the format, or explicitly select DICOM or a grayscale raster."
-)
-RASTER_HU_RESCALE_SLOPE = Field(
-    allow_inf_nan=False,
-    description="Raster HU = stored value * slope + intercept; ignored for DICOM.",
-)
-RASTER_HU_RESCALE_INTERCEPT = Field(
-    allow_inf_nan=False,
-    description="Offset in HU after multiplying raster values by the slope; ignored for DICOM.",
-)
-CT_RASTER_UNITS = Field(
-    description="Raster values must have known Hounsfield-unit calibration; ignored for DICOM."
-)
+CURIA_MODEL_ID = "raidium/curia"
 
 
 def _curia_hu_input(decoded: DecodedCTSlice, plane: CuriaCTPlane) -> np.ndarray:
@@ -81,20 +58,11 @@ def _curia_hu_input(decoded: DecodedCTSlice, plane: CuriaCTPlane) -> np.ndarray:
 @TASK_CLS.register("classify_ct_slice_with_curia")
 @requires(["torch", "transformers", "huggingface_hub"], extra="hf")
 def classify_ct_slice_with_curia(
-    dicom_or_raster: Annotated[bytes, DICOM_OR_RASTER],
-    huggingface_model_id: Annotated[
-        Literal["raidium/curia"], HUGGINGFACE_MODEL_ID
-    ] = "raidium/curia",
-    classification_task: Annotated[
-        CuriaCTTask, CLASSIFICATION_TASK
-    ] = "ct_anatomy_classification",
-    anatomical_plane: Annotated[CuriaCTPlane, ANATOMICAL_PLANE] = "axial",
-    input_format: Annotated[
-        Literal["auto", "dicom", "grayscale_raster"], CT_INPUT_FORMAT
-    ] = "auto",
-    raster_hu_rescale_slope: Annotated[float, RASTER_HU_RESCALE_SLOPE] = 1.0,
-    raster_hu_rescale_intercept: Annotated[float, RASTER_HU_RESCALE_INTERCEPT] = 0.0,
-    raster_units: Annotated[Literal["hu"], CT_RASTER_UNITS] = "hu",
+    image_or_dicom: CTImage,
+    classification_task: ClassifyCtSliceWithCuriaClassificationTaskArg = "ct_anatomy_classification",
+    anatomical_plane: ClassifyCtSliceWithCuriaAnatomicalPlaneArg = "axial",
+    raster_hu_rescale_slope: RasterRescaleSlope = 1.0,
+    raster_hu_rescale_intercept: RasterRescaleIntercept = 0.0,
 ) -> dict[str, Any]:
     """Classify CT anatomy, COVID/pneumonia, or hemorrhage with a Curia slice head.
 
@@ -124,22 +92,16 @@ def classify_ct_slice_with_curia(
     if head != "anatomy-ct" and anatomical_plane != "axial":
         raise ValueError("The selected Curia head requires axial CT slices")
     decoded = _decode_ct_slice(
-        dicom_or_raster,
-        "image" if input_format == "grayscale_raster" else input_format,
+        image_or_dicom,
         raster_hu_rescale_slope,
         raster_hu_rescale_intercept,
-        raster_units,
+        "hu",
     )
-    is_dicom = input_format == "dicom" or (
-        input_format == "auto"
-        and len(dicom_or_raster) >= 132
-        and dicom_or_raster[128:132] == b"DICM"
-    )
-    if is_dicom and decoded.image_orientation_patient is None:
+    if _is_dicom(image_or_dicom) and decoded.image_orientation_patient is None:
         raise ValueError("Curia CT DICOM input requires image orientation metadata")
     hu = _curia_hu_input(decoded, anatomical_plane)
     model, processor = get_hf_model_and_processor(
-        huggingface_model_id,
+        CURIA_MODEL_ID,
         HFModelType.IMAGE_CLASSIFICATION,
         trust_remote_code=True,
         use_fast=False,
@@ -149,13 +111,13 @@ def classify_ct_slice_with_curia(
     inputs = processor(images=hu, return_tensors="pt").to(DEVICE)
     with torch.inference_mode():
         logits = model(**inputs)["logits"]
-    labels = get_hf_json(huggingface_model_id, "id_to_labels.json").get(head)
+    labels = get_hf_json(CURIA_MODEL_ID, "id_to_labels.json").get(head)
     if not isinstance(labels, dict):
         raise TypeError(
             "Curia checkpoint does not provide labels for the selected head"
         )
     return {
-        "model_id": huggingface_model_id,
+        "model_id": CURIA_MODEL_ID,
         "head": head,
         "task": classification_task,
         "prediction_level": "slice",

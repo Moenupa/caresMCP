@@ -1,7 +1,5 @@
 """Exercise DALE-CT-2S through its public CT interface."""
 
-from typing import Literal
-
 import numpy as np
 import pytest
 
@@ -11,18 +9,14 @@ from caresmcp.ct.dale_ct_2s import dale_ct_2s_image_embed
 
 @pytest.mark.slow
 @pytest.mark.parametrize("image", ["ct_lung_cancer_dicom", "ct_lung_nodule_dicom"])
-@pytest.mark.parametrize("input_format", ["auto", "dicom"])
 @save_returns("ct_dale_ct_2s")
 def test_dicom_embedding(
     image: str,
-    input_format: Literal["auto", "dicom"],
     request: pytest.FixtureRequest,
 ):
     for package in ("torch", "timm", "transformers"):
         pytest.importorskip(package)
-    result = dale_ct_2s_image_embed(
-        request.getfixturevalue(image), input_format=input_format
-    )
+    result = dale_ct_2s_image_embed(request.getfixturevalue(image))
 
     assert result["model_id"] == "hf-hub:Kentucky-Open-Science/DALE-CT-2S"
     assert result["embedding_type"] == "global"

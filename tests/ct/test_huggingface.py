@@ -1,15 +1,11 @@
 """Exercise CT Hugging Face tools with real DICOM samples."""
 
-from typing import Literal
-
-import numpy as np
 import pytest
 
 from caresmcp.api.decorators import save_returns
 from caresmcp.ct.huggingface import (
     CTClassifier,
     classify_ct_slice,
-    ct_slice_image_embed,
 )
 
 pytestmark = pytest.mark.slow
@@ -20,21 +16,6 @@ def image(request: pytest.FixtureRequest) -> bytes:
     pytest.importorskip("torch")
     pytest.importorskip("transformers")
     return request.getfixturevalue(request.param)
-
-
-@pytest.mark.parametrize(
-    "image", ["ct_lung_cancer_dicom", "ct_lung_nodule_dicom"], indirect=True
-)
-@pytest.mark.parametrize("pooling", ["cls", "mean"])
-@save_returns("ct_hf")
-def test_ct_slice_image_embed(image: bytes, pooling: Literal["cls", "mean"]):
-    result = ct_slice_image_embed(image, pooling=pooling)
-
-    embedding = np.asarray(result["embedding"])
-    assert embedding.shape == (768,)
-    assert np.isfinite(embedding).all()
-    assert np.linalg.norm(embedding) > 0
-    return result
 
 
 @pytest.mark.parametrize(

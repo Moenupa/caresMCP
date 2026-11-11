@@ -4,16 +4,20 @@ The checkpoint weights carry a CC-BY-NC-SA-4.0 license and are intended for
 non-commercial research use. This tool does not provide a diagnosis.
 """
 
-from typing import Annotated, Any
-
-from pydantic import Field
+from typing import Any
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.models import get_timm_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import CT, TASK_EMB
 
-from .io import CTInputFormat, CTRasterUnits, _decode_ct_slice
+from ._arg import (
+    CTImage,
+    HURasterUnits,
+    RasterRescaleIntercept,
+    RasterRescaleSlope,
+)
+from .io import _decode_ct_slice
 
 # DALE-CT-2S is a fixed encoder adapter. Keep model provenance, architecture,
 # artifact name, and preprocessing statistics together rather than exposing
@@ -54,37 +58,10 @@ def _preprocess_dale_ct_2s(hu: Any) -> Any:
 @TASK_EMB.register("dale_ct_2s_image_embed")
 @requires(["torch", "timm", "transformers"], extra="ct")
 def dale_ct_2s_image_embed(
-    image: Annotated[
-        bytes,
-        Field(
-            min_length=1,
-            description="Single chest CT DICOM slice or calibrated grayscale raster bytes.",
-        ),
-    ],
-    input_format: Annotated[
-        CTInputFormat,
-        Field(description="Auto-detect the format, or select DICOM or raster image."),
-    ] = "auto",
-    rescale_slope: Annotated[
-        float,
-        Field(
-            allow_inf_nan=False,
-            description="Raster HU = stored value * slope + intercept; ignored for DICOM.",
-        ),
-    ] = 1.0,
-    rescale_intercept: Annotated[
-        float,
-        Field(
-            allow_inf_nan=False,
-            description="Raster offset in HU after scaling; ignored for DICOM.",
-        ),
-    ] = 0.0,
-    raster_units: Annotated[
-        CTRasterUnits,
-        Field(
-            description="Use hu only for rasters with known HU calibration; display images are rejected."
-        ),
-    ] = "display",
+    image_or_dicom: CTImage,
+    rescale_slope: RasterRescaleSlope = 1.0,
+    rescale_intercept: RasterRescaleIntercept = 0.0,
+    raster_units: HURasterUnits = "display",
 ) -> dict[str, Any]:
     """Extract a global DALE-CT-2S feature vector from one chest CT slice.
 
@@ -100,7 +77,7 @@ def dale_ct_2s_image_embed(
     import torch
 
     decoded = _decode_ct_slice(
-        image, input_format, rescale_slope, rescale_intercept, raster_units
+        image_or_dicom, rescale_slope, rescale_intercept, raster_units
     )
     model_input = _preprocess_dale_ct_2s(decoded.require_hu())
     model = get_timm_model(CT_DALE_MODEL_ID, pretrained=True)

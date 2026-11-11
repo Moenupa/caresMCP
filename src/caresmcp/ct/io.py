@@ -15,7 +15,6 @@ from caresmcp.api.io import is_grayscale
 if TYPE_CHECKING:
     from pydicom.dataset import Dataset
 
-CTInputFormat = Literal["auto", "image", "dicom"]
 CTRasterUnits = Literal["display", "hu"]
 
 
@@ -157,21 +156,21 @@ def _decode_raster(
     return DecodedCTSlice(_validate_slice_pixels(pixels), units)
 
 
+def _is_dicom(image: bytes) -> bool:
+    return image[128:132] == b"DICM"
+
+
 def _decode_ct_slice(
     image: bytes,
-    input_format: CTInputFormat = "auto",
     rescale_slope: float = 1.0,
     rescale_intercept: float = 0.0,
     raster_units: CTRasterUnits = "display",
 ) -> DecodedCTSlice:
     if not image:
         raise ValueError("image must not be empty")
-    slope, intercept = _parse_rescale_parameters(rescale_slope, rescale_intercept)
-    is_dicom = input_format == "dicom" or (
-        input_format == "auto" and image[128:132] == b"DICM"
-    )
-    if is_dicom:
+    if _is_dicom(image):
         return _decode_dicom(image)
+    slope, intercept = _parse_rescale_parameters(rescale_slope, rescale_intercept)
     return _decode_raster(image, slope, intercept, raster_units)
 
 
