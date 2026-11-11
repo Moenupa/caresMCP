@@ -6,13 +6,13 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
+from caresmcp.api.io import get_classification_scores
 from caresmcp.api.models.hf_hub import (
     HFModelType,
     get_hf_checkpoint,
     get_hf_model_and_processor,
 )
 from caresmcp.api.models.timm import get_timm_model
-from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import CT, TASK_CLS, TASK_EMB
 

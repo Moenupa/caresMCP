@@ -7,10 +7,14 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as, draw_legends, encode_as
+from caresmcp.api.io import (
+    decode_as,
+    draw_legends,
+    encode_as,
+    get_classification_scores,
+)
 from caresmcp.api.models import get_torchxrayvision_model
 from caresmcp.api.saliency import blend_saliency, compute_gradcam
-from caresmcp.api.tensorio import get_classification_scores
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_CLS, TASK_LOC, TASK_SEG, XRAY
 

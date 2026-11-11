@@ -8,6 +8,7 @@ from .image import (
 )
 from .string import has_todo
 from .table import rich_table_to_df
+from .tensor import get_classification_scores
 
 __all__ = [
     "convert_grayscale",
@@ -15,6 +16,7 @@ __all__ = [
     "draw_legends",
     "encode_as",
     "encode_label_mask",
+    "get_classification_scores",
     "has_todo",
     "is_grayscale",
     "rich_table_to_df",
