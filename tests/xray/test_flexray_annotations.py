@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.api.imageio import encode_as
+from caresmcp.api.io import encode_as
 from caresmcp.xray.flexray import AnatomicalRegion, flexray_segment_anatomy
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]

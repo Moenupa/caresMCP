@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import Field
 
-from caresmcp.api.imageio import decode_as, encode_as
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.registry import IMAGE_PROC
 
 

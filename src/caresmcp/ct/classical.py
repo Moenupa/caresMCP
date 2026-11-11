@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 
-from caresmcp.api.imageio import encode_as
+from caresmcp.api.io import encode_as
 from caresmcp.registry import CT, TASK_DEN, TASK_SEG
 
 from .io import (

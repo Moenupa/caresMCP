@@ -7,7 +7,7 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_as, encode_as
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.api.models.flexray import get_flexray_model
 from caresmcp.registry import TASK_SEG, XRAY
 

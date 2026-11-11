@@ -12,7 +12,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import encode_label_mask
+from caresmcp.api.io import encode_label_mask
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_REG, TASK_SEG, ULTRASOUND
 

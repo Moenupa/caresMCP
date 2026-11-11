@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_as, encode_as
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_SEG
 

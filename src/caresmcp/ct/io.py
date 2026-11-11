@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import is_grayscale
+from caresmcp.api.io import is_grayscale
 
 if TYPE_CHECKING:
     from pydicom.dataset import Dataset

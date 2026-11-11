@@ -12,7 +12,7 @@ from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.imageio import decode_as
+from caresmcp.api.io import decode_as
 from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMB, ULTRASOUND
