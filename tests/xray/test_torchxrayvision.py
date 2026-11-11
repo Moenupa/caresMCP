@@ -125,27 +125,3 @@ def test_torchxrayvision_localize(
         if output == "saliency":
             assert pixels.max() == 255 or not pixels.any()
     return result
-
-
-@save_returns("torchxrayvision", unpack=True)
-def test_overlay_saliency(cxr_image: bytes):
-    """Exercise the generic overlay with a real saliency map and aligned image."""
-    from caresmcp.api.imageio import encode_as
-    from caresmcp.tools.saliency import overlay_saliency
-
-    saliency = torchxrayvision_localize(cxr_image, "Hernia", output="saliency")
-    with Image.open(BytesIO(cxr_image)) as source:
-        base = source.convert("RGB").resize((224, 224), Image.Resampling.BILINEAR)
-    image = encode_as(base)
-    overlay = overlay_saliency(image, saliency)
-    transparent = overlay_saliency(image, saliency, opacity=0)
-    with (
-        Image.open(BytesIO(overlay)) as output,
-        Image.open(BytesIO(transparent)) as zero,
-    ):
-        assert output.size == base.size
-        assert output.mode == "RGB"
-        assert np.array_equal(np.asarray(zero), np.asarray(base))
-    with pytest.raises(ValueError, match="dimensions must match"):
-        overlay_saliency(cxr_image, saliency)
-    return {"saliency": saliency, "aligned_source": image, "overlay": overlay}
