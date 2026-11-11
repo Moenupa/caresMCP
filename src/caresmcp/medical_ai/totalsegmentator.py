@@ -4,44 +4,44 @@ import gzip
 import logging
 import struct
 import zlib
-from typing import Literal
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI
+from caresmcp.registry import MEDAI, TASK_SEG
 
 logger = logging.getLogger(__name__)
 
 
 @MEDAI.register("totalsegmentator_segment_anatomy")
+@TASK_SEG.register("totalsegmentator_segment_anatomy")
 @requires(["totalsegmentator", "nibabel"], extra="totalsegmentator")
 def totalsegmentator_segment_anatomy(
-    image: bytes,
-    task: Literal["total", "total_mr"] = "total",
-    fast: bool = False,
-    roi_subset: list[str] | None = None,
-    device: Literal["auto", "cpu", "gpu", "mps"] = "auto",
-    force_split: bool = False,
+    image: Annotated[
+        bytes, Field(description="Three-dimensional NIfTI-1 volume (.nii or .nii.gz)")
+    ],
+    task: Annotated[
+        Literal["total", "total_mr"], Field(description="CT or MR anatomy task")
+    ] = "total",
+    fast: Annotated[
+        bool, Field(description="Use the faster, lower-resolution model")
+    ] = False,
+    roi_subset: Annotated[
+        list[str] | None,
+        Field(min_length=1, description="Anatomical names to segment, or null for all"),
+    ] = None,
+    force_split: Annotated[
+        bool,
+        Field(description="Split large volumes into three parts to reduce memory use"),
+    ] = False,
 ) -> bytes:
     """Segment anatomical structures in a three-dimensional CT or MR volume.
 
-    Args:
-        image: Complete NIfTI-1 volume bytes, uncompressed (.nii) or gzip
-            compressed (.nii.gz). Two-dimensional pictures and DICOM are not
-            supported.
-        task: ``total`` for CT anatomy or ``total_mr`` for MR anatomy.
-        fast: Use the lower-resolution model for faster inference.
-        roi_subset: Anatomical names to segment, such as ``["liver", "spleen"]``,
-            or None for all structures supported by the selected task.
-        device: Inference device; auto uses the server's configured device.
-        force_split: Process the volume in three parts to reduce memory use.
-            Intended for large volumes; avoid using it with small volumes.
-
-    Returns:
-        Gzip-compressed NIfTI-1 segmentation bytes (.nii.gz) on the input volume's
-        spatial grid. Zero denotes background; positive integer labels identify
-        anatomy using TotalSegmentator's task-specific label map. The extended
-        NIfTI header contains the anatomical names.
+    Returns a gzip-compressed NIfTI segmentation on the input spatial grid.
+    Zero denotes background; the extended NIfTI header maps positive labels to
+    anatomical names.
 
     References:
         Wasserthal et al., TotalSegmentator, Radiology: Artificial Intelligence,
@@ -55,29 +55,14 @@ def totalsegmentator_segment_anatomy(
     from totalsegmentator.map_to_binary import class_map
     from totalsegmentator.python_api import totalsegmentator
 
-    if task not in ("total", "total_mr"):
-        raise ValueError("task must be total or total_mr")
-    if device not in ("auto", "cpu", "gpu", "mps"):
-        raise ValueError("device must be auto, cpu, gpu, or mps")
-    if roi_subset is not None:
-        if (
-            not isinstance(roi_subset, list)
-            or not roi_subset
-            or any(not isinstance(name, str) for name in roi_subset)
-        ):
-            raise ValueError("roi_subset must be a non-empty list of anatomical names")
-        if any(name not in class_map[task].values() for name in roi_subset):
-            raise ValueError(
-                "roi_subset contains names unsupported by the selected task"
-            )
+    if roi_subset is not None and any(
+        name not in class_map[task].values() for name in roi_subset
+    ):
+        raise ValueError("roi_subset contains names unsupported by the selected task")
 
-    if not isinstance(image, bytes) or not image:
-        raise ValueError("image must contain a non-empty NIfTI-1 volume")
     try:
         payload = gzip.decompress(image) if image.startswith(b"\x1f\x8b") else image
         volume = nib.Nifti1Image.from_bytes(payload)
-        # Materialize the data before inference to reject truncated payloads.
-        volume.get_fdata()
     except (
         OSError,
         EOFError,
@@ -92,9 +77,6 @@ def totalsegmentator_segment_anatomy(
     if len(volume.shape) != 3 or any(size < 1 for size in volume.shape):
         raise ValueError("image must contain a non-empty three-dimensional volume")
 
-    resolved_device = (
-        ("gpu" if DEVICE == "cuda" else DEVICE) if device == "auto" else device
-    )
     try:
         segmentation = totalsegmentator(
             volume,
@@ -103,17 +85,11 @@ def totalsegmentator_segment_anatomy(
             task=task,
             fast=fast,
             roi_subset=roi_subset,
-            device=resolved_device,
+            device="gpu" if DEVICE == "cuda" else DEVICE,
             force_split=force_split,
             nr_thr_resamp=1,
             nr_thr_saving=1,
             quiet=True,
-        )
-        assert isinstance(segmentation, nib.Nifti1Image), (
-            f"TotalSegmentator returned {type(segmentation).__name__}; expected Nifti1Image"
-        )
-        assert segmentation.shape == volume.shape, (
-            f"TotalSegmentator output shape {segmentation.shape} differs from input {volume.shape}"
         )
         return gzip.compress(segmentation.to_bytes(), mtime=0)
     except Exception:

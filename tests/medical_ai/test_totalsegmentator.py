@@ -40,7 +40,7 @@ def test_totalsegmentator(sample_path: Path) -> None:
         else "total"
     )
     result = totalsegmentator_segment_anatomy(
-        image=sample_path.read_bytes(), task=task, fast=True, device="gpu"
+        image=sample_path.read_bytes(), task=task, fast=True
     )
     assert isinstance(result, bytes)
     segmentation = nib.Nifti1Image.from_bytes(gzip.decompress(result))

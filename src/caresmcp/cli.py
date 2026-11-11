@@ -1,6 +1,5 @@
 """Command-line entry point for listing registries and running the MCP server."""
 
-import re
 from collections.abc import Callable
 from inspect import signature, unwrap
 from pathlib import Path
@@ -14,7 +13,7 @@ from rich.table import Table
 
 from caresmcp.api.decorators import adapt_byte_inputs
 from caresmcp.api.decorators.file_io import get_kwargs_from_file, save_results
-from caresmcp.api.io import rich_table_to_df
+from caresmcp.api.io import has_todo, rich_table_to_df
 from caresmcp.constants import CACHE_ROOT
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
 
@@ -51,11 +50,6 @@ MODEL_PARAMETER_NAMES = {
     "pretrained_model",
     "weights",
 }
-
-
-def _is_todo(description: str) -> bool:
-    """Return True if the description looks like a TODO item."""
-    return bool(re.search(r"\b[Tt][Oo][Dd][Oo]\b", description))
 
 
 def _supported_models(function: Callable[..., Any]) -> str:
@@ -116,7 +110,7 @@ def list_functions(
                 _supported_models(function),
                 tags,
                 description,
-                style="dim" if _is_todo(description) else None,
+                style="dim" if has_todo(description) else None,
             )
 
     console.print(table)
