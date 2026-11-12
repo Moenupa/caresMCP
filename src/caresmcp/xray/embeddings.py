@@ -38,12 +38,11 @@ def xray_image_embed(
         ),
     ] = None,
 ) -> dict:
-    """Embed a chest radiograph with the given model.
+    """Generate an embedding of a chest radiograph.
 
-    RAD-DINO supplies a global visual feature vector using CLS or mean patch
-    pooling. BioViL supplies a normalized 128-dimensional projected image-text
-    vector; BioViL-T also accepts a prior image and uses its learned missing-prior
-    representation for current-only input. Embeddings supply no trained diagnosis or progression labels.
+    Use an embedding to compare radiographs or retrieve similar images. Choose
+    RAD-DINO for visual features or BioViL for an image-text representation.
+    Choose BioViL-T to include an earlier radiograph.
 
     See Also:
         https://huggingface.co/microsoft/rad-dino
@@ -73,9 +72,11 @@ def xray_image_similarity(
         Field(description="RAD-DINO token pooling; omit for BioViL"),
     ] = None,
 ) -> dict:
-    """Compare two chest radiographs using cosine similarity of their embeddings.
+    """Compare two chest radiographs by the cosine similarity of their embeddings.
 
-    Both images are encoded with the same model and pooling settings.
+    Use this to compare images or rank candidates by visual similarity. Both
+    images use the same encoder and pooling settings. Similarity reflects the
+    model's representation, not diagnostic agreement.
     """
     first = xray_image_embed(image, model_id=model_id, pooling=pooling)
     second = xray_image_embed(other_image, model_id=model_id, pooling=pooling)

@@ -3,6 +3,7 @@
 from typing import Annotated, Any, Literal, get_args
 
 import numpy as np
+import seaborn as sns
 from PIL import Image
 from pydantic import Field
 
@@ -92,14 +93,17 @@ def _preprocess_xray(
 
 @XRAY.register("torchxrayvision_classify")
 @TASK_CLS.register("torchxrayvision_classify")
-@requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
+@requires(["torchxrayvision"], extra="xray")
 def torchxrayvision_classify(
     image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
     weights: Annotated[
         ChestXrayWeights, TORCHXRAYVISION_WEIGHTS_FIELD
     ] = "densenet121-res224-all",
 ) -> dict:
-    """Return pathology multi-label scores for a chest radiograph.
+    """Score chest radiograph findings using a TorchXRayVision classifier.
+
+    Use this to assess multiple findings in one image. Choose weights that
+    support the findings of interest; each receives an independent sigmoid score.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
@@ -129,7 +133,7 @@ def torchxrayvision_classify(
 
 @XRAY.register("torchxrayvision_segment_anatomy")
 @TASK_SEG.register("torchxrayvision_segment_anatomy")
-@requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
+@requires(["torchxrayvision"], extra="xray")
 def torchxrayvision_segment_anatomy(
     image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
     probability_threshold: Annotated[
@@ -155,17 +159,17 @@ def torchxrayvision_segment_anatomy(
         ),
     ] = None,
 ) -> bytes:
-    """Return a PNG mask of 14 anatomical regions in a chest radiograph.
+    """Segment anatomical structures in a chest radiograph.
 
-    Colors identify structures in the legend. Background is transparent, and
-    overlapping structures use the highest-scoring label. Masks cover a
-    512-pixel square center crop, with the legend panel added on the right.
-    Binary region masks use white for the structure and black for background.
+    Use the legend output to inspect several structures, the label mask for
+    anatomical target IDs, or select a region for a binary mask. Single-region
+    masks preserve overlaps between structures; the combined mask assigns each
+    pixel to the highest-scoring structure. Binary masks use white for the region
+    and black for background. Masks cover a 512-pixel square center crop.
 
     See Also:
         https://github.com/mlmed/torchxrayvision
     """
-    import seaborn as sns
     import torch
     import torchxrayvision as xrv
     from torchvision import transforms
@@ -206,7 +210,7 @@ def torchxrayvision_segment_anatomy(
 
 @XRAY.register("torchxrayvision_localize")
 @TASK_LOC.register("torchxrayvision_localize")
-@requires(["torch", "torchvision", "torchxrayvision"], extra="xray")
+@requires(["torchxrayvision"], extra="xray")
 def torchxrayvision_localize(
     image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
     label: Annotated[
@@ -223,12 +227,13 @@ def torchxrayvision_localize(
         ),
     ] = "overlay",
 ) -> bytes:
-    """Return a PNG saliency overlay for the selected pathology label.
+    """Visualize model saliency for a chest radiograph finding.
 
-    Warmer colors indicate stronger positive contributions to the model score,
-    not pathology boundaries; brighter grayscale pixels have the same meaning.
-    Outputs cover a square center crop, 224 pixels for DenseNet or 512 for
-    ResNet, without a legend.
+    Select a finding supported by the weights to inspect which image regions
+    contribute to its score. Choose an overlay for visual review or a grayscale
+    map for further analysis. Warmer colors or brighter pixels indicate stronger
+    positive contributions, not pathology boundaries. The map covers a square
+    center crop: 224 pixels for DenseNet and 512 for ResNet.
 
     See Also:
         https://github.com/mlmed/torchxrayvision

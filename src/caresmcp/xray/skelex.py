@@ -44,15 +44,14 @@ def skelex_reconstruction_error(
         int, Field(ge=0, le=2**32 - 1, description="Seed for reproducible masking")
     ] = 0,
 ) -> bytes:
-    """Map masked reconstruction error in a musculoskeletal radiograph as a PNG.
+    """Map reconstruction error in a musculoskeletal radiograph.
 
-    Brighter grayscale pixels indicate larger mean squared RGB reconstruction
-    errors averaged only over passes that masked each pixel. Intensities scale
-    from zero to this image's maximum error, so brightness is not comparable
-    across images. Transparent pixels were never masked and have no error
-    estimate. The map uses 224 x 224 direct-resize image coordinates, with
-    aspect ratio changed for non-square inputs. PNG metadata records
-    the error scale, observed-pixel mean error, coverage, passes and seed.
+    Use the map to explore regions the model reconstructs poorly. Increase the
+    number of passes for more coverage and set the seed to reproduce a map.
+    Brighter pixels indicate larger errors, scaled to each image, so brightness
+    cannot be compared across images. Transparent pixels have no error estimate.
+    The 224 x 224 map stretches non-square images; PNG metadata records the error
+    scale, observed-pixel mean error, coverage, passes and seed.
 
     Reconstruction error is not a calibrated disease score or lesion boundary.
     Weights are licensed CC-BY-NC-ND-4.0 for non-commercial use.

@@ -107,15 +107,13 @@ def biovil_ground_phrases(
         Field(description="Earlier same-patient radiograph; BioViL-T only"),
     ] = None,
 ) -> dict:
-    """Locate radiological phrases with BioViL patch-to-text similarity maps.
+    """Locate and rank radiological phrases in a chest radiograph.
 
-    Maps contain Gaussian-smoothed cosine similarities on the patch grid, ordered
-    by rows then columns. Their coverage rectangle gives pixel-edge coordinates
-    in the original image, with x rightward and y downward. Pixels outside this
-    center crop are unobserved. The map grid spans the coverage rectangle evenly;
-    patch receptive fields can overlap. Global image-text cosine scores also rank
-    the supplied phrases. Scores are not probabilities or trained progression
-    predictions, including when a prior image is supplied.
+    Supply candidate radiological phrases to compare their image-text similarity
+    and inspect where each phrase is most relevant. BioViL-T can also incorporate
+    an earlier radiograph. Maps span the reported coverage rectangle in the
+    original image; areas outside it are unobserved. Similarity scores are not
+    probabilities or trained progression predictions.
 
     See Also:
         https://github.com/microsoft/hi-ml/blob/main/hi-ml-multimodal/src/health_multimodal/vlp/inference_engine.py

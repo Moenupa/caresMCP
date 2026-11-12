@@ -33,11 +33,11 @@ def detect_pediatric_wrist_findings(
 ) -> dict:
     """Detect fractures and associated findings on pediatric wrist radiographs.
 
-    The GRAZPEDWRI-DX-trained detector returns its nine original class names,
-    confidence scores, and bounding boxes in original-image pixel coordinates.
-    Boxes use [left, top, right, bottom], with origin at the upper left.
-    Fracture labels do not specify bone, morphology, or Salter–Harris type.
-    The upstream model is released under GPL-3.0.
+    Use this to identify and locate candidate findings in a pediatric wrist
+    image. Adjust the score threshold to control which detections are returned.
+    The detector supports nine GRAZPEDWRI-DX classes; fracture labels do not
+    specify bone, morphology, or Salter–Harris type. Bounding boxes use
+    original-image pixel coordinates. The upstream model is released under GPL-3.0.
 
     See Also:
         https://github.com/mdciri/YOLOv7-Bone-Fracture-Detection

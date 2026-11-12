@@ -107,9 +107,12 @@ mindmap
       Pathology encoders
       Zero-shot classifiers
       Cellpose
+    Musculoskeletal
+      Pediatric wrist findings
+      Anatomical masks
+      Reconstruction-error maps
     Gap: 0
       Abdomen
-      Bone
       Breast
 ```
 

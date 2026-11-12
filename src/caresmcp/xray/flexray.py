@@ -87,14 +87,12 @@ def flexray_segment_anatomy(
         float, Field(ge=0, le=1, description="Minimum independent sigmoid pixel score")
     ] = 0.5,
 ) -> bytes:
-    """Segment an anatomical structure on a radiograph as a binary PNG.
+    """Segment an anatomical structure in a radiograph.
 
-    White denotes the selected structure and black denotes background. The mask
-    matches the input image dimensions. Predictions originate at 256 x 256
-    resolution on a square padded canvas; padding is removed when mapping back
-    to the image. Structures are independently thresholded, preserving overlaps
-    between separate region calls. Paired bones are not separated by laterality.
-    Weights are licensed CC-BY-NC-4.0 for non-commercial use.
+    Select a region to obtain a binary mask for visual review or further image
+    analysis. Masks match the input dimensions, use white for the structure and
+    black for background, and can overlap across separate calls. Paired bones are
+    not separated by laterality.
 
     See Also:
         https://huggingface.co/VictorButoi/flexray
