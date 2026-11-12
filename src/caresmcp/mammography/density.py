@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from caresmcp.api.decorators import adapt_inputs, requires
-from caresmcp.api.io import decode_as
+from caresmcp.api.io import decode_as, get_classification_scores
 from caresmcp.api.models import get_monai_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MAMMOGRAPHY, TAG_MONAI, TASK_CLS
@@ -51,5 +51,5 @@ def classify_breast_density(
     import torch
 
     with torch.inference_mode():
-        scores = torch.sigmoid(get_monai_model(_MODEL_ID)(image))[0].cpu().tolist()
-    return dict(zip(_LABELS, scores, strict=True))
+        logits = get_monai_model(_MODEL_ID)(image)
+        return get_classification_scores(logits, dict(enumerate(_LABELS)), "sigmoid")
