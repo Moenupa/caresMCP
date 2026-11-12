@@ -107,20 +107,21 @@ mindmap
       Pathology encoders
       Zero-shot classifiers
       Cellpose
+    Breast: 1
+      Mammographic density
     Musculoskeletal
       Pediatric wrist findings
       Anatomical masks
       Reconstruction-error maps
     Gap: 0
       Abdomen
-      Breast
 ```
 
 ```mermaid
 pie showData title Tools by task type
     "Segmentation" : 13
     "Embedding" : 11
-    "Classification" : 3
+    "Classification" : 4
     "Image-text (CLIP)" : 6
     "Analysis and utilities" : 19
 ```
