@@ -1,6 +1,5 @@
 """MONAI tumor detection and nuclei analysis for pathology image regions."""
 
-from functools import lru_cache
 from io import BytesIO
 from typing import Annotated, Any, cast
 
@@ -10,7 +9,7 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as, get_classification_scores
-from caresmcp.api.models.hf_hub import get_hf_checkpoint
+from caresmcp.api.models import get_monai_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TAG_MONAI, TASK_CLS, TASK_SEG
 
@@ -18,36 +17,7 @@ TUMOR_PATCH_SIZE = 224
 TUMOR_MODEL_ID = "MONAI/pathology_tumor_detection"
 NUCLEI_CLASSIFIER_ID = "MONAI/pathology_nuclei_classification"
 HOVERNET_ID = "MONAI/pathology_nuclei_segmentation_classification"
-REVISIONS = {
-    TUMOR_MODEL_ID: "0.6.3",
-    NUCLEI_CLASSIFIER_ID: "0.2.1",
-    HOVERNET_ID: "0.2.7",
-}
 NUCLEI_CLASSES = ("other", "inflammatory", "epithelial", "spindle_shaped")
-
-
-@lru_cache(maxsize=3)
-def _load_pathology_model(model_id: str) -> Any:
-    """Load and cache a released MONAI pathology checkpoint on the selected device."""
-    from monai.networks.nets import DenseNet121, HoVerNet, TorchVisionFCModel
-
-    if model_id == TUMOR_MODEL_ID:
-        model = TorchVisionFCModel(
-            model_name="resnet18", num_classes=1, use_conv=True, pretrained=False
-        )
-    elif model_id == NUCLEI_CLASSIFIER_ID:
-        model = DenseNet121(spatial_dims=2, in_channels=4, out_channels=4)
-    elif model_id == HOVERNET_ID:
-        model = HoVerNet(
-            mode="fast", adapt_standard_resnet=True, in_channels=3, out_classes=5
-        )
-    else:
-        raise ValueError("Unsupported MONAI pathology model")
-    checkpoint = get_hf_checkpoint(
-        model_id, "models/model.pt", revision=REVISIONS[model_id]
-    )
-    model.load_state_dict(checkpoint, strict=True)
-    return model.to(DEVICE).eval()
 
 
 @PATHOLOGY.register("monai_pathology_tumor_detection")
@@ -87,7 +57,7 @@ def monai_pathology_tumor_detection(
         for y in range(0, height, TUMOR_PATCH_SIZE)
         for x in range(0, width, TUMOR_PATCH_SIZE)
     ]
-    model = _load_pathology_model(model_id)
+    model = get_monai_model(model_id)
     patches = []
     with torch.inference_mode():
         for offset in range(0, len(boxes), batch_size):
@@ -112,7 +82,6 @@ def monai_pathology_tumor_detection(
             )
     return {
         "model_id": model_id,
-        "model_revision": REVISIONS[model_id],
         "image_size": {"width": width, "height": height},
         "patch_size": TUMOR_PATCH_SIZE,
         "max_tumor_score": max(patch["tumor_score"] for patch in patches),
@@ -168,7 +137,7 @@ def monai_pathology_nuclei_classification(
     )
     inputs = torch.as_tensor(data["image"]).unsqueeze(0).to(DEVICE)
     with torch.inference_mode():
-        logits = _load_pathology_model(model_id)(inputs)
+        logits = get_monai_model(model_id)(inputs)
         if logits.shape != (1, 4) or not torch.isfinite(logits).all():
             raise RuntimeError("MONAI returned invalid nucleus class logits")
         class_scores = get_classification_scores(
@@ -176,7 +145,6 @@ def monai_pathology_nuclei_classification(
         )
     return {
         "model_id": model_id,
-        "model_revision": REVISIONS[model_id],
         "predicted_class": max(class_scores, key=class_scores.__getitem__),
         "class_scores": class_scores,
     }
@@ -234,7 +202,7 @@ def monai_pathology_nuclei_segmentation_classification(
     )
     with torch.inference_mode():
         predictions = cast(
-            dict[str, torch.Tensor], inferer(inputs, _load_pathology_model(model_id))
+            dict[str, torch.Tensor], inferer(inputs, get_monai_model(model_id))
         )
     info, instance_map = HoVerNetInstanceMapPostProcessing(
         sobel_kernel_size=21, marker_threshold=0.4, marker_radius=2
@@ -252,7 +220,6 @@ def monai_pathology_nuclei_segmentation_classification(
         raise RuntimeError("MONAI returned nucleus maps with unexpected dimensions")
     return {
         "model_id": model_id,
-        "model_revision": REVISIONS[model_id],
         "labels": dict(enumerate(("background", *NUCLEI_CLASSES))),
         "instance_count": int(np.unique(instances[instances > 0]).size),
         "instance_map": instances.tolist(),
