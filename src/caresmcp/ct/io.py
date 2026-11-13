@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import is_grayscale
+from caresmcp.api.io import is_dicom, is_grayscale
 
 if TYPE_CHECKING:
     from pydicom.dataset import Dataset
@@ -156,10 +156,6 @@ def _decode_raster(
     return DecodedCTSlice(_validate_slice_pixels(pixels), units)
 
 
-def _is_dicom(image: bytes) -> bool:
-    return image[128:132] == b"DICM"
-
-
 def _decode_ct_slice(
     image: bytes,
     rescale_slope: float = 1.0,
@@ -168,7 +164,7 @@ def _decode_ct_slice(
 ) -> DecodedCTSlice:
     if not image:
         raise ValueError("image must not be empty")
-    if _is_dicom(image):
+    if is_dicom(image):
         return _decode_dicom(image)
     slope, intercept = _parse_rescale_parameters(rescale_slope, rescale_intercept)
     return _decode_raster(image, slope, intercept, raster_units)

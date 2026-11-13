@@ -1,4 +1,5 @@
 from .annotation import unpack_literal
+from .filetype import is_dicom
 from .image import (
     convert_grayscale,
     decode_as,
@@ -19,6 +20,7 @@ __all__ = [
     "encode_label_mask",
     "get_classification_scores",
     "has_todo",
+    "is_dicom",
     "is_grayscale",
     "rich_table_to_df",
     "unpack_literal",

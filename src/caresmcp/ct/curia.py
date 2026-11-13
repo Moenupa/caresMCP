@@ -5,7 +5,7 @@ from typing import Any, Literal
 import numpy as np
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import get_classification_scores
+from caresmcp.api.io import get_classification_scores, is_dicom
 from caresmcp.api.models.hf_hub import (
     HFModelType,
     get_hf_json,
@@ -21,7 +21,7 @@ from ._arg import (
     RasterRescaleIntercept,
     RasterRescaleSlope,
 )
-from .io import DecodedCTSlice, _decode_ct_slice, _is_dicom
+from .io import DecodedCTSlice, _decode_ct_slice
 
 CURIA_MODEL_ID = "raidium/curia"
 CuriaCTTask = Literal[
@@ -101,7 +101,7 @@ def classify_ct_slice_with_curia(
         raster_hu_rescale_intercept,
         "hu",
     )
-    if _is_dicom(image_or_dicom) and decoded.image_orientation_patient is None:
+    if is_dicom(image_or_dicom) and decoded.image_orientation_patient is None:
         raise ValueError("Curia CT DICOM input requires image orientation metadata")
     hu = _curia_hu_input(decoded, anatomical_plane)
     model, processor = get_hf_model_and_processor(
