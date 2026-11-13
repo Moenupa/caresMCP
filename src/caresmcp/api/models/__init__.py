@@ -8,6 +8,7 @@ from .monai import get_monai_model
 from .timm import get_timm_model
 from .torch_hub import get_torch_model
 from .torchxrayvision import get_torchxrayvision_model
+from .umair import get_umair_classifier, get_umair_segmentation_model
 
 HFMODEL_ID_DESC = "Huggingface Model ID"
 SOFTMAX_DESC = "Sigmoid for multi-label; softmax for exclusive classes."
@@ -23,4 +24,6 @@ __all__ = [
     "get_timm_model",
     "get_torch_model",
     "get_torchxrayvision_model",
+    "get_umair_classifier",
+    "get_umair_segmentation_model",
 ]
