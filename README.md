@@ -98,7 +98,7 @@ mindmap
       LV segmentation
       PanEcho
       Cardiac MRI seg
-    Any anatomy: 21
+    Any anatomy: 22
       CT
       MRI
       TotalSegmentator
@@ -107,8 +107,9 @@ mindmap
       Pathology encoders
       Zero-shot classifiers
       Cellpose
-    Breast: 1
+    Breast: 2
       Mammographic density
+      Mammogram patch classify
     Musculoskeletal
       Pediatric wrist findings
       Anatomical masks
@@ -121,9 +122,9 @@ mindmap
 pie showData title Tools by task type
     "Segmentation" : 13
     "Embedding" : 11
-    "Classification" : 4
+    "Classification" : 5
     "Image-text (CLIP)" : 6
-    "Analysis and utilities" : 19
+    "Analysis and utilities" : 20
 ```
 
 ## Example workflow: chest X-ray with expert-tool calibration
