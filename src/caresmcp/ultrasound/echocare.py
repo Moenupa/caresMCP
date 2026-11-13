@@ -1,42 +1,41 @@
 """Image embeddings from the pretrained EchoCare ultrasound foundation model."""
 
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-import numpy as np
-from PIL import Image, UnidentifiedImageError
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
+from caresmcp.api.io import decode_as
 from caresmcp.api.models import get_hf_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMB, ULTRASOUND
+
+if TYPE_CHECKING:
+    from torchvision.transforms import Compose
 
 _MODEL_ID = "Moenupa/EchoCare"
 _IMAGE_SIZE = 256
 ULTRASOUND_IMG = Field(description="Ultrasound image or frame")
 
 
-def _decode_echocare_image(image: bytes, torch: Any) -> Any:
-    """Return an EchoCare input tensor for an encoded ultrasound frame."""
-    from io import BytesIO
+def _echocare_transform() -> "Compose":
+    """Return the EchoCare input transform for RGB ultrasound frames."""
+    from torchvision import transforms
 
-    if not image:
-        raise ValueError("image must contain a readable ultrasound frame")
-
-    try:
-        with Image.open(BytesIO(image)) as source:
-            resized = source.convert("RGB").resize(
-                (_IMAGE_SIZE, _IMAGE_SIZE), Image.Resampling.BILINEAR
-            )
-            pixels = np.asarray(resized, dtype=np.float32) / 255.0
-    except (OSError, UnidentifiedImageError) as exc:
-        raise ValueError("image must contain a readable ultrasound frame") from exc
-
-    return torch.from_numpy(pixels).permute(2, 0, 1).unsqueeze(0).to(DEVICE)
+    return transforms.Compose(
+        [
+            transforms.Resize(
+                (_IMAGE_SIZE, _IMAGE_SIZE),
+                interpolation=transforms.InterpolationMode.BILINEAR,
+                antialias=True,
+            ),
+            transforms.ToTensor(),
+        ]
+    )
 
 
-def _load_echocare_encoder(checkpoint: Any) -> Any:
-    """Return the EchoCare encoder for the supplied checkpoint."""
+def _load_echocare_encoder() -> Any:
+    """Load and cache the pretrained EchoCare encoder."""
     from monai.networks.nets.swin_unetr import SwinTransformer
 
     model = SwinTransformer(
@@ -53,10 +52,11 @@ def _load_echocare_encoder(checkpoint: Any) -> Any:
         spatial_dims=2,
         use_v2=True,
     )
-    state_dict = checkpoint.get("state_dict", checkpoint)
-    for k in list(dict(state_dict).keys()):
-        if k.startswith("swin."):
-            state_dict[k[5:]] = state_dict.pop(k)
+    checkpoint = get_hf_checkpoint(model_id=_MODEL_ID, filename="model.safetensors")
+    checkpoint_state = checkpoint.get("state_dict", checkpoint)
+    state_dict = {
+        key.removeprefix("swin."): value for key, value in checkpoint_state.items()
+    }
 
     model.load_state_dict(state_dict)
     return model.to(DEVICE).eval()
@@ -64,7 +64,7 @@ def _load_echocare_encoder(checkpoint: Any) -> Any:
 
 @ULTRASOUND.register("echocare_image_embed")
 @TASK_EMB.register("echocare_image_embed")
-@requires(["torch", "monai", "transformers"], extra="ultrasound")
+@requires(["torch", "torchvision", "monai", "transformers"], extra="ultrasound")
 def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, Any]:
     """Extract a 2048-dimensional EchoCare embedding from an ultrasound image.
 
@@ -74,11 +74,11 @@ def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, A
     """
     import torch
 
-    tensor = _decode_echocare_image(image, torch)
-    checkpoint = get_hf_checkpoint(model_id=_MODEL_ID, filename="model.safetensors")
-    model = _load_echocare_encoder(checkpoint)
+    model = _load_echocare_encoder()
     with torch.inference_mode():
-        feature_maps = model(tensor)
+        feature_maps = model(
+            _echocare_transform()(decode_as(image, mode="RGB")).unsqueeze(0).to(DEVICE)
+        )
 
     final_features = feature_maps[-1]
     if final_features.ndim != 4 or final_features.shape[0] != 1:
@@ -87,10 +87,7 @@ def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, A
         raise RuntimeError("EchoCare encoder returned non-finite features")
 
     embedding = final_features.mean(dim=(2, 3))[0].detach().float().cpu().tolist()
-    if len(embedding) != 2048:
-        raise RuntimeError("EchoCare encoder must return a 2048-dimensional embedding")
-
     return {
-        "model": _MODEL_ID,
+        "model": "CAIR-HKISI/EchoCare",
         "embedding": [float(value) for value in embedding],
     }
