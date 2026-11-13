@@ -18,6 +18,7 @@ class HFModelType(Enum):
     IMAGE_PRETRAINING = "image_pretraining"
     AUTO = "auto"
     SAM = "sam"
+    SAM2 = "sam2"
     SEMANTIC_SEGMENTATION = "semantic_segmentation"
 
 
@@ -64,6 +65,8 @@ def get_hf_model_and_processor(
 
     Image processors load with ``use_fast=True``; checkpoints saved with a slow
     processor would otherwise trigger a transformers deprecation warning.
+    ``SAM2`` uses the image-mode ``Sam2Model`` and ``Sam2Processor``, matching
+    the image interface documented for the released SAM 2 checkpoints.
 
     ``subfolder`` selects a model head. Its processor is loaded from the same
     folder unless ``processor_subfolder`` explicitly selects another folder.
@@ -76,6 +79,11 @@ def get_hf_model_and_processor(
 
             model_class = SamModel
             processor_class = SamProcessor
+        case HFModelType.SAM2:
+            from transformers import Sam2Model, Sam2Processor
+
+            model_class = Sam2Model
+            processor_class = Sam2Processor
         case HFModelType.SEMANTIC_SEGMENTATION:
             from transformers import (
                 AutoImageProcessor,
