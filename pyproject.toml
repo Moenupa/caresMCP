@@ -21,13 +21,14 @@ dependencies = [
 dicom = ["pydicom>=3,<4"]
 torch = ["torch>=2.8,<3", "torchvision"]
 hf = [
-    "caresmcp[torch]",
+    "caresmcp[torch,sam]",
     "transformers[torchhub]>=4.57,<5", # incl safetensors
     "einops",
 ]
+skimage = ["scikit-image[optional_free_threaded]"]
 timm = ["timm>=1.0.27,<2"]
-sam = ["segment-anything"]
-monai = ["caresmcp[hf]", "monai[skimage]>=1.3"]
+sam = ["segment-anything", "segmentation-models-pytorch>=0.6,<1"]
+monai = ["caresmcp[hf,skimage]", "monai>=1.3"]
 totalsegmentator = ["TotalSegmentator>=2.0"]
 itk = ["simpleitk>=2.4,<2.6"]
 clip = ["open-clip-torch>=4.2.1,<5"]

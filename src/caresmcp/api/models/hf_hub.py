@@ -1,5 +1,5 @@
 import json
-from enum import Enum
+from enum import Enum, auto
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -13,12 +13,12 @@ if TYPE_CHECKING:
 class HFModelType(Enum):
     """Transformers model and processor class combinations used internally."""
 
-    IMAGE_CLASSIFICATION = "image_classification"
-    IMAGE_ENCODER = "image_encoder"
-    IMAGE_PRETRAINING = "image_pretraining"
-    AUTO = "auto"
-    SAM = "sam"
-    SEMANTIC_SEGMENTATION = "semantic_segmentation"
+    IMAGE_CLASSIFICATION = auto()
+    IMAGE_ENCODER = auto()
+    IMAGE_PRETRAINING = auto()
+    AUTO = auto()
+    SAM = auto()
+    SEMANTIC_SEGMENTATION = auto()
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
