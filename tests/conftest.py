@@ -2,6 +2,13 @@ import os
 
 import pytest
 
+from caresmcp.api.decorators.bytes_io import _read_bytes
+
+
+@pytest.fixture(scope="session")
+def dummy_jpeg():
+    return _read_bytes("https://placehold.co/128x128.jpg")
+
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]):
     """Modify test collection based on markers and environment."""
