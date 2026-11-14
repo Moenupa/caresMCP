@@ -116,7 +116,7 @@ def torchxrayvision_classify(
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
 
     model = get_torchxrayvision_model(weights, apply_sigmoid=True)
-    with torch.no_grad():
+    with torch.inference_mode():
         scores = model(tensor)
 
     return {
@@ -177,7 +177,7 @@ def torchxrayvision_segment_anatomy(
     image_array, _ = _preprocess_xray(image, xrv, transforms, weight_or_size=512)
     tensor = torch.from_numpy(image_array).unsqueeze(0).to(DEVICE)
     model = get_torchxrayvision_model("anatomy")
-    with torch.no_grad():
+    with torch.inference_mode():
         probabilities = torch.sigmoid(model(tensor)[0])
         if region is not None:
             region_index = ANATOMICAL_TARGETS.index(region)
