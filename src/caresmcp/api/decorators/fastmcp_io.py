@@ -1,6 +1,6 @@
 """Input and output conversions for FastMCP tool functions."""
 
-import re
+import warnings
 from collections.abc import Callable
 from functools import wraps
 from inspect import signature
@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import filetype
+from fastmcp.utilities.docstring_parsing import parse_docstring
 from fastmcp.utilities.types import File, Image
 
 from .bytes_io import _byte_input_names, adapt_byte_inputs
@@ -43,7 +44,16 @@ def adapt_fastmcp_tool[**P, R](function: Callable[P, R]) -> Callable[P, Any]:
         result = adapted_function(*bound.args, **bound.kwargs)
         return _image_result(result)
 
-    wrapped.__doc__ = _describe_mcp_inputs(function.__doc__, byte_inputs)
+    parsed_docstring = parse_docstring(function)
+    if parsed_docstring.parameters:
+        names = ", ".join(parsed_docstring.parameters)
+        warnings.warn(
+            f"{function.__qualname__} has parameter descriptions in its docstring "  # ty: ignore[unresolved-attribute]
+            f"({names}); use Pydantic annotations instead.",
+            UserWarning,
+            stacklevel=2,
+        )
+        wrapped.__doc__ = parsed_docstring.description
     return wrapped
 
 
@@ -86,23 +96,3 @@ def _image_result(value: Any) -> Any:
     if file_type is None or not file_type.mime.startswith("image/"):
         return File(data=value, format=file_type.extension if file_type else None)
     return Image(data=value, format=file_type.extension)
-
-
-def _describe_mcp_inputs(
-    docstring: str | None,
-    parameter_names: tuple[str, ...],
-) -> str | None:
-    """Describe URL and data URI inputs without changing parameter names."""
-    if not docstring:
-        return docstring
-
-    for name in parameter_names:
-        pattern = re.compile(rf"(?m)^([ \t]*){re.escape(name)}:[ \t]*(.*)$")
-        docstring = pattern.sub(
-            lambda match, name=name: (
-                f"{match.group(1)}{name}: HTTP(S) URL or base64 data URI. "
-                f"{match.group(2)}"
-            ).rstrip(),
-            docstring,
-        )
-    return docstring
