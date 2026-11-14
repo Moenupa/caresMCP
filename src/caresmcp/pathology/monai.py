@@ -73,8 +73,6 @@ def monai_pathology_tumor_detection(
                 ]
             inputs = torch.from_numpy(batch).permute(0, 3, 1, 2).to(DEVICE)
             logits = model(inputs / 127.5 - 1.0)
-            if logits.numel() != len(batch_boxes) or not torch.isfinite(logits).all():
-                raise RuntimeError("MONAI returned invalid patch tumor logits")
             scores = logits.sigmoid().reshape(-1).cpu().tolist()
             patches.extend(
                 {"box": box, "tumor_score": score}
@@ -138,8 +136,6 @@ def monai_pathology_nuclei_classification(
     inputs = torch.as_tensor(data["image"]).unsqueeze(0).to(DEVICE)
     with torch.inference_mode():
         logits = get_monai_model(model_id)(inputs)
-        if logits.shape != (1, 4) or not torch.isfinite(logits).all():
-            raise RuntimeError("MONAI returned invalid nucleus class logits")
         class_scores = get_classification_scores(
             logits, dict(enumerate(NUCLEI_CLASSES)), "softmax"
         )

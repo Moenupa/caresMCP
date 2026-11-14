@@ -1,4 +1,3 @@
-import math
 from collections import Counter
 from typing import Annotated, Any, Literal
 
@@ -111,6 +110,4 @@ def hf_image_embed(
             )
         pooling_used = "pooler"
     embedding = vector[0].detach().float().cpu().tolist()
-    if not embedding or not all(math.isfinite(value) for value in embedding):
-        raise ValueError("encoder returned empty or non-finite feature values")
     return {"model_id": model_id, "pooling": pooling_used, "embedding": embedding}

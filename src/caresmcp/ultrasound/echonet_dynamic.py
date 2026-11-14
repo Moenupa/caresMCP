@@ -188,8 +188,6 @@ def _transform_echo_frame(frame: np.ndarray, transform: np.ndarray) -> np.ndarra
 
 def _decode_echonet_dynamic_video(video: bytes) -> np.ndarray:
     """Decode the full video as resized RGB frames on the 0–255 scale."""
-    if not video:
-        raise ValueError("video must contain a readable apical four-chamber echo")
     with TemporaryDirectory() as temporary_directory:
         video_path = Path(temporary_directory) / "input.mp4"
         video_path.write_bytes(video)
@@ -348,8 +346,6 @@ def echonet_dynamic_predict_ef(
             clips = (clips - channel_mean) / channel_std
             tensor = torch.from_numpy(clips).permute(0, 4, 1, 2, 3).to(DEVICE)
             predictions.extend(model(tensor)[:, 0].float().cpu().tolist())
-    if not np.isfinite(predictions).all():
-        raise RuntimeError("EchoNet-Dynamic returned a non-finite ejection fraction")
     last_start = len(pixels) - ((_FRAME_COUNT - 1) * _FRAME_PERIOD + 1)
     return {
         "model": "EchoNet-Dynamic",
@@ -398,8 +394,6 @@ def echonet_dynamic_segment_lv(
     model = _load_echonet_dynamic_segmentation_model()
     with torch.inference_mode():
         logits = model(tensor)["out"]
-    if not torch.isfinite(logits).all():
-        raise RuntimeError("EchoNet-Dynamic returned non-finite segmentation logits")
     logits_array = logits[0, 0].detach().cpu().numpy()
     source_logits = cv2.warpAffine(
         logits_array,

@@ -173,8 +173,6 @@ def biovil_ground_phrases(
         maps = torch.einsum("dhw,nd->nhw", patches, text).cpu().numpy()
         scores = (text @ global_image).cpu().tolist()
     maps = np.stack([gaussian_filter(values, sigma=1.5) for values in maps])
-    if not np.isfinite(maps).all() or not np.isfinite(scores).all():
-        raise RuntimeError("BioViL returned nonfinite image-text similarities")
     filename, revision = BIOVIL_CHECKPOINTS[model_id]
     return {
         "model_id": model_id,

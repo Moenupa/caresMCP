@@ -162,8 +162,6 @@ def _decode_ct_slice(
     rescale_intercept: float = 0.0,
     raster_units: CTRasterUnits = "display",
 ) -> DecodedCTSlice:
-    if not image:
-        raise ValueError("image must not be empty")
     if is_dicom(image):
         return _decode_dicom(image)
     slope, intercept = _parse_rescale_parameters(rescale_slope, rescale_intercept)

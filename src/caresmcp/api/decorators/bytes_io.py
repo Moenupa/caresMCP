@@ -67,8 +67,14 @@ def _read_byte_input(value: Any) -> bytes | list[bytes] | None:
     if value is None:
         return None
     if isinstance(value, list):
-        return [_read_bytes(item) for item in value]
-    return _read_bytes(value)
+        result = [_read_bytes(item) for item in value]
+        if any(not item for item in result):
+            raise ValueError("Byte input must not be empty")
+        return result
+    ret = _read_bytes(value)
+    if not ret:
+        raise ValueError("Byte input must not be empty")
+    return ret
 
 
 def _read_bytes(value: Any) -> bytes:

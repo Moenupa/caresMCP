@@ -176,8 +176,6 @@ def _extract_pathology_embedding_tensor(
     if embedding.ndim != 2 or embedding.shape[0] != 1:
         raise RuntimeError("pathology encoder returned an unexpected embedding shape")
     values = embedding[0].detach().float()
-    if not torch.isfinite(values).all():
-        raise RuntimeError("pathology encoder returned non-finite embedding values")
     return selected_pooling, values
 
 

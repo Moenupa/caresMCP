@@ -81,10 +81,6 @@ def echocare_image_embed(image: Annotated[bytes, ULTRASOUND_IMG]) -> dict[str, A
         )
 
     final_features = feature_maps[-1]
-    if final_features.ndim != 4 or final_features.shape[0] != 1:
-        raise RuntimeError("EchoCare encoder returned an invalid final feature map")
-    if not torch.isfinite(final_features).all():
-        raise RuntimeError("EchoCare encoder returned non-finite features")
 
     embedding = final_features.mean(dim=(2, 3))[0].detach().float().cpu().tolist()
     return {
