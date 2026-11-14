@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Annotated, Any, Literal
 
 import numpy as np
@@ -29,7 +28,6 @@ MIN_CELL_SIZE = Field(
 )
 
 
-@lru_cache(maxsize=2)
 def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
     """Load and cache the pretrained Cellpose-SAM model."""
     from cellpose.models import CellposeModel
