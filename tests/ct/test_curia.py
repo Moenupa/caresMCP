@@ -2,7 +2,7 @@
 
 import pytest
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.ct.curia import (
     CuriaCTTask,
     classify_ct_slice_with_curia,
@@ -19,15 +19,13 @@ pytestmark = pytest.mark.slow
         ("intracranial_hemorrhage_classification", "ich"),
     ],
 )
+@skip_on_import_error
 @save_returns("ct_curia")
 def test_classify_dicom(
     ct_lung_cancer_dicom: bytes,
     classification_task: CuriaCTTask,
     expected_head: str,
 ):
-    for package in ("torch", "transformers", "huggingface_hub"):
-        pytest.importorskip(package)
-
     result = classify_ct_slice_with_curia(
         ct_lung_cancer_dicom,
         classification_task=classification_task,

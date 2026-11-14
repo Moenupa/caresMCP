@@ -4,15 +4,9 @@ import math
 
 import pytest
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.medical_ai.hf import hf_classifier, hf_image_embed
-
-
-@pytest.fixture(scope="module", autouse=True)
-def require_hf_dependencies() -> None:
-    pytest.importorskip("torch")
-    pytest.importorskip("transformers")
 
 
 @pytest.fixture(
@@ -43,6 +37,7 @@ def sample(request: pytest.FixtureRequest) -> tuple[bytes, set[str]]:
         pytest.param("microsoft/resnet-18", 1000, id="resnet-18"),
     ],
 )
+@skip_on_import_error
 def test_hf_classifier(
     sample: tuple[bytes, set[str]], model_id: str, class_count: int
 ) -> None:
@@ -75,6 +70,7 @@ def test_hf_classifier(
 
 @pytest.mark.slow
 @pytest.mark.parametrize("pooling", ["cls", "mean"])
+@skip_on_import_error
 @save_returns("hf_image_embed")
 def test_hf_image_embed(sample, pooling):
     """Extract finite image embeddings using both token pooling options."""

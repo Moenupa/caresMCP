@@ -2,25 +2,13 @@
 
 import pytest
 
-from caresmcp.api.decorators import save_returns
-from caresmcp.ct.huggingface import (
-    CTClassifier,
-    classify_ct_slice,
-)
+from caresmcp.api.decorators import save_returns, skip_on_import_error
+from caresmcp.ct.huggingface import CTClassifier, classify_ct_slice
 
 pytestmark = pytest.mark.slow
 
 
-@pytest.fixture(scope="module")
-def image(request: pytest.FixtureRequest) -> bytes:
-    pytest.importorskip("torch")
-    pytest.importorskip("transformers")
-    return request.getfixturevalue(request.param)
-
-
-@pytest.mark.parametrize(
-    "image", ["ct_lung_cancer_dicom", "ct_lung_nodule_dicom"], indirect=True
-)
+@pytest.mark.parametrize("image", ["ct_lung_cancer_dicom", "ct_lung_nodule_dicom"])
 @pytest.mark.parametrize(
     "model_id, labels",
     [
@@ -37,16 +25,15 @@ def image(request: pytest.FixtureRequest) -> bytes:
         ),
     ],
 )
+@skip_on_import_error
 @save_returns("ct_hf")
 def test_classify_ct_slice(
-    image: bytes,
+    image: str,
     model_id: CTClassifier,
     labels: set[str],
+    request: pytest.FixtureRequest,
 ):
-    if model_id == "sukhmani1303/lung-cancer-vit-model":
-        pytest.importorskip("timm")
-
-    result = classify_ct_slice(image, model_id=model_id)
+    result = classify_ct_slice(request.getfixturevalue(image), model_id=model_id)
 
     assert set(result["scores"]) == labels
     scores = list(result["scores"].values())

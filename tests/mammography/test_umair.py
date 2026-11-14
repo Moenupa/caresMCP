@@ -2,16 +2,16 @@ import math
 
 import pytest
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.mammography.umair import classify_mammogram_patch
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("image", ["mlo_scattered_density", "b_sample", "c_sample"])
+@skip_on_import_error
 @save_returns("mammography_classification")
 def test_classify_mammogram_patch(image: str, request: pytest.FixtureRequest):
     """Return normalized benign, malignant, and normal scores for real images."""
-    pytest.importorskip("torchvision")
     scores = classify_mammogram_patch(request.getfixturevalue(image))
 
     assert tuple(scores) == ("benign", "malignant", "normal")

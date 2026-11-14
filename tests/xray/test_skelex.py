@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.io import encode_as
 from caresmcp.api.models import HFModelType, get_hf_model_and_processor
 from caresmcp.xray.skelex import skelex_reconstruction_error
@@ -14,10 +14,10 @@ from caresmcp.xray.skelex import skelex_reconstruction_error
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 
 
+@skip_on_import_error
 @save_returns("skelex", unpack=True)
 def test_skelex_reconstruction_error(wrist_example):
     """Check mask coverage, error scale and reproducible multi-pass sampling."""
-    pytest.importorskip("transformers")
     import torch
 
     model, _ = get_hf_model_and_processor(
@@ -46,10 +46,10 @@ def test_skelex_reconstruction_error(wrist_example):
     return {"source": image, "heatmap": result, "metadata": metadata}
 
 
+@skip_on_import_error
 @save_returns("skelex_palette", unpack=True)
 def test_skelex_palette_image(wrist_example):
     """A palette image and its RGB rendering should yield the same map."""
-    pytest.importorskip("transformers")
     image, _ = wrist_example
     with Image.open(BytesIO(image)) as source:
         palette = source.convert("RGB").quantize(colors=64)

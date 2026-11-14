@@ -3,17 +3,17 @@
 import numpy as np
 import pytest
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.xray.embeddings import xray_image_embed, xray_image_similarity
 
 pytestmark = pytest.mark.slow
 
 
 @pytest.mark.parametrize("pooling", ["cls", "mean"])
+@skip_on_import_error
 @save_returns("cxr_encoder", unpack=True)
 def test_cxr_encoder(cxr_image: bytes, cxr_image_followup: bytes, pooling):
     """Rank two real images and reject genuinely different pooling representations."""
-    pytest.importorskip("transformers")
     embedding = xray_image_embed(cxr_image, pooling=pooling)
     followup = xray_image_embed(cxr_image_followup, pooling=pooling)
     assert embedding["model_id"] == "microsoft/rad-dino"

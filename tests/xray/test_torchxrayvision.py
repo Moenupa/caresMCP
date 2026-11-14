@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.models import get_torchxrayvision_model
 from caresmcp.xray.torchxrayvision import (
     ANATOMICAL_TARGETS,
@@ -20,14 +20,8 @@ from caresmcp.xray.torchxrayvision import (
 pytestmark = pytest.mark.slow
 
 
-@pytest.fixture(scope="module", autouse=True)
-def require_torchxrayvision():
-    """Skip integration tests when optional X-ray dependencies are absent."""
-    for package in ("torch", "torchvision", "torchxrayvision"):
-        pytest.importorskip(package)
-
-
 @pytest.mark.parametrize("weights", get_args(ChestXrayWeights))
+@skip_on_import_error
 @save_returns("torchxrayvision")
 def test_torchxrayvision_classify(cxr_image: bytes, weights: ChestXrayWeights):
     """Check pathology names, score ranges, and rounding for every checkpoint."""
@@ -45,6 +39,7 @@ def test_torchxrayvision_classify(cxr_image: bytes, weights: ChestXrayWeights):
 
 
 @pytest.mark.parametrize("output", ["legend", "label_mask"])
+@skip_on_import_error
 @save_returns("torchxrayvision")
 def test_torchxrayvision_segment_anatomy(
     cxr_image: bytes, output: Literal["legend", "label_mask"]
@@ -69,6 +64,7 @@ def test_torchxrayvision_segment_anatomy(
     return result
 
 
+@skip_on_import_error
 @save_returns("torchxrayvision")
 def test_torchxrayvision_segment_anatomy_region(cxr_image: bytes):
     """Check that selecting a lung returns a binary mask without a legend."""
@@ -85,6 +81,7 @@ def test_torchxrayvision_segment_anatomy_region(cxr_image: bytes):
     ("weights", "size"), [("densenet121-res224-all", 224), ("resnet50-res512-all", 512)]
 )
 @pytest.mark.parametrize("output", ["overlay", "saliency"])
+@skip_on_import_error
 @save_returns("torchxrayvision")
 def test_torchxrayvision_localize(
     cxr_image: bytes,

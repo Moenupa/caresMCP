@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.models._biovil import BioViLModel
 from caresmcp.xray.biovil import biovil_ground_phrases
@@ -24,6 +24,7 @@ from caresmcp.xray.biovil import biovil_ground_phrases
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 
 
+@skip_on_import_error
 @pytest.fixture(
     scope="module",
     params=[("00001688_000.png", "Nodule"), ("00019892_003.png", "Pneumothorax")],
@@ -63,10 +64,10 @@ def nih_box_example(request):
     "model_id",
     ["microsoft/BiomedVLP-CXR-BERT-specialized", "microsoft/BiomedVLP-BioViL-T"],
 )
+@skip_on_import_error
 @save_returns("biovil_nih_pathology_boxes", unpack=True)
 def test_biovil_pathology_boxes(nih_box_example, model_id: BioViLModel):
     """Report peak hits and grid ranking inside the original-coordinate boxes."""
-    pytest.importorskip("health_multimodal")
     image, boxes, finding, source_url, annotation_sha = nih_box_example
     result = biovil_ground_phrases(image, [finding], model_id=model_id)
     phrase = result["phrases"][0]

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.models.flexray import get_flexray_model
 from caresmcp.xray.flexray import AnatomicalRegion, flexray_segment_anatomy
 
@@ -15,10 +15,10 @@ pytestmark = [pytest.mark.slow, pytest.mark.cuda]
 
 
 @pytest.mark.parametrize("region", ["lungs", "heart", "clavicles"])
+@skip_on_import_error
 @save_returns("flexray")
 def test_flexray_segment_anatomy(cxr_image: bytes, region: AnatomicalRegion):
     """Verify independent masks, released label order, and input-sized geometry."""
-    pytest.importorskip("fxr")
     model = get_flexray_model()
     assert model.label_names == ("background", *get_args(AnatomicalRegion))
     assert model.subfolders == ("members/flux0375",)
@@ -30,11 +30,10 @@ def test_flexray_segment_anatomy(cxr_image: bytes, region: AnatomicalRegion):
         assert set(np.unique(pixels)) == {0, 255}
     return result
 
-
+@skip_on_import_error
 @save_returns("flexray", unpack=True)
 def test_flexray_wrist_anatomy(wrist_example):
     """Exercise a non-square pediatric wrist with independent radius/ulna masks."""
-    pytest.importorskip("fxr")
     image, _ = wrist_example
     results = {
         name: flexray_segment_anatomy(image, name) for name in ("radii", "ulnae")
