@@ -1,119 +1,83 @@
-"""Exercise byte input adaptation with a real medical image."""
+"""Test byte input adaptation without external files or downloads."""
 
-import base64
 from inspect import signature
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
+from unittest.mock import MagicMock, mock_open
 
 import pytest
 
 from caresmcp.api.decorators.bytes_io import adapt_byte_inputs
 
-pytestmark = pytest.mark.slow
 
-IMAGE_URL = "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png"
-type ImageSource = bytes | Path | str
-
-
-@pytest.fixture(scope="module")
-def image_sources(tmp_path_factory: pytest.TempPathFactory) -> dict[str, ImageSource]:
-    """Provide supported sources for the same real medical image."""
-
-    @adapt_byte_inputs
-    def read_image(image: bytes) -> bytes:
-        return image
-
-    image = read_image(IMAGE_URL)  # ty: ignore[invalid-argument-type]
-    path = tmp_path_factory.mktemp("byte-inputs") / "image.png"
-    path.write_bytes(image)
-    return {
-        "bytes": image,
-        "path": path,
-        "path_string": str(path),
-        "data_uri": "data:image/png;base64," + base64.b64encode(image).decode("ascii"),
-        "url": IMAGE_URL,
-    }
+@pytest.fixture
+def artifact() -> bytes:
+    return b"fake artifact"
 
 
-@pytest.mark.parametrize(
-    "source_format, annotation",
-    [
-        ("bytes", bytes),
-        ("path", Annotated[bytes, "image"]),
-        ("path_string", "bytes"),
-        ("data_uri", bytes),
-        ("url", bytes),
-    ],
-)
-def test_single_byte_input(annotation: Any, source_format, image_sources):
-    """Adapt each source and preserve the signature and other arguments."""
-
-    def tool(value, *, label: str = "image"):
-        return value, label
-
-    tool.__annotations__["value"] = annotation
-    adapted = adapt_byte_inputs(tool)
-    source = image_sources[source_format]
-
-    assert signature(adapted) == signature(tool)
-    assert adapted(source, label="scan") == (image_sources["bytes"], "scan")
-    assert adapted(value=source) == (image_sources["bytes"], "image")
-
-
-@pytest.mark.parametrize(
-    "annotation", [list[bytes], Annotated[list[bytes], "images"], "list[bytes]"]
-)
-def test_byte_input_list(annotation: Any, image_sources):
-    """Adapt source lists without changing the caller's list."""
-
-    def tool(values):
-        return values
-
-    tool.__annotations__["values"] = annotation
-    adapted = adapt_byte_inputs(tool)
-    sources = list(image_sources.values())
-    original_sources = sources.copy()
-
-    expected = [image_sources["bytes"]] * len(sources)
-
-    assert adapted(sources) == expected
-    assert adapted(values=sources) == expected
-    assert sources == original_sources
-    assert adapted([]) == []
-
-
-def test_multiple_byte_parameters(image_sources):
-    """Adapt single and list byte parameters together at the public boundary."""
-
-    @adapt_byte_inputs
-    def tool(image: bytes, references: list[bytes], path: Path):
-        return image, references, path
-
-    path = Path("unchanged")
-    sources = list(image_sources.values())
-    assert tool(image_sources["path"], references=sources, path=path) == (
-        image_sources["bytes"],
-        [image_sources["bytes"]] * len(sources),
-        path,
+def test_byte_inputs(artifact, monkeypatch):
+    """Accept bytes, file paths, data URIs, and HTTP URLs."""
+    monkeypatch.setattr("builtins.open", mock_open(read_data=artifact))
+    session = MagicMock()
+    session.__enter__.return_value.get.return_value.content = artifact
+    monkeypatch.setattr(
+        "caresmcp.api.decorators.bytes_io.requests.Session", lambda **_: session
     )
 
+    @adapt_byte_inputs
+    def read(value: bytes) -> bytes:
+        return value
 
-@pytest.mark.parametrize(
-    "source_name", ["bytes", "path", "path_string", "data_uri", "url"]
-)
-def test_nullable_byte_sources(image_sources, source_name):
-    """Adapt nullable single/list inputs from each real-image source format."""
+    assert read(artifact) == artifact
+    assert read(Path("artifact.bin")) == artifact  # ty: ignore[invalid-argument-type]
+    assert read("artifact.bin") == artifact  # ty: ignore[invalid-argument-type]
+    assert read("data:application/octet-stream;base64,ZmFrZSBhcnRpZmFjdA==") == artifact  # ty: ignore[invalid-argument-type]
+    assert read("https://example.com/artifact.bin") == artifact  # ty: ignore[invalid-argument-type]
+
+
+def test_lists_and_optional_inputs(artifact):
+    """Adapt lists and optional byte inputs without changing other arguments."""
 
     @adapt_byte_inputs
-    def read_optional(
-        image: Annotated[bytes | None, "optional image"] = None,
-        images: list[bytes] | None = None,
+    def read(
+        value: Annotated[bytes | None, "artifact"] = None,
+        values: list[bytes] | None = None,
+        label: str = "example",
     ):
-        return image, images
+        return value, values, label
 
-    source: Any = image_sources[source_name]
-    image, images = read_optional(source, [source])
-    assert image == image_sources["bytes"]
-    assert images == [image_sources["bytes"]]
-    assert read_optional(None, None) == (None, None)
-    assert read_optional() == (None, None)
+    data_uri = "data:;base64,ZmFrZSBhcnRpZmFjdA=="
+    sources = [artifact, data_uri]
+    assert read(data_uri, sources, label="test") == (  # ty: ignore[invalid-argument-type]
+        artifact,
+        [artifact, artifact],
+        "test",
+    )
+    assert sources == [artifact, data_uri]
+    assert read() == (None, None, "example")
+    assert read(values=[]) == (None, [], "example")
+
+
+def test_preserves_signature():
+    def read(value: bytes, *, label: str = "example"):
+        return value, label
+
+    assert signature(adapt_byte_inputs(read)) == signature(read)
+
+
+@pytest.mark.parametrize(
+    "source, error",
+    [
+        (123, TypeError),
+        ("data:text/plain,hello", ValueError),
+        ("data:;base64,!!!", ValueError),
+        ("https:///artifact.bin", ValueError),
+    ],
+)
+def test_invalid_sources(source, error):
+    @adapt_byte_inputs
+    def read(value: bytes):
+        return value
+
+    with pytest.raises(error):
+        read(source)
