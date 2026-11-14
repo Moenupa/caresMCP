@@ -30,6 +30,7 @@ def test_flexray_segment_anatomy(cxr_image: bytes, region: AnatomicalRegion):
         assert set(np.unique(pixels)) == {0, 255}
     return result
 
+
 @skip_on_import_error
 @save_returns("flexray", unpack=True)
 def test_flexray_wrist_anatomy(wrist_example):
