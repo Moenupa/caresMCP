@@ -48,6 +48,15 @@ pathology = [
     "cellpose>=4,<5",
     "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
 ]
+docs = [
+    "sphinx>=9,<10",
+    "furo",
+    "myst-parser>=5,<6",
+    "sphinx-autodoc-typehints",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinxcontrib-bibtex",
+]
 
 [project.scripts]
 caresmcp = "caresmcp.cli:app"

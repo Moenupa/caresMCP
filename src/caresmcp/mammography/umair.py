@@ -41,7 +41,7 @@ def classify_mammogram_patch(
 
     See Also:
         https://huggingface.co/umairinayat/medical-models
-        https://huggingface.co/umairinayat/medical-models/blob/main/disease_models/mammography/classification/metrics.json
+        https://huggingface.co/umairinayat/medical-models/tree/main/disease_models/mammography
     """
     import torch
 

@@ -45,8 +45,7 @@ def classify_breast_density(
     """Score the four BI-RADS breast density categories on one mammogram (in sigmoid).
 
     See Also:
-        https://huggingface.co/MONAI/breast_density_classification
-        https://arxiv.org/abs/2202.08238
+        https://project-monai.github.io/model-zoo.html#/model/breast_density_classification
     """
     import torch
 

@@ -1,10 +1,13 @@
-.PHONY: all help format-check format check test test-slow list
+.PHONY: all help format-check format check test test-slow list docs
 
 check_dirs := src tests
 
 # uvx with fallback, e.g.: 1. `uvx ruff check` 2. `ruff check`
 TOOL := $(shell command -v uv >/dev/null 2>&1 && echo "uvx" || echo "")
 RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run" || echo "")
+SPHINXOPTS  ?= -T -W -b html -d docs/_build/doctrees -D language=en
+DOCS_SRC    := docs
+DOCS_OUT    := docs/_build/html
 
 all: format check
 
@@ -15,6 +18,7 @@ help:
 	@echo "  check:         Run type checker"
 	@echo "  test:          Run quick tests"
 	@echo "  test-slow:     Run tests with real examples (slow)"
+	@echo "  docs:          Build documentation in docs/_build/html"
 
 format-check:
 	$(TOOL) ruff check $(check_dirs)
@@ -35,3 +39,6 @@ test-slow:
 
 list:
 	$(RUN) caresmcp list
+
+docs:
+	uv run --extra docs sphinx-build $(SPHINXOPTS) $(DOCS_SRC) $(DOCS_OUT)

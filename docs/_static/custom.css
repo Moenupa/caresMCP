@@ -1,0 +1,12 @@
+.bibliography-footnotes {
+  margin-top: 3rem;
+  font-size: 0.875em;
+}
+
+.bibliography-footnotes::before {
+  content: "";
+  display: block;
+  width: 5rem;
+  border-top: 1px solid var(--color-foreground-border);
+  margin-bottom: 1rem;
+}
