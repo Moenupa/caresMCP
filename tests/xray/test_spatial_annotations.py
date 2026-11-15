@@ -5,15 +5,13 @@ Montgomery cases are distinct patients, one normal and one abnormal. Training
 cohort overlap is unknown; these small checks do not establish held-out accuracy.
 """
 
-from io import BytesIO
-
 import numpy as np
 import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import save_returns
 from caresmcp.api.decorators.bytes_io import _read_bytes
-from caresmcp.api.io import encode_as
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.xray.biovil import biovil_ground_phrases
 from caresmcp.xray.flexray import flexray_segment_anatomy
 from caresmcp.xray.torchxrayvision import torchxrayvision_segment_anatomy
@@ -34,10 +32,8 @@ def manual_lung_example(request):
     masks = {}
     for side in ("left", "right"):
         content = _read_bytes(MONTGOMERY_ROOT + f"ManualMask/{side}Mask/" + filename)
-        with Image.open(BytesIO(content)) as mask:
-            masks[side] = np.asarray(mask.convert("L")) > 0
-    with Image.open(BytesIO(image)) as source:
-        width, height = source.size
+        masks[side] = np.asarray(decode_as(content, mode="L")) > 0
+    width, height = decode_as(image).size
     assert all(mask.shape == (height, width) for mask in masks.values())
     assert all(mask.any() for mask in masks.values())
     return image, masks, filename
@@ -73,8 +69,8 @@ def test_anatomy_manual_lung_masks(manual_lung_example, model_id):
         pytest.importorskip("torchxrayvision")
         left = torchxrayvision_segment_anatomy(image, region="Left Lung")
         right = torchxrayvision_segment_anatomy(image, region="Right Lung")
-        with Image.open(BytesIO(left)) as lm, Image.open(BytesIO(right)) as rm:
-            merged = (np.asarray(lm) > 0) | (np.asarray(rm) > 0)
+        lm, rm = decode_as(left), decode_as(right)
+        merged = (np.asarray(lm) > 0) | (np.asarray(rm) > 0)
         result = encode_as(Image.fromarray(merged.astype(np.uint8) * 255))
         height, width = target.shape
         side = min(height, width)
@@ -85,8 +81,7 @@ def test_anatomy_manual_lung_masks(manual_lung_example, model_id):
             Image.fromarray(target).resize((512, 512), Image.Resampling.NEAREST)
         )
         geometry = "512-square center crop"
-    with Image.open(BytesIO(result)) as mask:
-        prediction = np.asarray(mask) > 0
+    prediction = np.asarray(decode_as(result)) > 0
     assert prediction.any(), (
         "Expected nonempty lung predictions on annotated radiographs"
     )

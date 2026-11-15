@@ -1,14 +1,13 @@
 from collections.abc import Callable
-from io import BytesIO
 
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import (
     matches_tool_signature,
     save_returns,
     skip_undefined_kwargs,
 )
+from caresmcp.api.io import decode_as
 from caresmcp.registry import PATHOLOGY
 
 PATHOLOGY_TOOLS = tuple(
@@ -42,8 +41,8 @@ def test_pathology(
         pytest.skip(str(exc))
 
     assert isinstance(result, bytes), f"Expected bytes, got {type(result)}"
-    with Image.open(BytesIO(result)) as output_image:
-        assert output_image.format == "PNG"
-        assert output_image.mode == "RGB"
+    output_image = decode_as(result)
+    assert output_image.format == "PNG"
+    assert output_image.mode == "RGB"
 
     return result

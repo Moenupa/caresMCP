@@ -9,8 +9,15 @@ from PIL import Image, ImageDraw, ImageFont
 def decode_as(
     image: bytes, mode: Literal["RGB", "RGBA", "L"] | None = None
 ) -> Image.Image:
-    with Image.open(BytesIO(image)) as pil_image:
-        return pil_image.copy() if mode is None else pil_image.convert(mode)
+    pil_image = Image.open(BytesIO(image))
+    # Decode eagerly and detach from the buffer so the result stays usable.
+    pil_image.load()
+    if mode is None:
+        return pil_image
+    decoded = pil_image.convert(mode)
+    # convert() discards the source format recorded by open().
+    decoded.format = pil_image.format
+    return decoded
 
 
 def encode_as(

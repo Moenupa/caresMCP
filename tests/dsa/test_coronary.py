@@ -1,13 +1,12 @@
 """Run the coronary angiography U-Nets on a real ARCADE frame."""
 
 import json
-from io import BytesIO
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
+from caresmcp.api.io import decode_as
 from caresmcp.dsa import coronary
 
 # Annotation for samples/126.png from the Stenoz release, as [x, y, width, height].
@@ -50,11 +49,11 @@ def test_segment_coronary_stenosis(coronary_angiogram: bytes):
     """Return an original-size palette mask with candidate stenosis pixels."""
     result = coronary.segment_coronary_stenosis(coronary_angiogram)
 
-    with Image.open(BytesIO(result)) as mask:
-        assert mask.size == (512, 512)
-        assert mask.mode == "P"
-        assert mask.info.get("transparency") == 0
-        labels = np.asarray(mask)
+    mask = decode_as(result)
+    assert mask.size == (512, 512)
+    assert mask.mode == "P"
+    assert mask.info.get("transparency") == 0
+    labels = np.asarray(mask)
     assert labels.max() == 1
     assert (labels == 1).sum() > 0
     return {"mask": result}
@@ -67,10 +66,10 @@ def test_segment_coronary_vessels(coronary_angiogram: bytes):
     """Return an original-size palette mask of the visible coronary tree."""
     result = coronary.segment_coronary_vessels(coronary_angiogram)
 
-    with Image.open(BytesIO(result)) as mask:
-        assert mask.size == (512, 512)
-        assert mask.mode == "P"
-        labels = np.asarray(mask)
+    mask = decode_as(result)
+    assert mask.size == (512, 512)
+    assert mask.mode == "P"
+    labels = np.asarray(mask)
     assert labels.max() == 1
     assert (labels == 1).sum() > 0
     return {"mask": result}

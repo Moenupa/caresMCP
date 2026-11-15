@@ -1,13 +1,12 @@
 """Exercise TorchXRayVision tools with a real NIH chest radiograph."""
 
-from io import BytesIO
 from typing import Literal, get_args
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
+from caresmcp.api.io import decode_as
 from caresmcp.api.models import get_torchxrayvision_model
 from caresmcp.xray.torchxrayvision import (
     ANATOMICAL_TARGETS,
@@ -50,17 +49,15 @@ def test_torchxrayvision_segment_anatomy(
         "Anatomical model target order must match mask IDs"
     )
 
-    with Image.open(BytesIO(result)) as mask:
-        assert mask.format == "PNG"
-        assert mask.mode == "P"
-        assert mask.height == 512
-        assert mask.width == 512 if output == "label_mask" else mask.width > 512
-        assert mask.info["transparency"] == 0
-        labels = np.asarray(mask)[:, :512]
-        assert set(np.unique(labels)) <= set(range(len(ANATOMICAL_TARGETS) + 1))
-        assert np.any(labels > 0), (
-            "Expected anatomical structures in the real radiograph"
-        )
+    mask = decode_as(result)
+    assert mask.format == "PNG"
+    assert mask.mode == "P"
+    assert mask.height == 512
+    assert mask.width == 512 if output == "label_mask" else mask.width > 512
+    assert mask.info["transparency"] == 0
+    labels = np.asarray(mask)[:, :512]
+    assert set(np.unique(labels)) <= set(range(len(ANATOMICAL_TARGETS) + 1))
+    assert np.any(labels > 0), "Expected anatomical structures in the real radiograph"
     return result
 
 
@@ -69,11 +66,11 @@ def test_torchxrayvision_segment_anatomy(
 def test_torchxrayvision_segment_anatomy_region(cxr_image: bytes):
     """Check that selecting a lung returns a binary mask without a legend."""
     result = torchxrayvision_segment_anatomy(cxr_image, region="Left Lung")
-    with Image.open(BytesIO(result)) as mask:
-        assert mask.format == "PNG"
-        assert mask.mode == "L"
-        assert mask.size == (512, 512)
-        assert set(np.unique(np.asarray(mask))) <= {0, 255}
+    mask = decode_as(result)
+    assert mask.format == "PNG"
+    assert mask.mode == "L"
+    assert mask.size == (512, 512)
+    assert set(np.unique(np.asarray(mask))) <= {0, 255}
     return result
 
 
@@ -113,12 +110,12 @@ def test_torchxrayvision_localize(
     assert len(activations) == 1, (
         f"{weights}: expected one final feature map, captured {len(activations)}"
     )
-    with Image.open(BytesIO(result)) as image:
-        assert image.format == "PNG"
-        assert image.size == (size, size)
-        assert image.mode == ("RGB" if output == "overlay" else "L")
-        pixels = np.asarray(image)
-        assert pixels.dtype == np.uint8
-        if output == "saliency":
-            assert pixels.max() == 255 or not pixels.any()
+    image = decode_as(result)
+    assert image.format == "PNG"
+    assert image.size == (size, size)
+    assert image.mode == ("RGB" if output == "overlay" else "L")
+    pixels = np.asarray(image)
+    assert pixels.dtype == np.uint8
+    if output == "saliency":
+        assert pixels.max() == 255 or not pixels.any()
     return result

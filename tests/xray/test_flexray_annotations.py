@@ -5,7 +5,6 @@ https://huggingface.co/datasets/VictorButoi/flexray-data
 https://huggingface.co/VictorButoi/flexray
 """
 
-from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +12,7 @@ import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.api.io import encode_as
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.xray.flexray import AnatomicalRegion, flexray_segment_anatomy
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]
@@ -118,8 +117,7 @@ def test_flexray_released_anatomy(released_manifests, dataset: str, subject_inde
     measurements: list[dict] = []
     for region, target in targets.items():
         result = flexray_segment_anatomy(image, region=region)
-        with Image.open(BytesIO(result)) as mask:
-            prediction = np.asarray(mask) > 0
+        prediction = np.asarray(decode_as(result)) > 0
         assert prediction.shape == target.shape == (256, 256)
         intersection = int(np.count_nonzero(prediction & target))
         predicted, reference = int(prediction.sum()), int(target.sum())

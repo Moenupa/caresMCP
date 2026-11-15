@@ -9,15 +9,14 @@ not a calibrated disease-detection benchmark or a full-sentence grounding study.
 import csv
 import gzip
 import hashlib
-from io import BytesIO
 from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.io import decode_as
 from caresmcp.api.models._biovil import BioViLModel
 from caresmcp.xray.biovil import biovil_ground_phrases
 
@@ -47,10 +46,9 @@ def nih_box_example(request):
         + filename
     )
     image = _read_bytes(url)
-    with Image.open(BytesIO(image)) as source:
-        assert source.size == (1024, 1024), (
-            "NIH box geometry is defined at 1024-square resolution"
-        )
+    assert decode_as(image).size == (1024, 1024), (
+        "NIH box geometry is defined at 1024-square resolution"
+    )
     return (
         image,
         boxes,
