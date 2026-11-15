@@ -2,6 +2,7 @@
 
 from . import (  # noqa: F401
     ct,
+    dsa,
     mammography,
     medical_ai,
     pathology,

@@ -13,6 +13,7 @@ ULTRASOUND = catalogue.create(pkg_name, "ultrasound")
 MRI = catalogue.create(pkg_name, "mri")
 CT = catalogue.create(pkg_name, "ct")
 MAMMOGRAPHY = catalogue.create(pkg_name, "mammography")
+DSA = catalogue.create(pkg_name, "dsa")
 
 # categorical dict for tools/prompts
 # strict 1-to-n mapping without overlap
@@ -25,6 +26,7 @@ REGISTRIES = {
     "mri": MRI,
     "ct": CT,
     "mammography": MAMMOGRAPHY,
+    "dsa": DSA,
 }
 
 # many-to-many mapping for tag for flexible association
