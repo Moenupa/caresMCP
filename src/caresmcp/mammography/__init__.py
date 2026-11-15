@@ -1,4 +1,4 @@
-'''
+"""
 * |x| `MONAI breast density <https://huggingface.co/MONAI/breast_density_classification>`_
   :footcite:`gupta2022density`: BI-RADS A–D scores in
   :mod:`density.py <caresmcp.mammography.density>`.
@@ -22,7 +22,7 @@ Out of scope:
   :footcite:`ghosh2025mammofm`: its weight license prohibits API serving.
 * `batmanLab/Mammo-CLIP <https://github.com/batmanLab/Mammo-CLIP>`_
   :footcite:`ghosh2024mammoclip`: not inference-ready checkpoints.
-'''
+"""
 
 import importlib
 from pathlib import Path

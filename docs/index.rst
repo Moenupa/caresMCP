@@ -5,3 +5,4 @@ CaresMCP documentation
    :maxdepth: 2
 
    mammography
+   xray

@@ -37,7 +37,7 @@ def detect_pediatric_wrist_findings(
     image. Adjust the score threshold to control which detections are returned.
     The detector supports nine GRAZPEDWRI-DX classes; fracture labels do not
     specify bone, morphology, or Salter–Harris type. Bounding boxes use
-    original-image pixel coordinates. The upstream model is released under GPL-3.0.
+    original-image pixel coordinates.
 
     See Also:
         https://github.com/mdciri/YOLOv7-Bone-Fracture-Detection

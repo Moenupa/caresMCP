@@ -54,7 +54,6 @@ def skelex_reconstruction_error(
     scale, observed-pixel mean error, coverage, passes and seed.
 
     Reconstruction error is not a calibrated disease score or lesion boundary.
-    Weights are licensed CC-BY-NC-ND-4.0 for non-commercial use.
 
     See Also:
         https://github.com/skhoha/SKELEX/blob/main/unsupervised_heatmap.py

@@ -6,6 +6,7 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.embeddings import cosine_similarity
+from caresmcp.api.models import HFMODEL_ID_DESC
 from caresmcp.registry import TASK_EMB, TASK_RET, XRAY
 from caresmcp.xray.biovil import _embed_biovil_image
 from caresmcp.xray.cxr_encoder import _extract_cxr_embedding
@@ -23,7 +24,7 @@ XrayEncoder = Literal[
 def xray_image_embed(
     image: Annotated[bytes, Field(description="Current chest radiograph image")],
     model_id: Annotated[
-        XrayEncoder, Field(description="Exact encoder repository")
+        XrayEncoder, Field(description=HFMODEL_ID_DESC)
     ] = "microsoft/rad-dino",
     pooling: Annotated[
         Literal["cls", "mean"] | None,
@@ -42,10 +43,10 @@ def xray_image_embed(
 
     Use an embedding to compare radiographs or retrieve similar images. Choose
     RAD-DINO for visual features or BioViL for an image-text representation.
-    Choose BioViL-T to include an earlier radiograph.
+    Choose BioViL-T to include an earlier radiograph. BioViL embeddings have no
+    diagnosis head and do not predict temporal progression.
 
     See Also:
-        https://huggingface.co/microsoft/rad-dino
         https://github.com/microsoft/hi-ml/tree/main/hi-ml-multimodal
     """
     if model_id == "microsoft/rad-dino":
@@ -65,7 +66,7 @@ def xray_image_similarity(
     image: Annotated[bytes, Field(description="First chest radiograph image")],
     other_image: Annotated[bytes, Field(description="Second chest radiograph image")],
     model_id: Annotated[
-        XrayEncoder, Field(description="Exact encoder repository")
+        XrayEncoder, Field(description=HFMODEL_ID_DESC)
     ] = "microsoft/rad-dino",
     pooling: Annotated[
         Literal["cls", "mean"] | None,

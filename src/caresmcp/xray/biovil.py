@@ -8,6 +8,7 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as
+from caresmcp.api.models import HFMODEL_ID_DESC
 from caresmcp.api.models._biovil import (
     BIOVIL_CHECKPOINTS,
     BioViLModel,
@@ -33,30 +34,11 @@ def _biovil_image_tensor(image: bytes, crop_size: int):
 
 
 def _embed_biovil_image(
-    image: Annotated[bytes, Field(description="Current chest radiograph image")],
-    model_id: Annotated[
-        BioViLModel,
-        Field(description="Official BioViL or BioViL-T image checkpoint repository"),
-    ] = "microsoft/BiomedVLP-BioViL-T",
-    prior_image: Annotated[
-        bytes | None,
-        Field(
-            description="Earlier chest radiograph from the same patient; BioViL-T only."
-        ),
-    ] = None,
+    image: bytes,
+    model_id: BioViLModel = "microsoft/BiomedVLP-BioViL-T",
+    prior_image: bytes | None = None,
 ) -> dict:
-    """Embed a chest radiograph with BioViL, or a current/prior pair with BioViL-T.
-
-    The normalized 128-dimensional vector is in the model's projected joint
-    image-text space. It has no diagnosis head. Compare vectors only from the
-    same model and temporal input configuration. BioViL-T uses its learned
-    missing-prior representation when no prior image is supplied. Temporal
-    embeddings do not provide trained improved/stable/worsened predictions.
-
-    See Also:
-        https://github.com/microsoft/hi-ml/tree/main/hi-ml-multimodal
-        https://huggingface.co/microsoft/BiomedVLP-BioViL-T
-    """
+    """Embed a radiograph, or a current/prior pair with BioViL-T."""
     import torch
 
     temporal = model_id == "microsoft/BiomedVLP-BioViL-T"
@@ -100,7 +82,7 @@ def biovil_ground_phrases(
         ),
     ],
     model_id: Annotated[
-        BioViLModel, Field(description="Matching BioViL image and text checkpoint")
+        BioViLModel, Field(description=HFMODEL_ID_DESC)
     ] = "microsoft/BiomedVLP-BioViL-T",
     prior_image: Annotated[
         bytes | None,
