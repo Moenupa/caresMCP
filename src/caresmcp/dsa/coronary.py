@@ -1,18 +1,18 @@
 """Coronary X-ray angiography stenosis and vessel segmentation U-Nets."""
 
-from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import cv2
 import numpy as np
 from pydantic import Field
 
-from caresmcp.api.decorators import adapt_inputs, requires
+from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as, encode_label_mask
 from caresmcp.constants import DEVICE
 from caresmcp.registry import DSA, TASK_LOC, TASK_SEG
 
 if TYPE_CHECKING:
-    from ._unet import UNet
+    from torch.nn import Module
 
 CORONARY_MODEL_ID = "uzbtrust/stenoz-coronary-stenosis-unet"
 _CHECKPOINTS = {
@@ -69,7 +69,7 @@ def _normalize_frame(pixels: np.ndarray, invert_polarity: bool) -> np.ndarray:
     return (pixels - pixels.min()) / (span + 1e-6)
 
 
-def _load_model(kind: Literal["stenosis", "vessel"]) -> "UNet":
+def _load_model(kind: Literal["stenosis", "vessel"]) -> "Module":
     """Load one released checkpoint strictly onto the inference device."""
     from caresmcp.api.models import get_hf_checkpoint
 
@@ -139,7 +139,6 @@ def _label_components(
 @DSA.register("detect_coronary_stenosis")
 @TASK_LOC.register("detect_coronary_stenosis")
 @requires(_CORONARY_DEPS, extra="hf")
-@adapt_inputs(image=_decode_angiogram)
 def detect_coronary_stenosis(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,
@@ -159,7 +158,7 @@ def detect_coronary_stenosis(
         https://github.com/uzbtrust/stenoz
     """
     probabilities, (height, width) = _predict(
-        cast(np.ndarray, image), "stenosis", invert_polarity
+        _decode_angiogram(image), "stenosis", invert_polarity
     )
     _, detections = _label_components(probabilities, score_threshold, min_area_pixels)
     return {
@@ -190,7 +189,6 @@ def detect_coronary_stenosis(
 @DSA.register("segment_coronary_stenosis")
 @TASK_SEG.register("segment_coronary_stenosis")
 @requires(_CORONARY_DEPS, extra="hf")
-@adapt_inputs(image=_decode_angiogram)
 def segment_coronary_stenosis(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,
@@ -203,7 +201,7 @@ def segment_coronary_stenosis(
         Palette PNG at the input size: 0 is transparent background and 1
         (blue) is a candidate stenosis region.
     """
-    probabilities, _ = _predict(cast(np.ndarray, image), "stenosis", invert_polarity)
+    probabilities, _ = _predict(_decode_angiogram(image), "stenosis", invert_polarity)
     mask, _ = _label_components(probabilities, score_threshold, min_area_pixels)
     return encode_label_mask(mask)
 
@@ -211,7 +209,6 @@ def segment_coronary_stenosis(
 @DSA.register("segment_coronary_vessels")
 @TASK_SEG.register("segment_coronary_vessels")
 @requires(_CORONARY_DEPS, extra="hf")
-@adapt_inputs(image=_decode_angiogram)
 def segment_coronary_vessels(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,
@@ -225,6 +222,6 @@ def segment_coronary_vessels(
         (blue) is a predicted vessel pixel. The mask supports visualization;
         it does not identify arteries, lesions, or blood flow.
     """
-    probabilities, _ = _predict(cast(np.ndarray, image), "vessel", invert_polarity)
+    probabilities, _ = _predict(_decode_angiogram(image), "vessel", invert_polarity)
     mask, _ = _label_components(probabilities, score_threshold, min_area_pixels)
     return encode_label_mask(mask)

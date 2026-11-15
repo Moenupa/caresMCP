@@ -65,6 +65,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
 }
 intersphinx_timeout = 10
 
