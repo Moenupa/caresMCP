@@ -46,6 +46,6 @@ Implementation
 
 .. autofunction:: caresmcp.xray.skelex.skelex_reconstruction_error
 
-.. container:: bibliography-footnotes
+.. rst-class:: bibliography-footnotes
 
-   .. footbibliography::
+.. footbibliography::

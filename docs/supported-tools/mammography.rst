@@ -20,6 +20,6 @@ Implementation
 
 .. autofunction:: caresmcp.mammography.umair.classify_mammogram_patch
 
-.. container:: bibliography-footnotes
+.. rst-class:: bibliography-footnotes
 
-   .. footbibliography::
+.. footbibliography::

@@ -21,10 +21,12 @@ help:
 	@echo "  docs:          Build documentation in docs/_build/html"
 
 format-check:
+	$(TOOL) docstrfmt --check $(DOCS_SRC)
 	$(TOOL) ruff check $(check_dirs)
 	$(TOOL) ruff format --check $(check_dirs)
 
 format:
+	$(TOOL) docstrfmt $(DOCS_SRC)
 	$(TOOL) ruff check $(check_dirs) --fix
 	$(TOOL) ruff format $(check_dirs)
 
@@ -41,4 +43,4 @@ list:
 	$(RUN) caresmcp list
 
 docs:
-	uv run --extra docs sphinx-build $(SPHINXOPTS) $(DOCS_SRC) $(DOCS_OUT)
+	$(RUN) --extra docs sphinx-build $(SPHINXOPTS) $(DOCS_SRC) $(DOCS_OUT)

@@ -43,7 +43,7 @@ autodoc_default_options = {
 }
 autodoc_typehints = "description"      # handled by sphinx-autodoc-typehints
 typehints_defaults = "comma"           # show defaults in the param description
-always_document_param_types = False
+always_document_param_types = True
 
 
 # Read undocumented parameter descriptions from pydantic Field metadata.

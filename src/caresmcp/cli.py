@@ -1,6 +1,7 @@
 """Command-line entry point for listing registries and running the MCP server."""
 
 from pathlib import Path
+from typing import Annotated, Literal
 
 import seaborn as sns
 import typer
@@ -112,8 +113,58 @@ def debug_function(category: str, name: str, kwarg_file: Path) -> None:
 
 
 @app.command("mcp")
-def mcpserve() -> None:
-    """Start the FastMCP server."""
+def mcpserve(
+    host: Annotated[
+        str | None,
+        typer.Option(help="Host address to bind to (default: 127.0.0.1)."),
+    ] = None,
+    port: Annotated[
+        int | None,
+        typer.Option(min=0, max=65535, help="Port to bind to (default: 8000)."),
+    ] = None,
+    path: Annotated[
+        str | None,
+        typer.Option(help="HTTP endpoint path (default: /mcp)."),
+    ] = None,
+    log_level: Annotated[
+        Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None,
+        typer.Option(help="Server log level (default: INFO)."),
+    ] = None,
+    show_banner: Annotated[
+        bool,
+        typer.Option(help="Display the server banner."),
+    ] = False,
+    json_response: Annotated[
+        bool | None,
+        typer.Option(help="Return JSON responses instead of SSE streams."),
+    ] = None,
+    stateless_http: Annotated[
+        bool | None,
+        typer.Option(help="Handle each request in a new HTTP transport session."),
+    ] = None,
+    allowed_hosts: Annotated[
+        list[str] | None,
+        typer.Option(
+            help="Additional Host header values accepted by the request guard."
+        ),
+    ] = None,
+    allowed_origins: Annotated[
+        list[str] | None,
+        typer.Option(help="Additional browser origins trusted by the request guard."),
+    ] = None,
+) -> None:
+    """Start the FastMCP server over streamable HTTP."""
     from caresmcp.mcpserver import mcp
 
-    mcp.run(transport="streamable-http", show_banner=False)
+    mcp.run(
+        transport="streamable-http",
+        show_banner=show_banner,
+        host=host,
+        port=port,
+        path=path,
+        log_level=log_level,
+        json_response=json_response,
+        stateless_http=stateless_http,
+        allowed_hosts=allowed_hosts,
+        allowed_origins=allowed_origins,
+    )

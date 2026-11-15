@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import save_returns
-from caresmcp.tools.denoise import DenoiseMethod, denoise
+from caresmcp.tools.skimage import DenoiseMethod, denoise
 
 
 @pytest.mark.slow

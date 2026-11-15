@@ -1,3 +1,5 @@
+"""Denoise 2D medical images with classical filters."""
+
 from functools import partial
 from io import BytesIO
 from typing import Annotated, Literal
