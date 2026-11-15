@@ -1,6 +1,7 @@
 from .annotation import unpack_literal
 from .filetype import is_dicom
 from .image import (
+    check_bbox,
     convert_grayscale,
     decode_as,
     draw_legends,
@@ -13,6 +14,7 @@ from .table import rich_table_to_df
 from .tensor import get_classification_scores
 
 __all__ = [
+    "check_bbox",
     "convert_grayscale",
     "decode_as",
     "draw_legends",

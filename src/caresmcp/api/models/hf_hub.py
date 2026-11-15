@@ -18,6 +18,7 @@ class HFModelType(Enum):
     IMAGE_PRETRAINING = auto()
     AUTO = auto()
     SAM = auto()
+    SAM2 = auto()
     SEMANTIC_SEGMENTATION = auto()
 
 
@@ -62,6 +63,12 @@ def get_hf_model_and_processor(
     ``HFModelType.AUTO`` uses ``AutoModel`` and
     ``AutoProcessor`` for checkpoints with custom model interfaces.
 
+    ``HFModelType.SAM2`` loads the image branch of a SAM2 video checkpoint.
+    The image model shares the trained vision, prompt-encoder, and
+    mask-decoder weights, so its video config is presented as an image config.
+    Its image processor is constructed because SAM2 repositories ship no
+    image-processor configuration.
+
     Image processors load with ``use_fast=True``; checkpoints saved with a slow
     processor would otherwise trigger a transformers deprecation warning.
 
@@ -70,12 +77,37 @@ def get_hf_model_and_processor(
 
     Never support revision or local_files_only. Since it brings complexity we/agents dont need.
     """
+    model_kwargs: dict[str, Any] = {}
+    processor_kwargs: dict[str, Any] = {}
+    processor: ProcessorMixin | None = None
+
     match model_type:
         case HFModelType.SAM:
             from transformers import SamModel, SamProcessor
 
             model_class = SamModel
             processor_class = SamProcessor
+        case HFModelType.SAM2:
+            from transformers import Sam2Config, Sam2Model, Sam2Processor
+            from transformers.models.sam2 import Sam2ImageProcessorFast
+
+            model_class = Sam2Model
+            processor_class = Sam2Processor
+            # SAM2 checkpoints ship a video config. The image model shares the
+            # trained weights, so rewrite the config model type and drop the
+            # video architecture hint before loading it as an image model.
+            config_data = dict(
+                get_hf_json(model_id, "config.json", subfolder=subfolder)
+            )
+            config_data["model_type"] = "sam2"
+            config_data.pop("architectures", None)
+            model_kwargs["config"] = Sam2Config(**config_data)
+            processor = Sam2Processor(
+                image_processor=Sam2ImageProcessorFast(
+                    size={"height": 1024, "width": 1024},
+                    mask_size={"height": 256, "width": 256},
+                )
+            )
         case HFModelType.SEMANTIC_SEGMENTATION:
             from transformers import (
                 AutoImageProcessor,
@@ -107,8 +139,6 @@ def get_hf_model_and_processor(
         case _:
             raise ValueError("model_type must be an HFModelType member")
 
-    model_kwargs: dict[str, Any] = {}
-    processor_kwargs: dict[str, Any] = {}
     if model_type in (
         HFModelType.IMAGE_CLASSIFICATION,
         HFModelType.IMAGE_ENCODER,
@@ -131,7 +161,8 @@ def get_hf_model_and_processor(
     if processor_folder:
         processor_kwargs["subfolder"] = processor_folder
 
-    processor = processor_class.from_pretrained(model_id, **processor_kwargs)
+    if processor is None:
+        processor = processor_class.from_pretrained(model_id, **processor_kwargs)
     model = model_class.from_pretrained(model_id, **model_kwargs).to(DEVICE)
     model.eval()
     return model, processor
@@ -159,9 +190,13 @@ def get_hf_checkpoint(
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def get_hf_json(model_id: str, filename: str) -> Any:
+def get_hf_json(model_id: str, filename: str, *, subfolder: str = "") -> Any:
     """Load and cache JSON metadata shipped alongside Hub model weights."""
     from huggingface_hub import hf_hub_download
 
-    artifact = hf_hub_download(repo_id=model_id, filename=filename)
+    artifact = hf_hub_download(
+        repo_id=model_id,
+        filename=filename,
+        subfolder=subfolder or None,
+    )
     return json.loads(Path(artifact).read_text())

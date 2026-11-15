@@ -1,18 +1,31 @@
 from collections import Counter
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 
+import numpy as np
+from PIL import Image, ImageOps
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as, get_classification_scores
+from caresmcp.api.io import check_bbox, decode_as, encode_as, get_classification_scores
 from caresmcp.api.models import (
     HFMODEL_ID_DESC,
     SOFTMAX_DESC,
+    HFModelType,
     get_hf_model_and_processor,
 )
-from caresmcp.api.models.hf_hub import HFModelType
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TASK_CLS, TASK_EMB
+from caresmcp.registry import MEDAI, TASK_CLS, TASK_EMB, TASK_SEG
+
+if TYPE_CHECKING:
+    from transformers import Sam2Processor, SamProcessor
+
+PromptableSegmentationModel = Literal[
+    "wanglab/medsam-vit-base",
+    "facebook/sam2.1-hiera-tiny",
+    "facebook/sam2.1-hiera-small",
+    "facebook/sam2.1-hiera-base-plus",
+    "facebook/sam2.1-hiera-large",
+]
 
 
 @MEDAI.register("hf_classifier")
@@ -111,3 +124,79 @@ def hf_image_embed(
         pooling_used = "pooler"
     embedding = vector[0].detach().float().cpu().tolist()
     return {"model_id": model_id, "pooling": pooling_used, "embedding": embedding}
+
+
+@MEDAI.register("hf_segment_image")
+@TASK_SEG.register("hf_segment_image")
+@requires(["torch", "torchvision", "transformers"], extra="hf")
+def hf_segment_image(
+    image: Annotated[
+        bytes,
+        Field(
+            description="Medical image as a raster image (PNG or JPEG); DICOM is not supported."
+        ),
+    ],
+    box: Annotated[
+        tuple[float, float, float, float],
+        Field(
+            description="Prompt box in original-image pixels as (x_min, y_min, x_max, y_max)."
+        ),
+    ],
+    model_id: Annotated[
+        PromptableSegmentationModel,
+        Field(
+            description=(
+                "Promptable segmentation checkpoint. MedSAM is the medical-domain "
+                "default; SAM2.1 variants trade speed for accuracy."
+            )
+        ),
+    ] = "wanglab/medsam-vit-base",
+) -> bytes:
+    """Segment a box-prompted region in one medical image (white foreground PNG).
+
+    MedSAM is a general medical segmenter, and the SAM2.1 checkpoints are
+    general-purpose; none is a diagnosis model, and none is validated here for
+    a specific examination, pathology, or anatomical structure. The mask
+    follows the prompted box and requires review. Prefer the tiny or small
+    SAM2.1 variants on CPU and the larger variants when memory allows.
+
+    See Also:
+        - https://huggingface.co/wanglab/medsam-vit-base
+        - https://huggingface.co/facebook/sam2.1-hiera-tiny
+    """
+    import torch
+
+    is_sam2 = model_id.startswith("facebook/sam2.1-")
+    model, processor = get_hf_model_and_processor(
+        model_id, HFModelType.SAM2 if is_sam2 else HFModelType.SAM
+    )
+    source = ImageOps.exif_transpose(decode_as(image, mode="RGB"))
+    width, height = source.size
+    x_min, y_min, x_max, y_max = check_bbox(box, width, height)
+    inputs = processor(
+        images=source,
+        input_boxes=[[[x_min, y_min, x_max, y_max]]],
+        return_tensors="pt",
+    )
+    inputs = {
+        name: value.to(DEVICE) if hasattr(value, "to") else value
+        for name, value in inputs.items()
+    }
+    with torch.inference_mode():
+        outputs = model(**inputs)
+    if is_sam2:
+        masks = cast("Sam2Processor", processor).post_process_masks(
+            outputs.pred_masks.cpu(),
+            inputs["original_sizes"].cpu(),
+        )
+    else:
+        masks = cast("SamProcessor", processor).post_process_masks(
+            outputs.pred_masks.cpu(),
+            inputs["original_sizes"].cpu(),
+            inputs["reshaped_input_sizes"].cpu(),
+        )
+    best = int(outputs.iou_scores.detach().float().cpu()[0, 0].argmax())
+    mask = np.asarray(masks[0][0, best].numpy() > 0.0)
+    if mask.shape != (height, width) or not mask.any():
+        raise RuntimeError("Segmenter returned an empty or mis-sized mask")
+    return encode_as(Image.fromarray(mask.astype(np.uint8) * 255))

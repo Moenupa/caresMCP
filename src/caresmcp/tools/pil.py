@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from caresmcp.api.io import decode_as, encode_as
+from caresmcp.api.io import check_bbox, decode_as, encode_as
 from caresmcp.registry import IMAGE_PROC
 
 
@@ -34,22 +34,15 @@ def inspect(image: bytes) -> dict[str, object]:
 @IMAGE_PROC.register("crop")
 def crop(
     image: bytes,
-    left: Annotated[int, Field(ge=0)],
-    top: Annotated[int, Field(ge=0)],
-    right: Annotated[int, Field(gt=0)],
-    bottom: Annotated[int, Field(gt=0)],
+    bbox: Annotated[
+        tuple[int, int, int, int],
+        Field(description="Crop box in image pixels as (x_min, y_min, x_max, y_max)."),
+    ],
 ) -> bytes:
-    """Crop a 2D image using pixel coordinates."""
-    if right <= left or bottom <= top:
-        raise ValueError("Crop bounds must satisfy right > left and bottom > top")
+    """Crop a 2D image to a pixel box."""
     pil_image = decode_as(image)
-    inside_image = right <= pil_image.width and bottom <= pil_image.height
-    if not inside_image:
-        raise ValueError(
-            "Crop must be inside image bounds "
-            f"(0, 0, {pil_image.width}, {pil_image.height})"
-        )
-    cropped = pil_image.crop((left, top, right, bottom))
+    x_min, y_min, x_max, y_max = check_bbox(bbox, *pil_image.size)
+    cropped = pil_image.crop((int(x_min), int(y_min), int(x_max), int(y_max)))
     return encode_as(cropped)
 
 
@@ -59,14 +52,12 @@ def cropcenter(
     width: Annotated[int, Field(gt=0)],
     height: Annotated[int, Field(gt=0)],
 ) -> bytes:
-    """Crop the center of a 2D image using pixel coordinates."""
+    """Crop the center of a 2D image to the given pixel size."""
     pil_image = decode_as(image)
     left = (pil_image.width - width) // 2
     top = (pil_image.height - height) // 2
-    if left < 0 or top < 0:
-        raise ValueError(
-            "Crop must be inside image bounds "
-            f"(0, 0, {pil_image.width}, {pil_image.height})"
-        )
-    cropped = pil_image.crop((left, top, left + width, top + height))
+    x_min, y_min, x_max, y_max = check_bbox(
+        (left, top, left + width, top + height), *pil_image.size
+    )
+    cropped = pil_image.crop((int(x_min), int(y_min), int(x_max), int(y_max)))
     return encode_as(cropped)

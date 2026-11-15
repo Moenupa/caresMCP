@@ -39,6 +39,30 @@ def is_grayscale(mode: str) -> bool:
     return mode in ("1", "L", "I", "F") or mode.startswith("I;16")
 
 
+def check_bbox(
+    box: tuple[float, float, float, float], width: int, height: int
+) -> tuple[float, float, float, float]:
+    """Validate a box prompt in original-image pixel coordinates.
+
+    Args:
+        box: ``(x_min, y_min, x_max, y_max)`` in pixels.
+        width: Image width in pixels.
+        height: Image height in pixels.
+
+    Returns:
+        The validated box as floats.
+    """
+    x_min, y_min, x_max, y_max = (float(value) for value in box)
+    if not all(np.isfinite(value) for value in (x_min, y_min, x_max, y_max)):
+        raise ValueError("box coordinates must be finite")
+    if not (0 <= x_min < x_max <= width and 0 <= y_min < y_max <= height):
+        raise ValueError(
+            "box must satisfy 0 <= x_min < x_max <= image width and "
+            "0 <= y_min < y_max <= image height"
+        )
+    return (x_min, y_min, x_max, y_max)
+
+
 def draw_legends(
     image: Image.Image,
     labels: Sequence[str],
