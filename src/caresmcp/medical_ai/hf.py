@@ -32,22 +32,13 @@ PromptableSegmentationModel = Literal[
 @TASK_CLS.register("hf_classifier")
 @requires(["torch", "transformers"], extra="hf")
 def hf_classifier(
-    image: Annotated[bytes, Field(description="Image to classify")],
+    image: bytes,
     model_id: Annotated[str, Field(description=HFMODEL_ID_DESC)],
     score_mode: Annotated[
         Literal["sigmoid", "softmax"], Field(description=SOFTMAX_DESC)
     ] = "sigmoid",
 ) -> dict[str, Any]:
-    """Run a trained Transformers image-classification head on a CXR.
-
-    Use a checkpoint with both a compatible image processor and a trained
-    classification head. Encoder-only RAD-DINO or CXFormer checkpoints do not
-    provide disease predictions until a task-specific head is trained. Scores
-    are model outputs, not calibrated clinical probabilities.
-
-    Returns:
-        Scores keyed by checkpoint labels. Repeated label names include their
-        class IDs to distinguish separate classes.
+    """Run a trained Transformers image-classification head.
 
     See Also:
         https://huggingface.co/docs/transformers/tasks/image_classification
@@ -82,7 +73,7 @@ def hf_classifier(
 @TASK_EMB.register("hf_image_embed")
 @requires(["torch", "transformers"], extra="hf")
 def hf_image_embed(
-    image: Annotated[bytes, Field(description="Image to embed.")],
+    image: bytes,
     model_id: Annotated[
         str, Field(description=HFMODEL_ID_DESC)
     ] = "facebook/dinov2-base",
@@ -93,9 +84,8 @@ def hf_image_embed(
 ) -> dict[str, Any]:
     """Extract image features with a Hugging Face image encoder.
 
-    Use a compatible image encoder and processor. For token outputs, mean
-    pooling excludes the first token; for pooled outputs, pooling is supplied
-    by the model.
+    For token outputs, mean pooling excludes the first token;
+    for pooled outputs, pooling is supplied by the model.
     """
     import torch
 
@@ -130,39 +120,19 @@ def hf_image_embed(
 @TASK_SEG.register("hf_segment_image")
 @requires(["torch", "torchvision", "transformers"], extra="hf")
 def hf_segment_image(
-    image: Annotated[
-        bytes,
-        Field(
-            description="Medical image as a raster image (PNG or JPEG); DICOM is not supported."
-        ),
-    ],
+    image: bytes,
     box: Annotated[
         tuple[float, float, float, float],
-        Field(
-            description="Prompt box in original-image pixels as (x_min, y_min, x_max, y_max)."
-        ),
+        Field(description="Prompt box in pixels as [x1, y1, x2, y2]."),
     ],
     model_id: Annotated[
-        PromptableSegmentationModel,
-        Field(
-            description=(
-                "Promptable segmentation checkpoint. MedSAM is the medical-domain "
-                "default; SAM2.1 variants trade speed for accuracy."
-            )
-        ),
+        PromptableSegmentationModel, Field(description=HFMODEL_ID_DESC)
     ] = "wanglab/medsam-vit-base",
 ) -> bytes:
     """Segment a box-prompted region in one medical image (white foreground PNG).
 
-    MedSAM is a general medical segmenter, and the SAM2.1 checkpoints are
-    general-purpose; none is a diagnosis model, and none is validated here for
-    a specific examination, pathology, or anatomical structure. The mask
-    follows the prompted box and requires review. Prefer the tiny or small
-    SAM2.1 variants on CPU and the larger variants when memory allows.
-
-    See Also:
-        - https://huggingface.co/wanglab/medsam-vit-base
-        - https://huggingface.co/facebook/sam2.1-hiera-tiny
+    MedSAM is a general medical segmenter; SAM2.1 checkpoints are general-purpose.
+    The mask follows the prompted box and requires review.
     """
     import torch
 
@@ -172,10 +142,10 @@ def hf_segment_image(
     )
     source = ImageOps.exif_transpose(decode_as(image, mode="RGB"))
     width, height = source.size
-    x_min, y_min, x_max, y_max = check_bbox(box, width, height)
+    x1, y1, x2, y2 = check_bbox(box, width, height)
     inputs = processor(
         images=source,
-        input_boxes=[[[x_min, y_min, x_max, y_max]]],
+        input_boxes=[[[x1, y1, x2, y2]]],
         return_tensors="pt",
     )
     inputs = {
