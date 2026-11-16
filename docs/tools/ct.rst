@@ -45,5 +45,3 @@ Implementation
    :no-members:
 
 .. autofunction:: caresmcp.ct.pyradiomics.radiomics_ct_slice
-
-   Registered as ``extract_ct_slice_radiomics``.

@@ -34,7 +34,12 @@ itk = ["simpleitk>=2.4,<2.6"]
 clip = ["open-clip-torch>=4.2.1,<5"]
 
 mri = ["caresmcp[hf,monai,timm,sam,itk,totalseg]"]
-ct = ["caresmcp[torch,hf,timm,totalseg]"]
+ct = [
+    "caresmcp[torch,hf,timm,totalseg]",
+    # pure-Python, CPU-only PyRadiomics features; pinned because the 2D GLRLM
+    # adapter relies on numpyradiomics 0.0.5 internals
+    "numpyradiomics>=0.0.5,<0.0.6",
+]
 xray = [
     "caresmcp[hf,clip,itk]",
     "torchxrayvision>=1.5,<1.6",
@@ -46,6 +51,8 @@ ultrasound = ["caresmcp[hf,monai,timm]"]
 pathology = [
     "caresmcp[torch,monai,timm]",
     "cellpose>=4,<5",
+    "environs",
+    "sacremoses",
     "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
 ]
 

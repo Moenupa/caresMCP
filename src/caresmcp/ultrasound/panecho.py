@@ -1,6 +1,5 @@
 """Echocardiography tools powered by the pretrained PanEcho model."""
 
-from math import isfinite
 from pathlib import Path
 from statistics import fmean
 from tempfile import TemporaryDirectory
@@ -15,7 +14,7 @@ from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as
 from caresmcp.api.models import get_torch_model
 from caresmcp.constants import DEVICE
-from caresmcp.registry import TASK_EMB, ULTRASOUND
+from caresmcp.registry import TASK_CLS, TASK_EMB, TASK_REG, ULTRASOUND
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -26,6 +25,41 @@ _PANECHO_NAME = "PanEcho"
 _FRAME_COUNT = 16
 _IMAGE_SIZE = 224
 _PANECHO_DEPS = ["torch", "torchvision", "timm"]
+_MEASUREMENT_UNITS = {
+    "EF": "%",
+    "GLS": "%",
+    "LVEDV": "cm^3",
+    "LVESV": "cm^3",
+    "LVSV": "cm^3",
+    "IVSd": "cm",
+    "LVPWd": "cm",
+    "LVIDs": "cm",
+    "LVIDd": "cm",
+    "LVOTDiam": "cm",
+    "E|EAvg": "dimensionless",
+    "RVSP": "mmHg",
+    "RVIDd": "cm",
+    "TAPSE": "cm",
+    "RVSVel": "cm/s",
+    "LAIDs2D": "cm",
+    "LAVol": "cm^3",
+    "RADimensionM-L(cm)": "cm",
+    "AVPkVel(m|s)": "m/s",
+    "TVPkGrad": "mmHg",
+    "AORoot": "cm",
+}
+# Upstream flips these binary heads so their scalar denotes class_names[0].
+_BINARY_FIRST_CLASS = frozenset(
+    {
+        "MVStenosis",
+        "AVStructure",
+        "RASize",
+        "RVSystolicFunction",
+        "LVWallThickness-increased-modsev",
+        "LVWallThickness-increased-any",
+        "pericardial-effusion",
+    }
+)
 
 
 def _panecho_transform() -> "Compose":
@@ -52,17 +86,11 @@ def _decode_panecho_video(video: bytes) -> Any:
     """Return a PanEcho input tensor for an encoded echo video."""
     import torch
 
-    if not video:
-        raise ValueError("video must contain a readable echocardiogram")
-
     with TemporaryDirectory() as temporary_directory:
         video_path = Path(temporary_directory) / "input.mp4"
         video_path.write_bytes(video)
         capture = cv2.VideoCapture(video_path.as_posix())
         try:
-            if not capture.isOpened():
-                raise ValueError("video must contain a readable echocardiogram")
-
             frame_total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
             frames = []
             if frame_total > 0:
@@ -71,9 +99,7 @@ def _decode_panecho_video(video: bytes) -> Any:
                 )
                 for frame_index in frame_indices:
                     capture.set(cv2.CAP_PROP_POS_FRAMES, int(frame_index))
-                    read_successfully, frame = capture.read()
-                    if not read_successfully:
-                        raise ValueError("video must contain a readable echocardiogram")
+                    _, frame = capture.read()
                     frames.append(frame)
             else:
                 while True:
@@ -81,8 +107,6 @@ def _decode_panecho_video(video: bytes) -> Any:
                     if not read_successfully:
                         break
                     frames.append(frame)
-                if not frames:
-                    raise ValueError("video must contain a readable echocardiogram")
                 frame_indices = np.linspace(
                     0, len(frames) - 1, num=_FRAME_COUNT, dtype=int
                 )
@@ -112,20 +136,23 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
     task_by_name = {task.task_name: task for task in model.tasks}
     predictions: dict[str, Any] = {}
     for task_name, output in outputs.items():
-        task = task_by_name.get(task_name)
-        if task is None:
-            raise RuntimeError("PanEcho output has no matching task description")
+        task = task_by_name[task_name]
 
         values = output.detach().float().cpu().reshape(-1).tolist()
-        if not all(isfinite(value) for value in values):
-            raise RuntimeError("PanEcho output must contain finite numbers")
         if task.task_type == "regression":
-            if len(values) != 1:
-                raise RuntimeError("PanEcho regression output must be a single value")
-            predictions[task_name] = float(values[0])
+            predictions[task_name] = float(
+                -values[0] if task_name == "GLS" else values[0]
+            )
             continue
 
         class_names = [str(label) for label in task.class_names]
+        if task.task_type == "binary_classification":
+            first = values[0] if task_name in _BINARY_FIRST_CLASS else 1 - values[0]
+            predictions[task_name] = {
+                class_names[0]: float(first),
+                class_names[1]: float(1 - first),
+            }
+            continue
         predictions[task_name] = {
             label: float(value) for label, value in zip(class_names, values)
         }
@@ -133,20 +160,21 @@ def _serialize_panecho_predictions(model: Any, outputs: Any) -> dict[str, Any]:
 
 
 @ULTRASOUND.register("panecho_predict_video")
+@TASK_CLS.register("panecho_predict_video")
+@TASK_REG.register("panecho_predict_video")
 @requires(_PANECHO_DEPS, extra="ultrasound")
 def panecho_predict_video(
     video: Annotated[
         bytes,
         Field(
-            description="Echocardiography cine video, such as MP4. DICOM is not supported."
+            description="Echocardiography cine video, such as MP4. Sixteen frames are sampled uniformly across the video. DICOM is not supported."
         ),
     ],
 ) -> dict[str, Any]:
     """Predict echocardiography measurements and findings from one video.
 
     Returns:
-        Predictions keyed by task name: numeric measurements in PanEcho's
-        task-specific units or probabilities keyed by class label.
+        Predictions keyed by task name and units for numeric measurements.
 
     See Also:
         https://github.com/CarDS-Yale/PanEcho
@@ -166,35 +194,38 @@ def panecho_predict_video(
     return {
         "model": "PanEcho",
         "predictions": _serialize_panecho_predictions(model, outputs),
+        "measurement_units": {
+            name: _MEASUREMENT_UNITS[name]
+            for name in outputs
+            if name in _MEASUREMENT_UNITS
+        },
     }
 
 
 @ULTRASOUND.register("panecho_predict_study")
+@TASK_CLS.register("panecho_predict_study")
+@TASK_REG.register("panecho_predict_study")
 @requires(_PANECHO_DEPS, extra="ultrasound")
 def panecho_predict_study(
     videos: Annotated[
         list[bytes],
         Field(
             min_length=1,
-            description="Echocardiography cine videos from one study, such as MP4. DICOM is not supported.",
+            description="Echocardiography cine videos from one study, such as MP4. Sixteen frames are sampled uniformly from each video. DICOM is not supported.",
         ),
     ],
 ) -> dict[str, Any]:
     """Predict echocardiography measurements and findings for one study.
 
     Returns:
-        Study predictions keyed by task name: mean measurements in PanEcho's
-        task-specific units or mean probabilities keyed by class label,
-        with equal weight for each video.
+        Study predictions and measurement units, with equal weight per video.
 
     See Also:
         https://github.com/CarDS-Yale/PanEcho
         https://doi.org/10.1001/jama.2025.8731
     """
-    if not videos:
-        raise ValueError("at least one echocardiography video is required")
-
-    predictions = [panecho_predict_video(video)["predictions"] for video in videos]
+    video_results = [panecho_predict_video(video) for video in videos]
+    predictions = [result["predictions"] for result in video_results]
     aggregated: dict[str, Any] = {}
     for task_name, first_value in predictions[0].items():
         if isinstance(first_value, dict):
@@ -212,6 +243,7 @@ def panecho_predict_study(
         "video_count": len(videos),
         "aggregation": "equal_weight_mean",
         "predictions": aggregated,
+        "measurement_units": video_results[0]["measurement_units"],
     }
 
 
@@ -222,7 +254,7 @@ def panecho_video_embed(
     video: Annotated[
         bytes,
         Field(
-            description="Echocardiography cine video, such as MP4. DICOM is not supported."
+            description="Echocardiography cine video, such as MP4. Sixteen frames are sampled uniformly across the video. DICOM is not supported."
         ),
     ],
 ) -> dict[str, Any]:
