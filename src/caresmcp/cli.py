@@ -3,43 +3,16 @@
 from pathlib import Path
 from typing import Annotated, Literal
 
-import seaborn as sns
 import typer
-from rich import box
 from rich.console import Console
-from rich.table import Table
 
-from caresmcp.api.decorators import adapt_byte_inputs
-from caresmcp.api.decorators.file_io import get_kwargs_from_file, save_results
-from caresmcp.api.io import has_todo, rich_table_to_df, unpack_literal
-from caresmcp.constants import CACHE_ROOT
-from caresmcp.registry import REGISTRIES, TAGS, TASKS
+from caresmcp.api.io.table import function_help, registry_table, rich_table_to_df
+from caresmcp.registry import REGISTRIES
 
 app = typer.Typer(add_completion=False)
 console = Console()
 
-# Cycle of row styles assigned to categories (by sorted index)
-COLORS = [
-    "yellow",
-    "cyan",
-    "magenta",
-    "green",
-    "red",
-    "blue",
-] * 10
-TAG_COLORS = {
-    tag_name: color
-    for tag_name, color in zip(
-        sorted(TAGS),
-        sns.color_palette("husl", n_colors=len(TAGS)).as_hex(),
-    )
-} | {
-    tag_name: color
-    for tag_name, color in zip(
-        sorted(TASKS),
-        sns.color_palette("husl", desat=0.5, n_colors=len(TASKS)).as_hex(),
-    )
-}
+HELP_KEYWORDS = {"help", "?"}
 
 
 @app.command("list")
@@ -48,100 +21,83 @@ def list_functions(
     output: Path | None = None,
 ) -> None:
     """Print registered tools and prompts grouped by catalogue category."""
-    if category is not None and category not in REGISTRIES:
-        valid_categories = ", ".join(REGISTRIES)
-        raise typer.BadParameter(
-            f"Choose one of: {valid_categories}", param_hint="category"
-        )
-
-    table = Table(show_header=True, header_style="bold", box=box.MINIMAL_HEAVY_HEAD)
-    table.add_column("Categ")
-    table.add_column("Name")
-    table.add_column("Models", max_width=30)
-    table.add_column("Tags")
-    table.add_column("Description", no_wrap=True)
-
-    for cat_name, color in zip(
-        [category] if category is not None else sorted(REGISTRIES), COLORS
-    ):
-        registry = REGISTRIES[cat_name]
-        table.add_section()
-        for name, function in sorted(registry.get_all().items()):
-            summary = (function.__doc__ or "").strip().splitlines()
-            description = summary[0] if summary else ""
-            tags = ", ".join(
-                f"[white on {TAG_COLORS[tag_name]}]{tag_name.split('_')[-1]}[/]"
-                for tag_name, tag_registry in sorted((TAGS | TASKS).items())
-                if name in tag_registry.get_all()
-            )
-            table.add_row(
-                f"[{color}]{cat_name}[/]",
-                f"[{color}]{name}[/]",
-                ",\n".join(unpack_literal(function)),
-                tags,
-                description,
-                style="dim" if has_todo(description) else None,
-            )
-
+    try:
+        table = registry_table(category)
+    except ValueError as error:
+        raise typer.BadParameter(str(error), param_hint="category") from error
     console.print(table)
     if output is not None:
         rich_table_to_df(table).to_csv(output, sep="\t", index=False)
 
 
 @app.command("debug")
-def debug_function(category: str, name: str, kwarg_file: Path) -> None:
+def debug_function(
+    category: str, name: str, kwargs: str, save_dir: Path = Path(".")
+) -> None:
     """Run a registry function with JSON kwargs and adapted byte inputs.
 
-    Byte inputs may be paths, base64 data URIs, or HTTP URLs.
+    kwargs may be inline JSON, a .json or .jsonl file, or help to print the
+    function's signature. Byte inputs may be paths, base64 data URIs, or HTTP
+    URLs. Outputs are saved under CACHE_ROOT/category/.
     """
-    kwargs = get_kwargs_from_file(kwarg_file)
-    fn = REGISTRIES.get(category, {}).get(name)
-    if fn is None:
+    from caresmcp.api.decorators import adapt_byte_inputs
+    from caresmcp.api.decorators.file_io import save_results
+    from caresmcp.api.io.function import load_kwargs
+
+    registry = REGISTRIES.get(category)
+    if registry is None:
         raise typer.BadParameter(
-            f"Function '{name}' not found in category '{category}'",
+            f"Choose one of: {', '.join(REGISTRIES)}", param_hint="category"
+        )
+    function = registry.get_all().get(name)
+    if function is None:
+        raise typer.BadParameter(
+            f"Function {name!r} not found in category {category!r}. "
+            f"Available: {', '.join(sorted(registry.get_all()))}",
             param_hint="name",
         )
-    fn = adapt_byte_inputs(fn)
 
-    for kwarg in kwargs:
+    if kwargs.strip().lower() in HELP_KEYWORDS:
+        console.print(f"[bold]{category}.{name}[/]")
+        console.print(function_help(function))
+        return
+
+    try:
+        entries = load_kwargs(kwargs)
+    except (OSError, ValueError) as error:
+        raise typer.BadParameter(str(error), param_hint="kwargs") from error
+
+    console.print(f"Debugging {category!r} {name!r}", style="dim")
+    function = adapt_byte_inputs(function)
+    for index, entry in enumerate(entries, start=1):
+        console.print(f"{index:02d}. {entry}")
+        output = function(**entry)
+        suffix = "" if len(entries) == 1 else f"_{index}"
+        saved = save_results(output, save_dir / f"{category}-{name}{suffix}")
         console.print(
-            f"Debugging function {name!r} from category {category!r} with kwargs: {kwarg}"
+            " " * len(str(f"{index:02d}")) + f"  Results: {saved!r}", style="dim"
         )
-        output = fn(**kwarg)
-        # if output is bytes, save to .cache
-        save_results(output, CACHE_ROOT / category / f"{name}", console.print)
 
 
 @app.command("mcp")
 def mcpserve(
-    host: Annotated[
-        str | None,
-        typer.Option(help="Host address to bind to (default: 127.0.0.1)."),
-    ] = None,
-    port: Annotated[
-        int | None,
-        typer.Option(min=0, max=65535, help="Port to bind to (default: 8000)."),
-    ] = None,
-    path: Annotated[
-        str | None,
-        typer.Option(help="HTTP endpoint path (default: /mcp)."),
-    ] = None,
-    log_level: Annotated[
-        Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None,
-        typer.Option(help="Server log level (default: INFO)."),
-    ] = None,
-    show_banner: Annotated[
-        bool,
-        typer.Option(help="Display the server banner."),
-    ] = False,
-    json_response: Annotated[
-        bool | None,
-        typer.Option(help="Return JSON responses instead of SSE streams."),
-    ] = None,
-    stateless_http: Annotated[
-        bool | None,
-        typer.Option(help="Handle each request in a new HTTP transport session."),
-    ] = None,
+    host: str | None = typer.Option(
+        None, help="Host address to bind to (default: 127.0.0.1)."
+    ),
+    port: int | None = typer.Option(
+        None, min=0, max=65535, help="Port to bind to (default: 8000)."
+    ),
+    path: str | None = typer.Option(None, help="HTTP endpoint path (default: /mcp)."),
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = (
+        typer.Option(None, help="Server log level (default: INFO).")
+    ),
+    show_banner: bool = typer.Option(False, help="Display the server banner."),
+    json_response: bool | None = typer.Option(
+        None, help="Return JSON responses instead of SSE streams."
+    ),
+    stateless_http: bool | None = typer.Option(
+        None, help="Handle each request in a new HTTP transport session."
+    ),
     allowed_hosts: Annotated[
         list[str] | None,
         typer.Option(
@@ -168,3 +124,48 @@ def mcpserve(
         allowed_hosts=allowed_hosts,
         allowed_origins=allowed_origins,
     )
+
+
+@app.command("mcpdev")
+def mcpinspect(
+    ui_port: int | None = typer.Option(
+        None, min=1, max=65535, help="Port for the MCP Inspector web UI."
+    ),
+    server_port: int | None = typer.Option(
+        None, min=1, max=65535, help="Port for the MCP Inspector proxy server."
+    ),
+    inspector_version: str | None = typer.Option(
+        None,
+        help="Version of @modelcontextprotocol/inspector to run (default: latest).",
+    ),
+    reload: bool = typer.Option(True, help="Restart the server when files change."),
+) -> None:
+    """Launch MCP Inspector against the caresmcp server over stdio.
+
+    Requires Node.js and npx. The Inspector UI is served by
+    @modelcontextprotocol/inspector, and commands are forwarded to a caresmcp
+    server subprocess for interactive debugging.
+    """
+    import os
+    import subprocess
+    import sys
+
+    server_spec = Path(__file__).with_name("mcpserver.py")
+    command = [sys.executable, "-m", "fastmcp.cli", "dev", "inspector"]
+    command.append(str(server_spec))
+    command.append("--reload" if reload else "--no-reload")
+    if ui_port is not None:
+        command.extend(["--ui-port", str(ui_port)])
+    if server_port is not None:
+        command.extend(["--server-port", str(server_port)])
+    if inspector_version is not None:
+        command.extend(["--inspector-version", inspector_version])
+
+    # FastMCP starts the server with the `fastmcp` console script, which may
+    # live in an isolated tool environment rather than on PATH.
+    env = os.environ.copy()
+    env["PATH"] = os.pathsep.join(
+        [str(Path(sys.executable).parent), env.get("PATH", "")]
+    )
+    console.print(f"Starting MCP Inspector for {server_spec}", style="dim")
+    raise typer.Exit(subprocess.run(command, check=False, env=env).returncode)

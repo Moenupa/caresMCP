@@ -1,33 +1,39 @@
 🚀 Quick Start
 ==============
 
-Get from a fresh checkout to a running MCP server in three steps. 🏁
+Get from an installed CaresMCP to a running MCP server in three steps. 🏁
 
-📋 List Tools
--------------
+.. note::
+
+   The commands below assume ``caresmcp`` is on your ``PATH``. If you installed from
+   source, activate the environment first (e.g., ``source .venv/bin/activate``), or
+   prefix commands with ``uv run`` (e.g., ``uv run caresmcp list``).
+
+📋 List Available Tools
+-----------------------
 
 ``caresmcp list`` prints every registered tool grouped by category, with the supported
 models, tags, and a short description:
 
 .. code-block:: console
 
-   $ uv run caresmcp list
+   $ caresmcp list
 
 Pass a category to narrow the listing, and an output path to also write it as
 tab-separated values:
 
 .. code-block:: console
 
-   $ uv run caresmcp list xray --output xray-tools.tsv
+   $ caresmcp list xray --output xray-tools.tsv
 
-🌐 Run the MCP Server
----------------------
+🌐 Serve with MCP
+-----------------
 
 Start the FastMCP server over streamable HTTP:
 
 .. code-block:: console
 
-   $ uv run caresmcp mcp
+   $ caresmcp mcp
 
 The server listens on ``http://127.0.0.1:8000/mcp``. Point an MCP client at that URL,
 for example:
@@ -49,17 +55,29 @@ Or in a JSON client configuration:
      }
    }
 
+To inspect and call tools interactively in a browser instead, run ``caresmcp mcpdev``
+(requires Node.js and ``npx``); see :doc:`installation` for more options.
+
 🧪 Call a Tool Directly
 -----------------------
 
 ``caresmcp debug`` runs a single registered tool without an MCP client. It takes the
-category, the tool name, and a JSON or JSON Lines file of keyword arguments:
+category, the tool name, and the tool's keyword arguments as inline JSON, a JSON or JSON
+Lines file, or ``help`` to print the tool's signature:
 
 .. code-block:: console
 
-   $ uv run caresmcp debug xray torchxrayvision_classify kwargs.json
+   $ caresmcp debug xray torchxrayvision_classify \
+       '{"image": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
+   $ caresmcp debug xray torchxrayvision_classify kwargs.json
+   $ caresmcp debug xray torchxrayvision_classify help
+
+Inline text may hold a single JSON object, a list of objects, or one object per line. A
+``.json`` file holds one object and a ``.jsonl`` file one object per line.
 
 .. tip::
 
-   Byte-valued inputs (for example ``image``) accept a local path, a base64 data URI,
-   or an HTTP URL. Results are written under ``.cache/<category>/``.
+   Byte-valued inputs (for example ``image``) accept a local path, a base64 data URI, or
+   an HTTP URL. Each output is written under ``<category>-<tool>.<ext>``, printed after
+   the run. When one call runs several keyword-argument entries, outputs gain ``_1``,
+   ``_2``, ... suffixes.

@@ -1,6 +1,6 @@
 from collections.abc import Callable
-from inspect import signature, unwrap
-from typing import Any, Literal, get_args, get_origin, get_type_hints
+from inspect import Parameter, formatannotation, signature, unwrap
+from typing import Annotated, Any, Literal, get_args, get_origin, get_type_hints
 
 MODEL_PARAMETER_NAMES = {
     "architecture",
@@ -10,6 +10,31 @@ MODEL_PARAMETER_NAMES = {
     "pretrained_model",
     "weights",
 }
+
+
+def format_annotation(annotation: Any) -> str:
+    """Render an annotation without ``Annotated`` field metadata."""
+    if annotation is Parameter.empty:
+        return ""
+    return formatannotation(_base_annotation(annotation))
+
+
+def field_description(annotation: Any) -> str:
+    """Return the pydantic ``Field`` description attached to an annotation."""
+    if get_origin(annotation) is not Annotated:
+        return ""
+    for metadata in get_args(annotation)[1:]:
+        description = getattr(metadata, "description", None)
+        if isinstance(description, str) and description:
+            return description
+    return ""
+
+
+def _base_annotation(annotation: Any) -> Any:
+    """Strip runtime field metadata from an ``Annotated`` type."""
+    if get_origin(annotation) is Annotated:
+        return get_args(annotation)[0]
+    return annotation
 
 
 def unpack_literal(

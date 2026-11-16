@@ -14,12 +14,14 @@ def get_torch_device() -> str:
 
 
 DEVICE = get_torch_device()
-CACHE_ROOT = Path(os.getenv("CACHE_ROOT", ".cache"))
+CACHE_ROOT = Path(os.getenv("CACHE_ROOT", "~/.cache/caresmcp")).expanduser()
 MODEL_CACHE_DIR = CACHE_ROOT / "models"
+MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 LRU_MAX_SIZE = 8
 HTTP_TIMEOUT = 15
 
+# update model sources with our cache path for central management
 os.environ.setdefault(
     "CELLPOSE_LOCAL_MODELS_PATH", MODEL_CACHE_DIR.absolute().as_posix()
 )

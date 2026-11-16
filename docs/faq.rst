@@ -34,10 +34,12 @@ CPU and return a device copy on every call.
 How do I try a single tool without an MCP client? 🧪
 ----------------------------------------------------
 
-Use ``uv run caresmcp debug <category> <tool> kwargs.json``. The file may contain one
-JSON object or one JSON object per line; byte-valued inputs such as ``image`` accept a
-local path, a base64 data URI, or an HTTP URL. Outputs are written under
-``.cache/<category>/``.
+Use ``uv run caresmcp debug <category> <tool> <kwargs>``. The last argument may be
+inline JSON (a single object or a list of objects), a ``.json`` or ``.jsonl`` file, or
+``help`` to print the tool's signature and parameters. Byte-valued inputs such as
+``image`` accept a local path, a base64 data URI, or an HTTP URL. Outputs are written
+under ``.cache/<category>/<tool>``, with ``_1``, ``_2``, ... suffixes when one call
+runs several entries.
 
 Does CaresMCP run LLMs or VLMs? 🤖
 ----------------------------------

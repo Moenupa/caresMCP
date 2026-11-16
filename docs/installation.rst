@@ -59,9 +59,9 @@ See ``pyproject.toml`` for the full list of extras.
 
 .. note::
 
-   If you installed from source, activate the project environment before running the
-   commands below (``source .venv/bin/activate``), or prefix each command with ``uv
-   run`` (for example, ``uv run caresmcp list``).
+   If you installed from source, activate the environment first (e.g., ``source
+   .venv/bin/activate``), or prefix commands with ``uv run`` (e.g., ``uv run caresmcp
+   list``).
 
 List the registered tools to confirm the package is installed correctly:
 
@@ -77,4 +77,5 @@ Node.js and ``npx``):
    $ caresmcp mcpdev
 
 The Inspector prints the UI URL in the terminal. Use ``--ui-port`` or ``--server-port``
-to change its ports, and ``--no-reload`` to disable auto-reload on file changes.
+to change its ports, ``--inspector-version`` to pin the Inspector release, and
+``--no-reload`` to disable auto-reload on file changes.
