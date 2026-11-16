@@ -3,8 +3,9 @@
 from functools import lru_cache
 from typing import Any, Literal, NamedTuple
 
-from caresmcp.constants import DEVICE, LRU_MAX_SIZE
+from caresmcp.constants import LRU_MAX_SIZE
 
+from ._device import device_copy
 from .hf_hub import get_hf_checkpoint
 
 MODEL_ID = "umairinayat/medical-models"
@@ -47,9 +48,15 @@ class DiseaseModel(NamedTuple):
         return tuple(self.checkpoint.get("normalization_std", ()))
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
 def get_umair_classifier(disease: Disease) -> DiseaseModel:
     """Load a disease-specific classifier and its checkpoint metadata."""
+    cached = _get_umair_classifier(disease)
+    return DiseaseModel(device_copy(cached.model), cached.checkpoint)
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def _get_umair_classifier(disease: Disease) -> DiseaseModel:
+    """Load and cache a disease-specific classifier on CPU."""
     import torch
     from torchvision import models
 
@@ -70,12 +77,18 @@ def get_umair_classifier(disease: Disease) -> DiseaseModel:
         model.classifier[2] = torch.nn.Linear(model.classifier[2].in_features, count)
 
     model.load_state_dict(checkpoint["model_state"], strict=True)
-    return DiseaseModel(model.to(DEVICE).eval(), checkpoint)
+    return DiseaseModel(model, checkpoint)
+
+
+def get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
+    """Load a disease-specific segmentation model and its checkpoint metadata."""
+    cached = _get_umair_segmentation_model(disease)
+    return DiseaseModel(device_copy(cached.model), cached.checkpoint)
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
-    """Load a disease-specific segmentation model and its checkpoint metadata."""
+def _get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
+    """Load and cache a disease-specific segmentation model on CPU."""
     checkpoint = get_hf_checkpoint(
         MODEL_ID, f"disease_models/{disease}/segmentation/best_segmenter.pt"
     )
@@ -101,4 +114,4 @@ def get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
         raise ValueError(f"Unsupported segmentation architecture: {arch}")
 
     model.load_state_dict(checkpoint["model_state"], strict=True)
-    return DiseaseModel(model.to(DEVICE).eval(), checkpoint)
+    return DiseaseModel(model, checkpoint)

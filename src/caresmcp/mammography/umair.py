@@ -6,7 +6,7 @@ from pydantic import Field
 
 from caresmcp.api.decorators import adapt_inputs, requires
 from caresmcp.api.io import decode_as, get_classification_scores
-from caresmcp.api.models.umair import get_umair_classifier
+from caresmcp.api.models._umair import get_umair_classifier
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MAMMOGRAPHY, TASK_CLS
 
