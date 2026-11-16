@@ -5,6 +5,7 @@ from .hf_hub import (
     get_hf_model_and_processor,
 )
 from .monai import get_monai_model
+from .onnx import get_onnx_session
 from .timm import get_timm_model
 from .torch_hub import get_torch_model, load_torch_checkpoint
 from .torchxrayvision import get_torchxrayvision_model
@@ -20,6 +21,7 @@ __all__ = [
     "get_hf_model",
     "get_hf_model_and_processor",
     "get_monai_model",
+    "get_onnx_session",
     "get_timm_model",
     "get_torch_model",
     "get_torchxrayvision_model",

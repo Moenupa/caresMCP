@@ -1,10 +1,48 @@
 from collections.abc import Callable
 from functools import wraps
 from importlib.util import find_spec
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def unavailable_packages(
+    packages: str | list[str] | tuple[str, ...],
+) -> tuple[str, ...]:
+    """Return the import names that cannot be resolved.
+
+    Args:
+        packages: Import names to check, for example ``["torch", "timm"]``.
+
+    Returns:
+        Missing import names in the order they were given.
+    """
+    names = [packages] if isinstance(packages, str) else packages
+    missing: list[str] = []
+    for package in names:
+        try:
+            available = find_spec(package) is not None
+        except (ImportError, ModuleNotFoundError, ValueError):
+            available = False
+        if not available:
+            missing.append(package)
+    return tuple(missing)
+
+
+def unmet_requirements(function: Callable[..., Any]) -> tuple[str, ...]:
+    """Return required optional packages that are unavailable for a function.
+
+    Requirements are the packages attached by :func:`requires`. Functions that
+    are not decorated with :func:`requires` have no unmet requirements.
+
+    Args:
+        function: Callable that may be decorated with :func:`requires`.
+
+    Returns:
+        Missing import names, empty when every requirement is installed.
+    """
+    return unavailable_packages(getattr(function, "__required_packages__", ()))
 
 
 def requires(
@@ -43,14 +81,7 @@ def requires(
     def decorate(function: Callable[P, R]) -> Callable[P, R]:
         @wraps(function)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            missing_packages: list[str] = []
-            for package in normalized_packages:
-                try:
-                    available = find_spec(package) is not None
-                except (ImportError, ModuleNotFoundError, ValueError):
-                    available = False
-                if not available:
-                    missing_packages.append(package)
+            missing_packages = unavailable_packages(normalized_packages)
             if missing_packages:
                 function_name = getattr(function, "__name__", "callable")
                 joined_packages = ", ".join(

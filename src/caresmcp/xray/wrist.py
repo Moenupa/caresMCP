@@ -6,7 +6,7 @@ import numpy as np
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.models.wrist import get_wrist_onnx_model
+from caresmcp.api.models import get_onnx_session
 from caresmcp.registry import TASK_LOC, XRAY
 
 WRIST_LABELS = (
@@ -20,6 +20,12 @@ WRIST_LABELS = (
     "softtissue",
     "text",
 )
+WRIST_MODEL_URL = (
+    "https://github.com/mdciri/YOLOv7-Bone-Fracture-Detection/releases/"
+    "download/trained-models/yolov7-p6-bonefracture.onnx"
+)
+WRIST_MODEL_FILENAME = "yolov7-p6-bonefracture.onnx"
+WRIST_MODEL_SHA256 = "bf65ea16ed4a6b7cc911e60420100aeae0eb748eb8ab8ff7e88544c7c00a9320"
 
 
 @XRAY.register("detect_pediatric_wrist_findings")
@@ -52,10 +58,12 @@ def detect_pediatric_wrist_findings(
     # Follow the released ONNX script's direct resize, RGB and [0, 1] scaling.
     resized = cv2.resize(pixels, (640, 640), interpolation=cv2.INTER_LINEAR)
     tensor = (resized.astype(np.float32) / 255).transpose(2, 0, 1)[None]
-    session = get_wrist_onnx_model()
+    session = get_onnx_session(
+        WRIST_MODEL_URL, WRIST_MODEL_FILENAME, WRIST_MODEL_SHA256
+    )
     rows = session.run(None, {session.get_inputs()[0].name: tensor})[0]
     detections = []
-    for row in rows:
+    for row in rows:  # ty: ignore[not-iterable]
         left, top, right, bottom, score, label = row[:6]
         if score < score_threshold:
             continue

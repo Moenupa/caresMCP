@@ -16,6 +16,8 @@ postprocessing.
   layout.
 - 🧪 **Evaluation ready** — model-returning loaders hand out models in evaluation mode,
   moved to ``caresmcp.constants.DEVICE`` when that is not the CPU.
+- 🖥️ **Device-aware sessions** — Pytorch/ONNX Runtime sessions prefer CUDA with CPU
+  fallback when both the device and the installed runtime support it.
 - 🔬 **Fresh Cellpose models** — Cellpose builds a new model on ``DEVICE`` for every
   call, while reusing weights already downloaded to the model cache.
 
@@ -36,7 +38,7 @@ postprocessing.
      - :external+hi-ml:doc:`hi-ml-multimodal <multimodal>`
    - - :doc:`flexray`
      - `flexray <https://github.com/VictorButoi/FleXray/tree/main/docs>`_
-   - - :doc:`wrist`
+   - - :doc:`onnx`
      - :external+onnxruntime:doc:`ONNX Runtime <index>`
    - - :doc:`cellpose`
      - :external+cellpose:doc:`Cellpose <index>`
@@ -52,6 +54,6 @@ postprocessing.
    torchxrayvision
    hi-ml
    flexray
-   wrist
+   onnx
    cellpose
    monai

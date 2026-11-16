@@ -6,7 +6,7 @@ Context Protocol (MCP). Every tool returns self-explanatory, traceable evidence 
 probabilities, masks, heatmaps, or embeddings — that an agent can cite when reasoning
 about a medical image.
 
-Getting Started Guide 🧭
+🧭 Getting Started Guide
 ------------------------
 
 New to CaresMCP? Follow this path:

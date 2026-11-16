@@ -136,6 +136,9 @@ def torchxrayvision_classify(
 @requires(["torchxrayvision"], extra="xray")
 def torchxrayvision_segment_anatomy(
     image: Annotated[bytes, CHEST_XRAY_IMAGE_FIELD],
+    weights: Annotated[
+        Literal["pspnet_chestxray"], TORCHXRAYVISION_WEIGHTS_FIELD
+    ] = "pspnet_chestxray",
     probability_threshold: Annotated[
         float,
         Field(

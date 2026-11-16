@@ -37,13 +37,20 @@ Out of scope:
   distal-radius fracture models requiring legacy PyTorch/Lightning stacks or a
   manual Box download and Python 3.8 Detectron2 environment.
 * `Urinary-stone segmentation <https://github.com/job-preedanan/urinary-stones-segmentation>`_:
-  excluded because its two-stage cascade requires TensorFlow/Keras.
+  excluded because its two-stage cascade requires TensorFlow/Keras; the
+  `KUB YOLOv8 study <https://doi.org/10.1007/s44163-026-01210-6>`_ is an
+  unevaluated detection alternative.
 * Bone-lesion and osteochondroma subtyping: deferred after the released YOLOv8
   segmenter underdetected release examples and no subtype checkpoint was found;
-  see `BTXRD <https://github.com/SHUNHANYAO/BTXRD>`_.
-* `ianpan/cxr-lines-and-tubes <https://huggingface.co/ianpan/cxr-lines-and-tubes>`_:
-  deferred because its loader downloads a multi-fold snapshot, mutates
-  ``sys.path``, and loads checkpoints without a safe packaged loader.
+  see `BTXRD <https://github.com/SHUNHANYAO/BTXRD>`_ and
+  `Bone-Tumor-Classification-XAI
+  <https://github.com/psxdj6/Bone-Tumor-Classification-XAI>`_.
+* Chest support-device paths/tips and carina: `ianpan/cxr-lines-and-tubes
+  <https://huggingface.co/ianpan/cxr-lines-and-tubes>`_ and
+  `ranzcr_clip <https://github.com/asnorkin/ranzcr_clip>`_: deferred because the
+  former's loader downloads a multi-fold snapshot, mutates ``sys.path``, and
+  loads checkpoints without a safe packaged loader; the latter relies on
+  DVC/Google Drive retrieval that was not verified.
 * `Ankle fractures <https://github.com/FaresAlMohamad/ankle-fractures-llm>`_ and
   pediatric Salter–Harris typing: skipped because access is restricted and no
   verified pediatric ankle checkpoint exists; binary labels cannot yield Weber
@@ -54,8 +61,17 @@ Out of scope:
 * Cervical foreign bodies, endobronchial blockers, and neonatal umbilical
   catheters: skipped because no task-specific localization or tip-placement
   checkpoint exists, and 2D masks cannot establish depth or position.
+  `Cervical-Spine-Segmentation-App
+  <https://github.com/nievsky/Cervical-Spine-Segmentation-App>`_ covers C2–C7
+  anatomy only; `Neonatal ResNet-50
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC8455735/>`_ and `NeoCLIP
+  <https://doi.org/10.1038/s41746-025-01922-6>`_ provide presence scores
+  without UVC tip placement; ETT models cannot be relabeled for endobronchial
+  blockers.
 * TMJ and first-MTP prostheses: skipped because no implant-specific head or foot
-  landmarks exist; OrthoNet covers hip/knee implants only.
+  landmarks exist; OrthoNet covers hip/knee implants only, and the
+  `panoramic dental Fast R-CNN <https://doi.org/10.1093/dmfr/twaf079>`_ addresses
+  dental restorations rather than TMJ replacement.
 * `ChEX <https://github.com/philip-mueller/chex>`_ and
   `CheXseg <https://github.com/stanfordmlgroup/CheXseg>`_: skipped because
   checkpoints require manual Google Drive/Box placement and both target legacy

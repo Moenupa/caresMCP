@@ -12,6 +12,7 @@ from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 
+from caresmcp.api.decorators.deps import unmet_requirements
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
 
 from .annotation import field_description, format_annotation, unpack_literal
@@ -86,7 +87,11 @@ def registry_table(category: str | None = None) -> Table:
                 ",\n".join(unpack_literal(function)),
                 tags,
                 description,
-                style="dim" if has_todo(description) else None,
+                style=(
+                    "dim"
+                    if has_todo(description) or unmet_requirements(function)
+                    else None
+                ),
             )
     return table
 

@@ -1,7 +1,7 @@
 🚀 Quick Start
 ==============
 
-Get from an installed CaresMCP to a running MCP server in three steps. 🏁
+🏁 Get from an installed CaresMCP to a running MCP server in three steps.
 
 .. note::
 
@@ -12,8 +12,8 @@ Get from an installed CaresMCP to a running MCP server in three steps. 🏁
 📋 List Available Tools
 -----------------------
 
-``caresmcp list`` prints every registered tool grouped by category, with the supported
-models, tags, and a short description:
+``caresmcp list`` prints every registered and usable tool grouped by category, with the
+supported models, tags, and a short description:
 
 .. code-block:: console
 

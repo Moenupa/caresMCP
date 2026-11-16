@@ -1,6 +1,6 @@
 """Multi-mask musculoskeletal radiograph reconstruction error with SKELEX."""
 
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 
 import numpy as np
 from PIL import Image, ImageOps, PngImagePlugin
@@ -8,7 +8,7 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as, encode_as
-from caresmcp.api.models import HFModelType, get_hf_model_and_processor
+from caresmcp.api.models import HFMODEL_ID_DESC, HFModelType, get_hf_model_and_processor
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EVAL, XRAY
 
@@ -34,6 +34,7 @@ def _prepare_skelex_image(image: bytes) -> Image.Image:
 @requires(["torch", "transformers"], extra="xray")
 def skelex_reconstruction_error(
     image: Annotated[bytes, Field(description="Musculoskeletal radiograph image")],
+    model_id: Annotated[Literal["skhoha/SKELEX"], HFMODEL_ID_DESC] = "skhoha/SKELEX",
     passes: Annotated[
         int,
         Field(
@@ -57,13 +58,12 @@ def skelex_reconstruction_error(
 
     See Also:
         https://github.com/skhoha/SKELEX/blob/main/unsupervised_heatmap.py
-        https://huggingface.co/skhoha/SKELEX
     """
     import torch
     from transformers import ViTImageProcessor, ViTMAEForPreTraining
 
     model, processor = get_hf_model_and_processor(
-        "skhoha/SKELEX", HFModelType.IMAGE_PRETRAINING, use_fast=False
+        model_id, HFModelType.IMAGE_PRETRAINING, use_fast=False
     )
     model = cast(ViTMAEForPreTraining, model)
     processor = cast(ViTImageProcessor, processor)

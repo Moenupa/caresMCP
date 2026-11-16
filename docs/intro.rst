@@ -9,7 +9,7 @@ diagnostic conclusions stay traceable to evidence and even to individual images.
 The same tool interface doubles as a foundation for test-time training and self-evolving
 agent workflows.
 
-What's Inside 🧰
+🧰 What's Inside
 ----------------
 
 - 🧠 **Workflow APIs** — 50+ end-to-end tools for classification, segmentation,
@@ -21,7 +21,7 @@ What's Inside 🧰
 - 📤 **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and
   other image outputs accompanied by legends or descriptions that explain their colors.
 
-Why Traceable Evidence? 🔍
+🔍 Why Traceable Evidence?
 --------------------------
 
 A VLM alone can be unsure or distracted by spurious findings. With CaresMCP, an agent
@@ -34,7 +34,7 @@ can cross-check its reading against dedicated models:
 Every conclusion then points back to the tool result and the image region supporting it,
 which keeps the diagnostic trail auditable.
 
-Explore the Docs 🗺️
+🗺️ Explore the Docs
 -------------------
 
 - :doc:`installation` — set up CaresMCP and its optional model backends.
