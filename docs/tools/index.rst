@@ -3,6 +3,7 @@
 
 All tools are grouped by the clinical or functional category they serve. Each page lists
 its registered functions, the models behind them, and their input and output formats.
+Pages without integrated tools record the candidate model survey instead.
 
 - :doc:`mammography` — breast-density and mammogram-patch classification.
 - :doc:`xray` — chest X-ray classification, segmentation, localization, embeddings, and
@@ -17,6 +18,8 @@ its registered functions, the models behind them, and their input and output for
   TotalSegmentator anatomy segmentation.
 - :doc:`dsa` — coronary stenosis detection and vessel segmentation in catheter
   angiography.
+- :doc:`fluoroscopy` — model survey for fluoroscopic examinations; no task-trained model
+  with a verified license is integrated.
 - :doc:`tools` — generic image download, inspection, cropping, and denoising.
 
 .. toctree::
@@ -29,4 +32,5 @@ its registered functions, the models behind them, and their input and output for
    pathology
    medai
    dsa
+   fluoroscopy
    tools

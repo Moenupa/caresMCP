@@ -30,8 +30,7 @@ Deferred priority candidates:
   `Angio-DualDx checkpoint instructions
   <https://github.com/SarvinChitsaz/Angio-DualDx/blob/main/models/checkpoints/README.md>`_;
   the `official ARCADE record <https://zenodo.org/records/10390295>`_
-  :footcite:`popov2024arcade`. Deferred because trained weights are not
-  released and the survey did not authorize training.
+  :footcite:`popov2024arcade`. Deferred because trained weights are not released.
 * |o| **Coronary stenosis localization: temporal multisource model.** The
   paper :footcite:`sun2026coronary` reports a temporal multisource model.
   Deferred because no implementation, checkpoint, or weight license was
