@@ -26,14 +26,14 @@ tab-separated values:
 
    $ caresmcp list xray --output xray-tools.tsv
 
-🌐 Serve with MCP
+🔌 Serve with MCP
 -----------------
 
 Start the FastMCP server over streamable HTTP:
 
 .. code-block:: console
 
-   $ caresmcp mcp
+   $ caresmcp mcp  # pass --help to customize the endpoint
 
 The server listens on ``http://127.0.0.1:8000/mcp``. Point an MCP client at that URL,
 for example:

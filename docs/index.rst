@@ -30,4 +30,11 @@ New to CaresMCP? Follow this path:
    :hidden:
 
    tools/index
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: 🛠 API Reference
+
    sources/index
+   api/index

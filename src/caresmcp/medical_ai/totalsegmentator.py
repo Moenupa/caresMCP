@@ -46,6 +46,8 @@ def totalsegmentator_segment_anatomy(
     References:
         Wasserthal et al., TotalSegmentator, Radiology: Artificial Intelligence,
         2023. https://doi.org/10.1148/ryai.230024
+
+    See Also:
         https://github.com/wasserth/TotalSegmentator#python-api
     """
     import nibabel as nib

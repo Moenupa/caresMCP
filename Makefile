@@ -42,5 +42,6 @@ test-slow:
 list:
 	$(RUN) caresmcp list
 
-docs:
+docs: format
+	rm -r $(DOCS_OUT)
 	$(RUN) --extra docs sphinx-build $(SPHINXOPTS) $(DOCS_SRC) $(DOCS_OUT)

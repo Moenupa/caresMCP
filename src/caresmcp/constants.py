@@ -17,7 +17,7 @@ CACHE_ROOT = Path(os.getenv("CARESMCP_CACHE", "~/.cache/caresmcp")).expanduser()
 MODEL_CACHE_DIR = CACHE_ROOT / "models"
 MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-LRU_MAX_SIZE = int(os.getenv("CARESMCP_LRU_SIZE", "8"))
+LRU_MAX_SIZE = int(os.getenv("CARESMCP_LRU_SIZE", "2"))
 HTTP_TIMEOUT = int(os.getenv("CARESMCP_TIMEOUT", "15"))
 
 # update model sources with our cache path for central management
@@ -25,5 +25,12 @@ os.environ.setdefault(
     "CELLPOSE_LOCAL_MODELS_PATH", (MODEL_CACHE_DIR / "cellpose").absolute().as_posix()
 )
 os.environ.setdefault("HF_HUB_CACHE", (MODEL_CACHE_DIR / "hf").absolute().as_posix())
+os.environ.setdefault(
+    "HF_MODULES_CACHE", (MODEL_CACHE_DIR / "modules").absolute().as_posix()
+)
 # torch will land in $TORCH_HOME/hub
 os.environ.setdefault("TORCH_HOME", (MODEL_CACHE_DIR).absolute().as_posix())
+# TotalSegmentator keeps its config and nnU-Net weights here
+os.environ.setdefault(
+    "TOTALSEG_HOME_DIR", (MODEL_CACHE_DIR / "totalseg").absolute().as_posix()
+)
