@@ -39,5 +39,5 @@ Explore the Docs 🗺️
 
 - :doc:`installation` — set up CaresMCP and its optional model backends.
 - :doc:`quick-start` — list tools, start the MCP server, and run a tool.
-- :doc:`supported-tools/index` — browse tools for each clinical category.
-- :doc:`supported-loaders/index` — learn how checkpoints are fetched and cached.
+- :doc:`tools/index` — browse tools for each clinical category.
+- :doc:`sources/index` — learn how checkpoints are fetched and cached.

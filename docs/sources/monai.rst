@@ -1,9 +1,9 @@
 🧠 MONAI
-=========
+========
 
-Models are built from the architectures released with the MONAI model zoo and
-loaded from pinned Hub revisions, so an upstream update cannot silently change
-the weights behind a tool.
+Models are built from the architectures released with the MONAI model zoo and loaded
+from pinned Hub revisions, so an upstream update cannot silently change the weights
+behind a tool.
 
 📦 Supported checkpoints:
 

@@ -29,5 +29,5 @@ New to CaresMCP? Follow this path:
 .. toctree::
    :hidden:
 
-   supported-tools/index
-   supported-loaders/index
+   tools/index
+   sources/index
