@@ -65,7 +65,7 @@ def _prepare_prism2_batch(image: bytes) -> tuple[Any, Any]:
 
     model, processor = get_hf_model_and_processor(
         MODEL_ID,
-        model_type=HFModelType.AUTO,
+        HFModelType.AUTO,
         trust_remote_code=True,
         torch_dtype="auto",
     )

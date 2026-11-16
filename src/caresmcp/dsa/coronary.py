@@ -7,7 +7,7 @@ import numpy as np
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as, encode_label_mask
+from caresmcp.api.io import decode_as, device_copy, encode_label_mask
 from caresmcp.constants import DEVICE
 from caresmcp.registry import DSA, TASK_LOC, TASK_SEG
 
@@ -70,7 +70,7 @@ def _normalize_frame(pixels: np.ndarray, invert_polarity: bool) -> np.ndarray:
 
 
 def _load_model(kind: Literal["stenosis", "vessel"]) -> "Module":
-    """Load one released checkpoint strictly onto the inference device."""
+    """Build one released checkpoint for inference."""
     from caresmcp.api.models import get_hf_checkpoint
 
     from ._unet import UNet
@@ -80,7 +80,7 @@ def _load_model(kind: Literal["stenosis", "vessel"]) -> "Module":
         raise ValueError("coronary checkpoint must contain a state dictionary")
     model = UNet(base=int(checkpoint.get("base", 32)))
     model.load_state_dict(checkpoint["state"], strict=True)
-    return model.to(DEVICE).eval()
+    return device_copy(model)
 
 
 def _predict(

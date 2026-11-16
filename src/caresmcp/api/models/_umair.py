@@ -1,11 +1,8 @@
 """Load disease-specific models from the Medical Imaging Models release."""
 
-from functools import lru_cache
 from typing import Any, Literal, NamedTuple
 
-from caresmcp.constants import LRU_MAX_SIZE
-
-from ._device import device_copy
+from ..io import device_copy
 from .hf_hub import get_hf_checkpoint
 
 MODEL_ID = "umairinayat/medical-models"
@@ -50,13 +47,12 @@ class DiseaseModel(NamedTuple):
 
 def get_umair_classifier(disease: Disease) -> DiseaseModel:
     """Load a disease-specific classifier and its checkpoint metadata."""
-    cached = _get_umair_classifier(disease)
-    return DiseaseModel(device_copy(cached.model), cached.checkpoint)
+    loaded = _get_umair_classifier(disease)
+    return DiseaseModel(device_copy(loaded.model), loaded.checkpoint)
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
 def _get_umair_classifier(disease: Disease) -> DiseaseModel:
-    """Load and cache a disease-specific classifier on CPU."""
+    """Load a disease-specific classifier on CPU."""
     import torch
     from torchvision import models
 
@@ -82,13 +78,12 @@ def _get_umair_classifier(disease: Disease) -> DiseaseModel:
 
 def get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
     """Load a disease-specific segmentation model and its checkpoint metadata."""
-    cached = _get_umair_segmentation_model(disease)
-    return DiseaseModel(device_copy(cached.model), cached.checkpoint)
+    loaded = _get_umair_segmentation_model(disease)
+    return DiseaseModel(device_copy(loaded.model), loaded.checkpoint)
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
 def _get_umair_segmentation_model(disease: SegmentationDisease) -> DiseaseModel:
-    """Load and cache a disease-specific segmentation model on CPU."""
+    """Load a disease-specific segmentation model on CPU."""
     checkpoint = get_hf_checkpoint(
         MODEL_ID, f"disease_models/{disease}/segmentation/best_segmenter.pt"
     )

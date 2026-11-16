@@ -1,10 +1,31 @@
-"""Tensor validation and conversion to labeled classification scores."""
+"""Tensor management."""
 
 from collections.abc import Mapping
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
+
+from caresmcp.constants import DEVICE
 
 if TYPE_CHECKING:
     from torch import Tensor
+    from torch.nn import Module
+
+
+def device_copy[ModuleT: "Module"](model: ModuleT) -> ModuleT:
+    """Return an inference-ready copy of a cached CPU model.
+
+    On CPU the cached module itself is returned in evaluation mode and must be
+    treated as read-only. Elsewhere a deep copy is moved to ``DEVICE``, so the
+    cache stays on the host and each call receives an independent module.
+    """
+    if DEVICE == "cpu":
+        return model.eval()
+
+    return deepcopy(model).to(DEVICE).eval()
+
+
+def device_to(tensor: "Tensor") -> "Tensor":
+    return tensor.to(DEVICE)
 
 
 def get_classification_scores(

@@ -47,7 +47,7 @@ def cardiac_video(cardiac_frames, tmp_path):
         path = tmp_path / f"{count}_{letterboxed}.avi"
         writer = cv2.VideoWriter(
             str(path),
-            cv2.VideoWriter_fourcc(*"MJPG"),
+            cv2.VideoWriter.fourcc(*"MJPG"),
             30,
             (224 if letterboxed else 112, 112),
         )

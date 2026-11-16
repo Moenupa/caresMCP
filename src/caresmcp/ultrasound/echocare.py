@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING, Annotated, Any
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as
+from caresmcp.api.io import decode_as, device_copy
 from caresmcp.api.models import get_hf_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_EMB, ULTRASOUND
 
 if TYPE_CHECKING:
+    from torch.nn import Module
     from torchvision.transforms import Compose
 
 _MODEL_ID = "Moenupa/EchoCare"
@@ -34,8 +35,8 @@ def _echocare_transform() -> "Compose":
     )
 
 
-def _load_echocare_encoder() -> Any:
-    """Load and cache the pretrained EchoCare encoder."""
+def _load_echocare_encoder() -> "Module":
+    """Build the pretrained EchoCare encoder for inference."""
     from monai.networks.nets.swin_unetr import SwinTransformer
 
     model = SwinTransformer(
@@ -59,7 +60,7 @@ def _load_echocare_encoder() -> Any:
     }
 
     model.load_state_dict(state_dict)
-    return model.to(DEVICE).eval()
+    return device_copy(model)
 
 
 @ULTRASOUND.register("echocare_image_embed")

@@ -41,7 +41,7 @@ def _load_pathology_encoder(model_id: PathologyEncoder) -> tuple[Any, Any]:
     if model_id in ("owkin/phikon", "owkin/phikon-v2", "histai/hibou-b"):
         model, processor = get_hf_model_and_processor(
             model_id,
-            model_type=HFModelType.IMAGE_ENCODER,
+            HFModelType.IMAGE_ENCODER,
             trust_remote_code=model_id == "histai/hibou-b",
             use_fast=False,
         )

@@ -9,7 +9,8 @@ import numpy as np
 from pydantic import Field
 
 from caresmcp.api.decorators import adapt_inputs, requires
-from caresmcp.api.io import decode_as, encode_label_mask
+from caresmcp.api.io import decode_as, device_copy, encode_label_mask
+from caresmcp.api.models import load_torch_checkpoint
 from caresmcp.constants import DEVICE
 from caresmcp.registry import TASK_REG, TASK_SEG, ULTRASOUND
 
@@ -252,20 +253,13 @@ def _load_echonet_dynamic_model() -> "Module":
     model.fc = torch.nn.Linear(model.fc.in_features, 1)
     # The released checkpoint stores NumPy scalars, which PyTorch's safe
     # unpickler rejects. It is downloaded over HTTPS from the official release.
-    checkpoint = torch.hub.load_state_dict_from_url(
-        _EF_CHECKPOINT_URL,
-        map_location="cpu",
-        progress=True,
-        weights_only=False,
-    )
+    checkpoint = load_torch_checkpoint(_EF_CHECKPOINT_URL, weights_only=False)
     state_dict = checkpoint.get("state_dict", checkpoint)
     state_dict = {
         name.removeprefix("module."): value for name, value in state_dict.items()
     }
     model.load_state_dict(state_dict)
-    model = model.to(DEVICE)
-    model.eval()
-    return model
+    return device_copy(model)
 
 
 def _load_echonet_dynamic_segmentation_model() -> "Module":
@@ -290,20 +284,13 @@ def _load_echonet_dynamic_segmentation_model() -> "Module":
         bias=final_layer.bias is not None,
         padding_mode=final_layer.padding_mode,
     )
-    checkpoint = torch.hub.load_state_dict_from_url(
-        _SEGMENTATION_CHECKPOINT_URL,
-        map_location="cpu",
-        progress=True,
-        weights_only=True,
-    )
+    checkpoint = load_torch_checkpoint(_SEGMENTATION_CHECKPOINT_URL)
     state_dict = checkpoint.get("state_dict", checkpoint)
     state_dict = {
         name.removeprefix("module."): value for name, value in state_dict.items()
     }
     model.load_state_dict(state_dict)
-    model = model.to(DEVICE)
-    model.eval()
-    return model
+    return device_copy(model)
 
 
 @ULTRASOUND.register("echonet_dynamic_predict_ef")

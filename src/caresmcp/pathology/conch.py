@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as
+from caresmcp.api.io import decode_as, device_copy
 from caresmcp.constants import DEVICE
 from caresmcp.registry import PATHOLOGY, TASK_RET
 
@@ -21,7 +21,7 @@ NONEMPTY_TEXTS = Field(
 
 
 def _load_conch() -> tuple[Any, Any, Any]:
-    """Load and cache CONCH, its image transform, and a bound text tokenizer."""
+    """Load CONCH, its image transform, and a bound text tokenizer for inference."""
     from conch.open_clip_custom import (
         create_model_from_pretrained,
         get_tokenizer,
@@ -32,9 +32,7 @@ def _load_conch() -> tuple[Any, Any, Any]:
         "conch_ViT-B-16",
         f"hf_hub:{MODEL_ID}",
     )
-    model = model.to(DEVICE)
-    model.eval()
-    return model, preprocess, partial(tokenize, get_tokenizer())
+    return device_copy(model), preprocess, partial(tokenize, get_tokenizer())
 
 
 @PATHOLOGY.register("conch_score_candidate_texts")

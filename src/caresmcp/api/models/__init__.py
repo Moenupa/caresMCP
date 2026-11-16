@@ -6,7 +6,7 @@ from .hf_hub import (
 )
 from .monai import get_monai_model
 from .timm import get_timm_model
-from .torch_hub import get_torch_model
+from .torch_hub import get_torch_model, load_torch_checkpoint
 from .torchxrayvision import get_torchxrayvision_model
 
 HFMODEL_ID_DESC = "Huggingface Model ID"
@@ -23,4 +23,5 @@ __all__ = [
     "get_timm_model",
     "get_torch_model",
     "get_torchxrayvision_model",
+    "load_torch_checkpoint",
 ]

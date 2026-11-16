@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Literal
 
-from caresmcp.constants import DEVICE
-
+from ..io import device_copy
 from .hf_hub import get_hf_checkpoint
 
 if TYPE_CHECKING:
@@ -53,6 +52,7 @@ def _build_monai_model(model_id: MonaiModels) -> "Module":
 def get_monai_model(model_id: MonaiModels) -> "Module":
     """Load and cache a released MONAI model-zoo checkpoint for inference."""
     model = _build_monai_model(model_id)
+    # hf handles caching
     checkpoint = get_hf_checkpoint(
         model_id,
         "models/model.pt",
@@ -61,4 +61,4 @@ def get_monai_model(model_id: MonaiModels) -> "Module":
     # Most bundles wrap the tensors under a "model" entry.
     state_dict = checkpoint.get("model", checkpoint)
     model.load_state_dict(state_dict, strict=True)
-    return model.to(DEVICE).eval()
+    return device_copy(model)

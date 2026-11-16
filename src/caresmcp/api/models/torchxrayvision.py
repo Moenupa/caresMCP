@@ -3,12 +3,19 @@
 from functools import lru_cache
 from typing import Any
 
-from caresmcp.constants import DEVICE, LRU_MAX_SIZE, MODEL_CACHE_DIR
+from caresmcp.constants import LRU_MAX_SIZE, MODEL_CACHE_DIR
+
+from ..io import device_copy
+
+
+def get_torchxrayvision_model(weights: str, *, apply_sigmoid: bool = False) -> Any:
+    """Load a TorchXRayVision model for inference."""
+    return device_copy(_get_torchxrayvision_model(weights, apply_sigmoid=apply_sigmoid))
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)
-def get_torchxrayvision_model(weights: str, *, apply_sigmoid: bool = False) -> Any:
-    """Load and cache a TorchXRayVision model for inference."""
+def _get_torchxrayvision_model(weights: str, *, apply_sigmoid: bool = False) -> Any:
+    """Load and cache a TorchXRayVision model on CPU."""
     import torchxrayvision as xrv
 
     if weights == "anatomy":
@@ -24,4 +31,4 @@ def get_torchxrayvision_model(weights: str, *, apply_sigmoid: bool = False) -> A
             apply_sigmoid=apply_sigmoid,
             cache_dir=MODEL_CACHE_DIR.as_posix(),
         )
-    return model.to(DEVICE).eval()
+    return model

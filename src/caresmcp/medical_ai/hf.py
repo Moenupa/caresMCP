@@ -45,7 +45,9 @@ def hf_classifier(
     """
     import torch
 
-    model, processor = get_hf_model_and_processor(model_id)
+    model, processor = get_hf_model_and_processor(
+        model_id, HFModelType.IMAGE_CLASSIFICATION
+    )
     config_labels = model.config.id2label
     if config_labels is None:
         raise ValueError(

@@ -4,7 +4,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from caresmcp.constants import DEVICE, LRU_MAX_SIZE
+from caresmcp.constants import LRU_MAX_SIZE
+
+from ..io import device_copy
 
 if TYPE_CHECKING:
     from transformers import PreTrainedModel, ProcessorMixin
@@ -22,12 +24,29 @@ class HFModelType(Enum):
     SEMANTIC_SEGMENTATION = auto()
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
 def get_hf_model(
     model_id: str,
+    *,
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
+    subfolder: str = "",
+) -> "PreTrainedModel":
+    """Load a Hugging Face model for inference."""
+    model = _get_hf_model(
+        model_id,
+        trust_remote_code=trust_remote_code,
+        torch_dtype=torch_dtype,
+        subfolder=subfolder,
+    )
+    return device_copy(model)
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def _get_hf_model(
+    model_id: str,
     *,
+    trust_remote_code: bool = False,
+    torch_dtype: str | None = None,
     subfolder: str = "",
 ) -> "PreTrainedModel":
     """Load and cache an AutoModel checkpoint without requiring a processor."""
@@ -38,18 +57,16 @@ def get_hf_model(
         kwargs["torch_dtype"] = torch_dtype
     if subfolder:
         kwargs["subfolder"] = subfolder
-    model = AutoModel.from_pretrained(model_id, **kwargs).to(DEVICE)
-    model.eval()
+    model = AutoModel.from_pretrained(model_id, **kwargs)
     return model
 
 
-@lru_cache(maxsize=LRU_MAX_SIZE)
 def get_hf_model_and_processor(
     model_id: str,
-    model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
+    model_type: HFModelType,
+    *,
     trust_remote_code: bool = False,
     torch_dtype: str | None = None,
-    *,
     use_fast: bool = True,
     subfolder: str = "",
     processor_subfolder: str | None = None,
@@ -77,6 +94,29 @@ def get_hf_model_and_processor(
 
     Never support revision or local_files_only. Since it brings complexity we/agents dont need.
     """
+    model, processor = _get_hf_model_and_processor(
+        model_id=model_id,
+        model_type=model_type,
+        trust_remote_code=trust_remote_code,
+        torch_dtype=torch_dtype,
+        use_fast=use_fast,
+        subfolder=subfolder,
+        processor_subfolder=processor_subfolder,
+    )
+    return device_copy(model), processor
+
+
+@lru_cache(maxsize=LRU_MAX_SIZE)
+def _get_hf_model_and_processor(
+    model_id: str,
+    model_type: HFModelType = HFModelType.IMAGE_CLASSIFICATION,
+    *,
+    trust_remote_code: bool = False,
+    torch_dtype: str | None = None,
+    use_fast: bool = True,
+    subfolder: str = "",
+    processor_subfolder: str | None = None,
+) -> "tuple[PreTrainedModel, ProcessorMixin]":
     model_kwargs: dict[str, Any] = {}
     processor_kwargs: dict[str, Any] = {}
     processor: ProcessorMixin | None = None
@@ -163,8 +203,7 @@ def get_hf_model_and_processor(
 
     if processor is None:
         processor = processor_class.from_pretrained(model_id, **processor_kwargs)
-    model = model_class.from_pretrained(model_id, **model_kwargs).to(DEVICE)
-    model.eval()
+    model = model_class.from_pretrained(model_id, **model_kwargs)
     return model, processor
 
 
@@ -174,7 +213,7 @@ def get_hf_checkpoint(
     filename: str,
     *,
     revision: str | None = None,
-    map_location: str = "cpu",
+    weights_only: bool = True,
 ) -> Any:
     """Load a tensor-only PyTorch checkpoint from a Hub repository."""
     import torch
@@ -186,7 +225,7 @@ def get_hf_checkpoint(
         revision=revision,
     )
     # safetensors handled in torch.load()
-    return torch.load(artifact, map_location=map_location, weights_only=True)
+    return torch.load(artifact, map_location="cpu", weights_only=weights_only)
 
 
 @lru_cache(maxsize=LRU_MAX_SIZE)

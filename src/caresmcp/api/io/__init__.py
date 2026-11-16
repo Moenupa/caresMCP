@@ -11,12 +11,14 @@ from .image import (
 )
 from .string import has_todo
 from .table import rich_table_to_df
-from .tensor import get_classification_scores
+from .tensor import device_copy, device_to, get_classification_scores
 
 __all__ = [
     "check_bbox",
     "convert_grayscale",
     "decode_as",
+    "device_copy",
+    "device_to",
     "draw_legends",
     "encode_as",
     "encode_label_mask",

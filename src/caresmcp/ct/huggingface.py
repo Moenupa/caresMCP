@@ -1,15 +1,15 @@
 """CT slice classification with supported Hub checkpoints."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import get_classification_scores
+from caresmcp.api.io import device_copy, get_classification_scores
 from caresmcp.api.models.hf_hub import (
     HFModelType,
     get_hf_checkpoint,
     get_hf_model_and_processor,
 )
-from caresmcp.api.models.timm import get_timm_model
+from caresmcp.api.models.timm import build_timm_model
 from caresmcp.constants import DEVICE
 from caresmcp.registry import CT, TASK_CLS
 
@@ -27,6 +27,20 @@ from .io import (
     _decode_ct_slice,
     _model_image,
 )
+
+if TYPE_CHECKING:
+    from torch.nn import Module
+
+
+def _load_ct_slice_classifier(model_id: str) -> "Module":
+    """Build the released ViT slice classifier for inference."""
+    model = build_timm_model(
+        "vit_base_patch16_224",
+        pretrained=False,
+        num_classes=2,
+    )
+    model.load_state_dict(get_hf_checkpoint(model_id, "pytorch_model.bin"), strict=True)
+    return device_copy(model)
 
 
 def _window_metadata(
@@ -74,14 +88,7 @@ def classify_ct_slice(
             ]
         )
         inputs = preprocess(ct_image).unsqueeze(0).to(DEVICE)
-        model = get_timm_model(
-            "vit_base_patch16_224",
-            pretrained=False,
-            num_classes=2,
-        )
-        model.load_state_dict(
-            get_hf_checkpoint(model_id, "pytorch_model.bin"), strict=True
-        )
+        model = _load_ct_slice_classifier(model_id)
         with torch.inference_mode():
             logits = model(inputs)
         labels = {0: "Cancer", 1: "Normal"}
