@@ -17,7 +17,7 @@ import pytest
 from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.io import decode_as
-from caresmcp.api.models._biovil import BioViLModel
+from caresmcp.api.models.hi_ml import BioViLModel
 from caresmcp.xray.biovil import biovil_ground_phrases
 
 pytestmark = [pytest.mark.slow, pytest.mark.cuda]

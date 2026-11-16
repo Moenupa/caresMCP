@@ -1,8 +1,10 @@
-Usage
-=====
+🚀 Quick Start
+==============
 
-List tools
-----------
+Get from a fresh checkout to a running MCP server in three steps. 🏁
+
+📋 List Tools
+-------------
 
 ``caresmcp list`` prints every registered tool grouped by category, with the supported
 models, tags, and a short description:
@@ -18,8 +20,8 @@ tab-separated values:
 
    $ uv run caresmcp list xray --output xray-tools.tsv
 
-Run the MCP server
-------------------
+🌐 Run the MCP Server
+---------------------
 
 Start the FastMCP server over streamable HTTP:
 
@@ -47,8 +49,8 @@ Or in a JSON client configuration:
      }
    }
 
-Call a tool directly
---------------------
+🧪 Call a Tool Directly
+-----------------------
 
 ``caresmcp debug`` runs a single registered tool without an MCP client. It takes the
 category, the tool name, and a JSON or JSON Lines file of keyword arguments:
@@ -57,5 +59,7 @@ category, the tool name, and a JSON or JSON Lines file of keyword arguments:
 
    $ uv run caresmcp debug xray torchxrayvision_classify kwargs.json
 
-Byte-valued inputs (for example ``image``) accept a local path, a base64 data URI, or an
-HTTP URL. Results are written under ``.cache/<category>/``.
+.. tip::
+
+   Byte-valued inputs (for example ``image``) accept a local path, a base64 data URI,
+   or an HTTP URL. Results are written under ``.cache/<category>/``.

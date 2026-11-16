@@ -9,7 +9,7 @@ from pydantic import Field
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as
 from caresmcp.api.models import HFMODEL_ID_DESC
-from caresmcp.api.models._biovil import (
+from caresmcp.api.models.hi_ml import (
     BIOVIL_CHECKPOINTS,
     BioViLModel,
     get_biovil_image_model,

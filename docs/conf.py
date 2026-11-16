@@ -1,8 +1,11 @@
 """Sphinx configuration."""
 
+from dataclasses import asdict
 from importlib.metadata import version as _get_version
 
 from pydantic.fields import FieldInfo
+from sphinx_design.icons import get_octicon
+from sphinxawesome_theme import ThemeOptions
 
 # -- Project information -------------------------------------------------------
 project = "CaresMCP"
@@ -24,7 +27,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",        # [source] links next to API entries
     "sphinx_autodoc_typehints",   # must come after napoleon
-    "sphinx_copybutton",
     "sphinx_design",
 ]
 
@@ -35,6 +37,7 @@ templates_path = ["_templates"]
 
 # -- Autodoc / autosummary -----------------------------------------------------
 autosummary_generate = True
+autodoc_mock_imports = ["transformers"]
 autodoc_member_order = "bysource"
 autodoc_default_options = {
     "members": True,
@@ -63,9 +66,17 @@ napoleon_attr_annotations = True
 # -- Intersphinx ---------------------------------------------------------------
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "hi-ml": ("https://hi-ml.readthedocs.io/en/latest/", None),
+    "huggingface_hub": ("https://huggingface.co/docs/huggingface_hub/main/en/", None),
+    "monai": ("https://monai.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
+    "scikit-image": ("https://scikit-image.org/docs/stable/", None),
+    "timm": ("https://huggingface.co/docs/timm/main/en/", None),
     "torch": ("https://docs.pytorch.org/docs/stable/", None),
+    "torchvision": ("https://docs.pytorch.org/vision/stable/", None),
+    "transformers": ("https://huggingface.co/docs/transformers/main/en/", None),
 }
 intersphinx_timeout = 10
 
@@ -103,14 +114,36 @@ bibtex_reference_style = "label"
 nitpicky = False
 # nitpick_ignore = [("py:class", "SomeInternalType")]
 
-# -- HTML output (Furo) --------------------------------------------------------
-html_theme = "furo"
-html_title = f"{project} {release}"
+# -- Syntax highlighting -------------------------------------------------------
+# sphinxawesome-theme appends the dark stylesheet behind prefers-color-scheme.
+pygments_style = "default"
+pygments_style_dark = "one-dark"
+
+# -- HTML output ---------------------------------------------------------------
+html_theme = "sphinxawesome_theme"
+html_title = f"{project}"
+html_favicon = "./_static/favicon.ico"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
-html_theme_options = {
-    "source_repository": "https://github.com/Moenupa/caresMCP/",
-    "source_branch": "main",
-    "source_directory": "docs/",
-    "top_of_page_buttons": ["view", "edit"],
-}
+html_permalinks_icon = "<span>#</span>"
+
+# for more icons, see https://primer.style/octicons/
+theme_options = ThemeOptions(
+    show_scrolltop=True,
+    awesome_external_links=True,
+    main_nav_links={"Docs": "index"},
+    extra_header_link_icons={
+        "GitHub": {
+            "link": "https://github.com/Moenupa/caresMCP/",
+            "icon": get_octicon("mark-github"),
+        },
+        "About us": {
+            "link": "https://cair-cas.org.hk",
+            "icon": get_octicon("info"),
+        },
+    },
+    logo_light="./_static/favicon.ico",
+    logo_dark="./_static/favicon.ico",
+)
+
+html_theme_options = asdict(theme_options)
