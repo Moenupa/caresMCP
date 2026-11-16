@@ -3,7 +3,7 @@
 
 CaresMCP brings dedicated medical ML models and tools to agents through the Model
 Context Protocol (MCP). It targets the bottlenecks that hold medical vision-language
-models back — medical reasoning, data sourcing, and interpretability — so that
+models back — medical reasoning, data sourcing, and AI explainability — so that
 diagnostic conclusions stay traceable to evidence and even to individual images.
 
 The same tool interface doubles as a foundation for test-time training and self-evolving
@@ -15,11 +15,9 @@ What's Inside 🧰
 - 🧠 **Workflow APIs** — 50+ end-to-end tools for classification, segmentation,
   localization, retrieval, embeddings, denoising, and image utilities.
 - 🔌 **Framework adapters** — unified loaders for ``transformers``, MONAI, timm,
-  ``torch.hub``, and TorchXRayVision, so a new checkpoint needs only its preprocessing
-  and postprocessing logic.
-- 🩻 **Modality coverage** — brain MRI, chest X-ray and CT, cardiac MRI and
-  echocardiography, mammography, DSA and catheter angiography, pathology, and
-  musculoskeletal imaging.
+  ``torch.hub``, etc., so new models only need thin wrappers for inference logic.
+- 🩻 **Modality coverage** — MRI, X-ray and CT, echocardiography and ultrasound,
+  mammography, DSA and catheter angiography, pathology, and musculoskeletal imaging.
 - 📤 **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and
   other image outputs accompanied by legends or descriptions that explain their colors.
 

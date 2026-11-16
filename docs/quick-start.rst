@@ -78,6 +78,7 @@ Inline text may hold a single JSON object, a list of objects, or one object per 
 .. tip::
 
    Byte-valued inputs (for example ``image``) accept a local path, a base64 data URI, or
-   an HTTP URL. Each output is written under ``<category>-<tool>.<ext>``, printed after
-   the run. When one call runs several keyword-argument entries, outputs gain ``_1``,
-   ``_2``, ... suffixes.
+   an HTTP URL. Each output is written to the current directory as
+   ``<category>-<tool>.<ext>`` (use ``--save-dir DIR`` to change the directory) and
+   printed after the run. When one call runs several keyword-argument entries, outputs
+   gain ``_1``, ``_2``, ... suffixes.

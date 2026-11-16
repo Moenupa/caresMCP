@@ -1,5 +1,4 @@
 import os
-from contextlib import nullcontext
 from importlib import import_module
 from pathlib import Path
 
@@ -14,24 +13,17 @@ def get_torch_device() -> str:
 
 
 DEVICE = get_torch_device()
-CACHE_ROOT = Path(os.getenv("CACHE_ROOT", "~/.cache/caresmcp")).expanduser()
+CACHE_ROOT = Path(os.getenv("CARESMCP_CACHE", "~/.cache/caresmcp")).expanduser()
 MODEL_CACHE_DIR = CACHE_ROOT / "models"
 MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-LRU_MAX_SIZE = 8
-HTTP_TIMEOUT = 15
+LRU_MAX_SIZE = int(os.getenv("CARESMCP_LRU_SIZE", "8"))
+HTTP_TIMEOUT = int(os.getenv("CARESMCP_TIMEOUT", "15"))
 
 # update model sources with our cache path for central management
 os.environ.setdefault(
-    "CELLPOSE_LOCAL_MODELS_PATH", MODEL_CACHE_DIR.absolute().as_posix()
+    "CELLPOSE_LOCAL_MODELS_PATH", (MODEL_CACHE_DIR / "cellpose").absolute().as_posix()
 )
-os.environ.setdefault("HF_HUB_CACHE", MODEL_CACHE_DIR.absolute().as_posix())
-
-
-def torch_autocast(dtype=None):
-    if DEVICE == "cpu":
-        return nullcontext()
-    else:
-        from torch import autocast
-
-        return autocast(device_type=DEVICE, dtype=dtype)
+os.environ.setdefault("HF_HUB_CACHE", (MODEL_CACHE_DIR / "hf").absolute().as_posix())
+# torch will land in $TORCH_HOME/hub
+os.environ.setdefault("TORCH_HOME", (MODEL_CACHE_DIR).absolute().as_posix())

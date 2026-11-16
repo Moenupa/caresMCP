@@ -37,8 +37,9 @@ def debug_function(
     """Run a registry function with JSON kwargs and adapted byte inputs.
 
     kwargs may be inline JSON, a .json or .jsonl file, or help to print the
-    function's signature. Byte inputs may be paths, base64 data URIs, or HTTP
-    URLs. Outputs are saved under CACHE_ROOT/category/.
+    function's signature. Byte inputs may be paths, base64 data URIs, or HTTP URLs.
+    Outputs are saved under save_dir as category-name files, with a
+    numeric suffix when multiple entries are supplied.
     """
     from caresmcp.api.decorators import adapt_byte_inputs
     from caresmcp.api.decorators.file_io import save_results

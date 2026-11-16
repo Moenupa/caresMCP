@@ -9,46 +9,49 @@ postprocessing.
 ⚙️ Shared Behavior
 ------------------
 
-- 🔌 **Lazy imports** — loader modules import their backend lazily, so the package can be
-  installed and documented without every optional dependency.
-- 💾 **Bounded caching** — in-memory caches are bounded by
-  ``caresmcp.constants.LRU_MAX_SIZE``. Hub checkpoints and TorchXRayVision weights are
-  stored under ``CACHE_ROOT/models`` (``CACHE_ROOT`` defaults to ``.cache``); PyTorch Hub
-  keeps its downloads in torch's own cache.
+- 🔌 **Lazy imports** — loader modules import their backend lazily, so the package can
+  be installed and documented without every optional dependency.
+- 💾 **Bounded caching** — in-memory caches are bounded by :envvar:`CARESMCP_LRU_SIZE`;
+  downloaded weights and checkpoints follow the :ref:`environment-variables` cache
+  layout.
 - 🧪 **Evaluation ready** — model-returning loaders hand out models in evaluation mode,
   moved to ``caresmcp.constants.DEVICE`` when that is not the CPU.
-- ♻️ **Device copies** — the transformers, timm, PyTorch Hub, and TorchXRayVision loaders
-  cache a master model on CPU and return a device copy; MONAI caches the checkpoint
-  through the Hub loader and rebuilds its architecture on every call.
+- 🔬 **Fresh Cellpose models** — Cellpose builds a new model on ``DEVICE`` for every
+  call, while reusing weights already downloaded to the model cache.
 
 .. list-table::
    :header-rows: 1
 
    - - Loader
      - Backend
-     - Entry points
    - - :doc:`hf-hub`
-     - transformers
-     - ``get_hf_model``, ``get_hf_model_and_processor``, ``get_hf_checkpoint``,
-       ``get_hf_json``
+     - :external+transformers:doc:`transformers <index>`
    - - :doc:`timm`
-     - timm
-     - ``get_timm_model``, ``build_timm_model``
+     - :external+timm:doc:`timm <index>`
    - - :doc:`torch-hub`
-     - torch.hub
-     - ``get_torch_model``, ``load_torch_checkpoint``
+     - :external+torch:doc:`torch.hub <hub>`
    - - :doc:`torchxrayvision`
-     - torchxrayvision
-     - ``get_torchxrayvision_model``
+     - :external+torchxrayvision:doc:`torchxrayvision <index>`
+   - - :doc:`hi-ml`
+     - :external+hi-ml:doc:`hi-ml-multimodal <multimodal>`
+   - - :doc:`flexray`
+     - `flexray <https://github.com/VictorButoi/FleXray/tree/main/docs>`_
+   - - :doc:`wrist`
+     - :external+onnxruntime:doc:`ONNX Runtime <index>`
+   - - :doc:`cellpose`
+     - :external+cellpose:doc:`Cellpose <index>`
    - - :doc:`monai`
-     - MONAI
-     - ``get_monai_model``
+     - :external+monai:doc:`MONAI <index>`
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
 
    hf-hub
    timm
    torch-hub
    torchxrayvision
+   hi-ml
+   flexray
+   wrist
+   cellpose
    monai

@@ -23,6 +23,7 @@ New to CaresMCP? Follow this path:
    intro
    installation
    quick-start
+   envvar
    faq
 
 .. toctree::

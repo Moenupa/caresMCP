@@ -9,37 +9,20 @@ No. Backends are optional extras grouped by modality, such as ``xray``, ``mri``,
 loader modules import their backend lazily, so missing extras only affect the tools that
 need them. See :doc:`installation`.
 
-How do I connect an MCP client? 🔌
-----------------------------------
-
-Run ``uv run caresmcp mcp`` and point the client at ``http://127.0.0.1:8000/mcp``. Use
-``--host``, ``--port``, and ``--path`` to change the address. Client examples are in
-:doc:`quick-start`.
-
-Where are model weights cached? 💾
-----------------------------------
-
-Checkpoints are stored under ``CACHE_ROOT/models``, and ``CACHE_ROOT`` defaults to
-``.cache`` in the working directory. Set the ``CACHE_ROOT`` environment variable to
-relocate the cache. The Hugging Face Hub and Cellpose caches follow this directory,
-while PyTorch Hub keeps its downloads in torch's own cache.
-
 Can I run CaresMCP without a GPU? 🖥️
 ------------------------------------
 
 Yes. The active device is CUDA when torch reports one and CPU otherwise. Tools still run
-on CPU, though large models take noticeably longer. Some loaders keep a master model on
-CPU and return a device copy on every call.
+on CPU, though large models take noticeably longer. On CUDA, some loaders keep a master
+model on CPU and return an independent eval-mode copy; on CPU they return the cached
+instance itself.
 
 How do I try a single tool without an MCP client? 🧪
 ----------------------------------------------------
 
-Use ``uv run caresmcp debug <category> <tool> <kwargs>``. The last argument may be
-inline JSON (a single object or a list of objects), a ``.json`` or ``.jsonl`` file, or
-``help`` to print the tool's signature and parameters. Byte-valued inputs such as
-``image`` accept a local path, a base64 data URI, or an HTTP URL. Outputs are written
-under ``.cache/<category>/<tool>``, with ``_1``, ``_2``, ... suffixes when one call
-runs several entries.
+Run ``caresmcp debug <category> <tool> <kwargs>``; pass ``help`` as the last argument to
+print the tool's signature. See :doc:`quick-start` for accepted input formats and how
+outputs are saved.
 
 Does CaresMCP run LLMs or VLMs? 🤖
 ----------------------------------

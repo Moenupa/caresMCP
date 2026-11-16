@@ -1,5 +1,8 @@
 🩻 X-ray
-=========
+========
+
+Registry category: ``xray`` — use ``caresmcp debug xray <tool> ...`` to run a tool
+directly.
 
 Overview
 --------

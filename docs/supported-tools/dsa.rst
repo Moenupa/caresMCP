@@ -1,6 +1,9 @@
 🫀 DSA and Catheter Angiography
 ===============================
 
+Registry category: ``dsa`` — use ``caresmcp debug dsa <tool> ...`` to run a tool
+directly.
+
 Overview
 --------
 

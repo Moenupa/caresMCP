@@ -9,8 +9,8 @@ from sphinxawesome_theme import ThemeOptions
 
 # -- Project information -------------------------------------------------------
 project = "CaresMCP"
-author = "cair-cas.org.hk"
-copyright = "2026, cair-cas.org.hk"
+author = "CAIR, CAS"
+copyright = "2026, CAIR, CAS"
 
 # Version comes from the installed package (this is why the build env must
 # install the project, which our uv sync does). Single source of truth.
@@ -37,7 +37,7 @@ templates_path = ["_templates"]
 
 # -- Autodoc / autosummary -----------------------------------------------------
 autosummary_generate = True
-autodoc_mock_imports = ["transformers"]
+autodoc_mock_imports = ["cellpose", "transformers"]
 autodoc_member_order = "bysource"
 autodoc_default_options = {
     "members": True,
@@ -66,16 +66,19 @@ napoleon_attr_annotations = True
 # -- Intersphinx ---------------------------------------------------------------
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "cellpose": ("https://cellpose.readthedocs.io/en/latest/", None),
     "hi-ml": ("https://hi-ml.readthedocs.io/en/latest/", None),
     "huggingface_hub": ("https://huggingface.co/docs/huggingface_hub/main/en/", None),
     "monai": ("https://monai.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "onnxruntime": ("https://onnxruntime.ai/docs/api/python/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
     "scikit-image": ("https://scikit-image.org/docs/stable/", None),
     "timm": ("https://huggingface.co/docs/timm/main/en/", None),
     "torch": ("https://docs.pytorch.org/docs/stable/", None),
     "torchvision": ("https://docs.pytorch.org/vision/stable/", None),
+    "torchxrayvision": ("https://torchxrayvision.readthedocs.io/en/stable/", None),
     "transformers": ("https://huggingface.co/docs/transformers/main/en/", None),
 }
 intersphinx_timeout = 10

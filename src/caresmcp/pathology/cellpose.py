@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Literal
+from typing import Annotated
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -6,10 +6,9 @@ from pydantic import Field
 
 from caresmcp.api.decorators import requires
 from caresmcp.api.io import decode_as, encode_as
-from caresmcp.constants import DEVICE
+from caresmcp.api.models.cellpose import CellposeModels, get_cellpose_model
 from caresmcp.registry import PATHOLOGY, TASK_SEG
 
-PRETRAINED_MODELS = Literal["cpsam", "cpsam_v2", "cpdino", "cpdino-vitb"]
 PATHOLOGY_TILE = Field(description="Encoded RGB or grayscale pathology tile or ROI.")
 CELLPOSE_MODEL = Field(description="Pretrained Cellpose model to use.")
 CELL_DIAMETER = Field(
@@ -28,22 +27,12 @@ MIN_CELL_SIZE = Field(
 )
 
 
-def _load_cellpose_model(pretrained_model: PRETRAINED_MODELS = "cpsam") -> Any:
-    """Load and cache the pretrained Cellpose-SAM model."""
-    from cellpose.models import CellposeModel
-
-    return CellposeModel(
-        gpu=DEVICE != "cpu",
-        pretrained_model=pretrained_model,
-    )
-
-
 @PATHOLOGY.register("cellpose_segment_pathology_cells")
 @TASK_SEG.register("cellpose_segment_pathology_cells")
 @requires("cellpose", extra="pathology")
 def cellpose_segment_pathology_cells(
     image: Annotated[bytes, PATHOLOGY_TILE],
-    pretrained_model: Annotated[PRETRAINED_MODELS, CELLPOSE_MODEL] = "cpsam",
+    pretrained_model: Annotated[CellposeModels, CELLPOSE_MODEL] = "cpsam",
     diameter: Annotated[float | None, CELL_DIAMETER] = None,
     flow_threshold: Annotated[float, FLOW_THRESHOLD] = 0.4,
     cellprob_threshold: Annotated[float, CELLPROB_THRESHOLD] = 0.0,
@@ -56,7 +45,7 @@ def cellpose_segment_pathology_cells(
         https://cellpose.readthedocs.io/en/latest/outputs.html
     """
     pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.uint8).copy()
-    model = _load_cellpose_model(pretrained_model=pretrained_model)
+    model = get_cellpose_model(pretrained_model)
     result = model.eval(
         pixels,
         channel_axis=-1,

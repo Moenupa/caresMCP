@@ -1,6 +1,7 @@
-"""Tensor management."""
+"""Pytorch support for device and tensors."""
 
 from collections.abc import Mapping
+from contextlib import nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -9,6 +10,15 @@ from caresmcp.constants import DEVICE
 if TYPE_CHECKING:
     from torch import Tensor
     from torch.nn import Module
+
+
+def torch_autocast(dtype=None):
+    if DEVICE == "cpu":
+        return nullcontext()
+    else:
+        from torch import autocast
+
+        return autocast(device_type=DEVICE, dtype=dtype)
 
 
 def device_copy[ModuleT: "Module"](model: ModuleT) -> ModuleT:

@@ -1,10 +1,9 @@
 🤗 Hugging Face Hub
-====================
+===================
 
-Checkpoints are loaded from the Hugging Face Hub through ``transformers``. Models and
-their processors are paired by :class:`~caresmcp.api.models.hf_hub.HFModelType`, while
-individual repository files (JSON metadata and tensor checkpoints) can be fetched
-directly.
+Models are loaded through ``transformers``; individual repository files (JSON metadata
+and tensor checkpoints) are fetched with ``huggingface_hub``. Models and their
+processors are paired by :class:`~caresmcp.api.models.hf_hub.HFModelType`.
 
 🧩 Requires the ``hf`` extra.
 
