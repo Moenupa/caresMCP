@@ -5,7 +5,7 @@ from . import (  # noqa: F401
     dsa,
     fluoroscopy,
     mammography,
-    medical_ai,
+    medai,
     pathology,
     prompts,
     tools,

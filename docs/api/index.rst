@@ -11,7 +11,7 @@ functions behind a category, including their signatures, accepted inputs, and ou
    - - Category
      - Package
    - - :doc:`medai`
-     - ``caresmcp.medical_ai``
+     - ``caresmcp.medai``
    - - :doc:`tools`
      - ``caresmcp.tools``
    - - :doc:`ct`

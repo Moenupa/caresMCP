@@ -6,7 +6,7 @@ import pytest
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
-from caresmcp.medical_ai.hf import hf_classifier, hf_image_embed
+from caresmcp.medai.hf import hf_classifier, hf_image_embed
 
 
 @pytest.fixture(

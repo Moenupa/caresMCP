@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from caresmcp.constants import CACHE_ROOT
-from caresmcp.medical_ai.totalsegmentator import totalsegmentator_segment_anatomy
+from caresmcp.medai.totalsegmentator import totalsegmentator_segment_anatomy
 
 SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "data_subset10"
 SAMPLE_PATHS = tuple(

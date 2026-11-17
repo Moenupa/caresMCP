@@ -1,7 +1,7 @@
 """
 No fluoroscopy-specific task-trained checkpoint with a verified license was
 found. Generic box-prompted segmentation is available as
-:func:`caresmcp.medical_ai.hf.hf_segment_image`; it is not fluoroscopy-specific
+:func:`caresmcp.medai.hf.hf_segment_image`; it is not fluoroscopy-specific
 and is not claimed as coverage for any examination below.
 
 Out of scope:

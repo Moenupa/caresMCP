@@ -9,7 +9,7 @@ from PIL import Image
 from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.io import decode_as, encode_as
-from caresmcp.medical_ai.hf import PromptableSegmentationModel, hf_segment_image
+from caresmcp.medai.hf import PromptableSegmentationModel, hf_segment_image
 
 
 @pytest.fixture(scope="module")
