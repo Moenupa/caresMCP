@@ -41,7 +41,7 @@ ct = [
     "numpyradiomics>=0.0.5,<0.0.6",
 ]
 xray = [
-    "caresmcp[hf,clip,itk]",
+    "caresmcp[hf,clip,itk,dicom]",
     "torchxrayvision>=1.5,<1.6",
     "flexray>=1.0.2,<1.1",
     "onnxruntime>=1.20,<2",

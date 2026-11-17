@@ -8,6 +8,14 @@ from caresmcp.constants import CACHE_ROOT
 
 
 @pytest.fixture(scope="module")
+def hernia_image() -> bytes:
+    # a hernia case
+    return _read_bytes(
+        "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png"
+    )
+
+
+@pytest.fixture(scope="module")
 def cxr_image() -> bytes:
     # a hernia case
     return _read_bytes(
@@ -20,6 +28,15 @@ def cxr_image_followup() -> bytes:
     # a hernia case
     return _read_bytes(
         "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_002.png"
+    )
+
+
+@pytest.fixture(scope="module")
+def chest_dicom() -> bytes:
+    """A real 1024x1024 PA chest radiograph DICOM from TorchXRayVision's tests."""
+    pytest.importorskip("pydicom")
+    return _read_bytes(
+        "https://raw.githubusercontent.com/mlmed/torchxrayvision/1.5.7/tests/1.2.276.0.7230010.3.1.4.8323329.6904.1517875201.850819.dcm"
     )
 
 

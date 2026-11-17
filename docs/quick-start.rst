@@ -68,7 +68,7 @@ Lines file, or ``help`` to print the tool's signature:
 .. code-block:: console
 
    $ caresmcp debug xray torchxrayvision_classify \
-       '{"image": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
+       '{"image_or_dicom": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
    $ caresmcp debug xray torchxrayvision_classify kwargs.json
    $ caresmcp debug xray torchxrayvision_classify help
 

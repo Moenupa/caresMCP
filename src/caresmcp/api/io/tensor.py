@@ -22,15 +22,12 @@ def torch_autocast(dtype=None):
 
 
 def device_copy[ModuleT: "Module"](model: ModuleT) -> ModuleT:
-    """Return an inference-ready copy of a cached CPU model.
+    """Return an independent inference-ready copy of a cached model.
 
-    On CPU the cached module itself is returned in evaluation mode and must be
-    treated as read-only. Elsewhere a deep copy is moved to ``DEVICE``, so the
-    cache stays on the host and each call receives an independent module.
+    The cache keeps models on the host; each call receives a deep copy in
+    evaluation mode, so callers can attach hooks or mutate the module without
+    affecting concurrent calls.
     """
-    if DEVICE == "cpu":
-        return model.eval()
-
     return deepcopy(model).to(DEVICE).eval()
 
 

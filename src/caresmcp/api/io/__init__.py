@@ -1,5 +1,5 @@
 from .annotation import unpack_literal
-from .filetype import is_dicom
+from .dicom import is_dicom
 from .image import (
     check_bbox,
     convert_grayscale,
