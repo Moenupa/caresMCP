@@ -1,4 +1,4 @@
-☢️ CT API
+🖥️ CT API
 =========
 
 .. automodule:: caresmcp.ct.classical

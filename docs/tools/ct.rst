@@ -1,4 +1,4 @@
-☢️ CT
+🖥️ CT
 =====
 
 Registry category: ``ct`` — use ``caresmcp debug ct <tool> ...`` to run a tool directly.

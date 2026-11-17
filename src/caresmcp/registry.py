@@ -14,6 +14,7 @@ MRI = catalogue.create(pkg_name, "mri")
 CT = catalogue.create(pkg_name, "ct")
 MAMMOGRAPHY = catalogue.create(pkg_name, "mammography")
 DSA = catalogue.create(pkg_name, "dsa")
+NUCLEARMED = catalogue.create(pkg_name, "nuclearmed")
 
 # categorical dict for tools/prompts
 # strict 1-to-n mapping without overlap

@@ -20,6 +20,8 @@ functions behind a category, including their signatures, accepted inputs, and ou
      - ``caresmcp.dsa``
    - - :doc:`mammography`
      - ``caresmcp.mammography``
+   - - :doc:`nuclearmed`
+     - ``caresmcp.nuclearmed``
    - - :doc:`pathology`
      - ``caresmcp.pathology``
    - - :doc:`ultrasound`
@@ -35,6 +37,7 @@ functions behind a category, including their signatures, accepted inputs, and ou
    ct
    dsa
    mammography
+   nuclearmed
    pathology
    ultrasound
    xray
