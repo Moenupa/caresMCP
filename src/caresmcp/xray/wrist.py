@@ -6,6 +6,7 @@ import numpy as np
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
+from caresmcp.api.io import decode_as
 from caresmcp.api.models import get_onnx_session
 from caresmcp.registry import TASK_LOC, XRAY
 
@@ -50,10 +51,7 @@ def detect_pediatric_wrist_findings(
     """
     import cv2
 
-    bgr = cv2.imdecode(np.frombuffer(image, dtype=np.uint8), cv2.IMREAD_COLOR)
-    if bgr is None:
-        raise ValueError("Unable to decode wrist radiograph image")
-    pixels = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.uint8)
     height, width = pixels.shape[:2]
     # Follow the released ONNX script's direct resize, RGB and [0, 1] scaling.
     resized = cv2.resize(pixels, (640, 640), interpolation=cv2.INTER_LINEAR)

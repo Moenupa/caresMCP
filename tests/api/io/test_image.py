@@ -1,68 +1,81 @@
-"""Test decoding image bytes into detached, fully loaded images."""
+"""Test the image encoding contracts shared by the tools."""
 
 from io import BytesIO
 
 import numpy as np
 import pytest
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, PngImagePlugin
 
-from caresmcp.api.io import decode_as
+from caresmcp.api.io import decode_as, encode_as, encode_label_mask
 
 
-def _image_bytes(
+def _pil_bytes(
     image: Image.Image, *, image_format: str = "PNG", **save_kwargs: object
 ) -> bytes:
-    """Encode a generated image for decoding tests."""
+    """Encode with PIL directly for formats encode_as does not support."""
     output = BytesIO()
     image.save(output, format=image_format, **save_kwargs)
     return output.getvalue()
 
 
-def test_decodes_pixels_and_detaches_from_buffer():
-    """Return exact pixels without retaining the source byte buffer."""
-    pixels = np.arange(48, dtype=np.uint8).reshape(4, 4, 3)
-    image = decode_as(_image_bytes(Image.fromarray(pixels)))
-    assert image.format == "PNG"
-    assert image.mode == "RGB"
-    assert image.size == (4, 4)
-    assert getattr(image, "fp", None) is None
-    np.testing.assert_array_equal(np.asarray(image), pixels)
+def test_decodes_eagerly():
+    """Raise at decode time for truncated input instead of leaving it lazy."""
+    payload = _pil_bytes(
+        Image.fromarray(np.arange(4096, dtype=np.uint8).reshape(64, 64))
+    )
+    # Image.open() accepts a half-truncated PNG; only load() detects the damage.
+    with pytest.raises(OSError, match="truncated"):
+        decode_as(payload[: len(payload) // 2])
 
 
 @pytest.mark.parametrize("image_format", ["PNG", "JPEG"])
-def test_preserves_source_format(image_format: str):
-    """Keep the format recorded for the encoded input."""
-    payload = _image_bytes(Image.new("RGB", (4, 4), "red"), image_format=image_format)
-    assert decode_as(payload).format == image_format
-
-
-def test_converts_mode_and_keeps_format():
-    """Convert pixels while retaining the source format."""
+def test_conversion_keeps_source_format(image_format: str):
+    """Keep the format that convert() would otherwise discard."""
     pixels = np.array([[[10, 20, 30], [40, 50, 60]]], dtype=np.uint8)
-    payload = _image_bytes(Image.fromarray(pixels))
-    image = decode_as(payload, mode="L")
+    payload = _pil_bytes(Image.fromarray(pixels), image_format=image_format)
+    converted = decode_as(payload, mode="L")
+    # Compare against PIL directly so the reference does not reuse decode_as.
     with Image.open(BytesIO(payload)) as source:
         expected = np.asarray(source.convert("L"))
-    assert image.mode == "L"
-    assert image.format == "PNG"
-    np.testing.assert_array_equal(np.asarray(image), expected)
+    assert converted.mode == "L"
+    assert converted.format == image_format
+    np.testing.assert_array_equal(np.asarray(converted), expected)
 
 
-def test_preserves_palette_and_transparency():
-    """Retain palette indices, colors, and PNG transparency metadata."""
-    palette = Image.fromarray(np.array([[0, 1], [1, 0]], dtype=np.uint8)).convert("P")
-    colors = [0, 0, 0, 255, 0, 0]
-    palette.putpalette(colors + [0] * (768 - len(colors)))
-    image = decode_as(_image_bytes(palette, transparency=0))
-    palette_values = image.getpalette()
-    assert image.mode == "P"
-    assert image.info["transparency"] == 0
-    assert palette_values is not None
-    assert palette_values[:6] == colors
-    np.testing.assert_array_equal(np.asarray(image), np.array([[0, 1], [1, 0]]))
+def test_encode_as_forwards_png_save_options():
+    """Forward the transparency and text options used by mask and annotation tools."""
+    mask = Image.fromarray(np.array([[0, 1], [1, 0]], dtype=np.uint8)).convert("P")
+    mask.putpalette([0, 0, 0, 255, 0, 0] + [0] * 762)
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("tool", "caresmcp")
+
+    decoded = decode_as(encode_as(mask, transparency=0, pnginfo=metadata))
+
+    assert decoded.info["transparency"] == 0
+    assert decoded.info["tool"] == "caresmcp"
+    np.testing.assert_array_equal(np.asarray(decoded), np.array([[0, 1], [1, 0]]))
 
 
-def test_rejects_invalid_bytes():
-    """Fail at decode time for data that is not an image."""
-    with pytest.raises(UnidentifiedImageError):
-        decode_as(b"not an image")
+def test_label_mask_preserves_class_indices_and_transparency():
+    """Encode class IDs as palette indices with a transparent background."""
+    labels = np.array([[0, 1], [2, 3]], dtype=np.uint8)
+    decoded = decode_as(encode_label_mask(labels))
+    assert decoded.mode == "P"
+    assert decoded.info["transparency"] == 0
+    np.testing.assert_array_equal(np.asarray(decoded), labels)
+    palette = decoded.getpalette()
+    assert palette is not None
+    assert palette[:12] == [
+        0,
+        0,
+        0,
+        31,
+        119,
+        180,
+        255,
+        127,
+        14,
+        44,
+        160,
+        44,
+    ]

@@ -4,9 +4,9 @@ from io import BytesIO
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
+from caresmcp.api.io import decode_as
 from caresmcp.ct.classical import segment_ct_hu_range
 from caresmcp.ct.pyradiomics import radiomics_ct_slice
 
@@ -52,7 +52,7 @@ def test_extract_dicom_slice_radiomics(
 
     dataset = pydicom.dcmread(BytesIO(dicom))
     hu = np.asarray(apply_modality_lut(dataset.pixel_array, dataset), dtype=np.float64)
-    mask = np.asarray(Image.open(BytesIO(roi_mask))) > 0
+    mask = np.asarray(decode_as(roi_mask)) > 0
     assert result["pixel_spacing_row_column_mm"] == pytest.approx(
         [float(dataset.PixelSpacing[0]), float(dataset.PixelSpacing[1])]
     )

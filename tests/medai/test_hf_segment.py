@@ -1,7 +1,5 @@
 """Exercise promptable MedSAM and SAM2 segmentation on real medical images."""
 
-from io import BytesIO
-
 import numpy as np
 import pytest
 from PIL import Image
@@ -73,10 +71,10 @@ def _assert_mask(
     mask_bytes: bytes, source: Image.Image, box: tuple[float, ...]
 ) -> np.ndarray:
     """Verify original-size binary geometry and a prompted centroid."""
-    with Image.open(BytesIO(mask_bytes)) as mask_image:
-        assert mask_image.size == source.size
-        assert mask_image.mode == "L"
-        mask = np.asarray(mask_image)
+    mask_image = decode_as(mask_bytes)
+    assert mask_image.size == source.size
+    assert mask_image.mode == "L"
+    mask = np.asarray(mask_image)
     assert set(np.unique(mask)) <= {0, 255}
     foreground = mask == 255
     assert 0 < foreground.mean() < 0.5

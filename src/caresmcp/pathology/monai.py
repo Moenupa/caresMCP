@@ -1,10 +1,8 @@
 """MONAI tumor detection and nuclei analysis for pathology image regions."""
 
-from io import BytesIO
 from typing import Annotated, Any, cast
 
 import numpy as np
-from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
@@ -121,10 +119,12 @@ def monai_pathology_nuclei_classification(
 
     model_id = NUCLEI_CLASSIFIER_ID
     pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.float32)
-    with Image.open(BytesIO(mask)) as decoded_mask:
-        if decoded_mask.mode not in ("1", "L", "I", "I;16", "P"):
-            raise ValueError("mask must be a grayscale or indexed nucleus mask")
-        labels = np.asarray(decoded_mask).copy()
+    decoded_mask = decode_as(mask)
+    # TODO: two way check with caresmcp.api.io is_grayscale, which implementation is better
+    # can we deduplicate some of our code?
+    if decoded_mask.mode not in ("1", "L", "I", "I;16", "P"):
+        raise ValueError("mask must be a grayscale or indexed nucleus mask")
+    labels = np.asarray(decoded_mask)
     if pixels.shape != (128, 128, 3) or labels.shape != (128, 128):
         raise ValueError("image and mask must both be 128x128 pixels")
     if not np.any(labels > 0):

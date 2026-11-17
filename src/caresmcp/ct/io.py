@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from caresmcp.api.decorators import requires
-from caresmcp.api.io import is_dicom, is_grayscale
+from caresmcp.api.io import decode_as, is_dicom, is_grayscale
 
 if TYPE_CHECKING:
     from pydicom.dataset import Dataset
@@ -136,12 +136,12 @@ def _decode_dicom(image: bytes) -> DecodedCTSlice:
 
 def _read_grayscale_raster(image: bytes) -> NDArray[Any]:
     try:
-        with Image.open(BytesIO(image)) as source:
-            if getattr(source, "n_frames", 1) != 1:
-                raise ValueError("CT input must contain exactly one raster frame")
-            if not is_grayscale(source.mode):
-                raise ValueError("CT slice image must be single-channel grayscale")
-            pixels = np.asarray(source)
+        source = decode_as(image)
+        if getattr(source, "n_frames", 1) != 1:
+            raise ValueError("CT input must contain exactly one raster frame")
+        if not is_grayscale(source.mode):
+            raise ValueError("CT slice image must be single-channel grayscale")
+        pixels = np.asarray(source)
     except OSError as exc:
         raise ValueError("image must contain a readable CT slice image") from exc
     return pixels
@@ -179,11 +179,7 @@ def _mask_foreground(source: Image.Image, name: str) -> NDArray[np.bool_]:
 
 
 def _decode_mask(mask: bytes, name: str) -> NDArray[np.bool_]:
-    try:
-        with Image.open(BytesIO(mask)) as source:
-            return _mask_foreground(source, name)
-    except OSError as exc:
-        raise ValueError(f"{name} must contain a readable image mask") from exc
+    return _mask_foreground(decode_as(mask), name)
 
 
 def _model_image(slice: DecodedCTSlice, center: float, width: float) -> Image.Image:

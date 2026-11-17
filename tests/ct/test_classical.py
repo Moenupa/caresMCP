@@ -6,9 +6,9 @@ from io import BytesIO
 import cv2
 import numpy as np
 import pytest
-from PIL import Image
 
 from caresmcp.api.decorators import save_returns
+from caresmcp.api.io import decode_as
 from caresmcp.ct.classical import (
     measure_ct_hu_regions,
     segment_ct_hu_range,
@@ -44,11 +44,6 @@ def sample(request: pytest.FixtureRequest) -> CTSample:
     )
 
 
-def image_pixels(data: bytes) -> np.ndarray:
-    with Image.open(BytesIO(data)) as image:
-        return np.array(image)
-
-
 @pytest.fixture
 def tissue_mask(sample: CTSample) -> bytes:
     return segment_ct_hu_range(sample.dicom, *SOFT_TISSUE_HU)
@@ -67,7 +62,7 @@ def test_window_ct_slice(sample: CTSample, center: float, width: float):
     lower = center - 0.5 - (width - 1) / 2
     upper = center - 0.5 + (width - 1) / 2
     expected = np.interp(sample.hu, [lower, upper], [0, 255]).round()
-    np.testing.assert_array_equal(image_pixels(output), expected)
+    np.testing.assert_array_equal(np.array(decode_as(output)), expected)
     return output
 
 
@@ -77,7 +72,7 @@ def test_segment_ct_hu_range(sample: CTSample, tissue_mask: bytes):
     minimum, maximum = SOFT_TISSUE_HU
     expected = (sample.hu >= minimum) & (sample.hu <= maximum)
     np.testing.assert_array_equal(
-        image_pixels(tissue_mask), expected.astype(np.uint8) * 255
+        np.array(decode_as(tissue_mask)), expected.astype(np.uint8) * 255
     )
 
     largest_mask = segment_ct_hu_range(
@@ -88,7 +83,7 @@ def test_segment_ct_hu_range(sample: CTSample, tissue_mask: bytes):
     )
     largest_label = 1 + stats[1:, cv2.CC_STAT_AREA].argmax()
     np.testing.assert_array_equal(
-        image_pixels(largest_mask) > 0, labels == largest_label
+        np.array(decode_as(largest_mask)) > 0, labels == largest_label
     )
     return {"all_regions": tissue_mask, "largest_region": largest_mask}
 
@@ -100,7 +95,9 @@ def test_measure_ct_hu_regions(sample: CTSample, tissue_mask: bytes):
         sample.dicom, *SOFT_TISSUE_HU, maximum_regions=sample.hu.size
     )
     regions = result["regions"]
-    _, labels = cv2.connectedComponents(image_pixels(tissue_mask), connectivity=8)
+    _, labels = cv2.connectedComponents(
+        np.array(decode_as(tissue_mask)), connectivity=8
+    )
     assert sum(region["area_pixels"] for region in regions) == np.count_nonzero(labels)
     assert result["pixel_spacing_row_column_mm"] == pytest.approx(sample.spacing)
 

@@ -1,7 +1,6 @@
 """EchoNet-Dynamic coverage using the authors' cardiac example."""
 
 import math
-from io import BytesIO
 
 import cv2
 import numpy as np
@@ -11,6 +10,7 @@ from PIL import Image, ImageOps
 import caresmcp.ultrasound.echonet_dynamic as echonet
 from caresmcp.api.decorators import save_returns
 from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.io import decode_as, encode_as
 from caresmcp.ultrasound.echonet_dynamic import (
     _load_echonet_dynamic_model,
     _load_echonet_dynamic_segmentation_model,
@@ -33,11 +33,11 @@ def cardiac_gif():
 @pytest.fixture(scope="session")
 def cardiac_frames(cardiac_gif):
     """Use the unannotated left panel of EchoNet's real example."""
-    with Image.open(BytesIO(cardiac_gif)) as video:
-        frames = []
-        for index in range(getattr(video, "n_frames", 1)):
-            video.seek(index)
-            frames.append(np.asarray(video.convert("RGB").crop((0, 0, 112, 112))))
+    video = decode_as(cardiac_gif)
+    frames = []
+    for index in range(getattr(video, "n_frames", 1)):
+        video.seek(index)
+        frames.append(np.asarray(video.convert("RGB").crop((0, 0, 112, 112))))
     return frames
 
 
@@ -112,10 +112,8 @@ def test_echonet_dynamic_segment_lv_with_real_image(
     square_padded = ImageOps.expand(enlarged, border=112, fill=0)
 
     def segment(image):
-        buffer = BytesIO()
-        image.save(buffer, format="PNG")
-        result = echonet_dynamic_segment_lv(buffer.getvalue())
-        return result, Image.open(BytesIO(result))
+        result = echonet_dynamic_segment_lv(encode_as(image))
+        return result, decode_as(result)
 
     original_bytes, original_mask = segment(source)
     letterbox_bytes, letterbox_mask = segment(letterboxed)
@@ -151,8 +149,8 @@ def test_echonet_dynamic_segment_lv_with_real_image(
         / (original.sum() + square_restored.sum())
     )
     assert square_dice > 0.6
-    with Image.open(BytesIO(cardiac_gif)) as video:
-        composite = Image.fromarray(np.asarray(video.convert("RGB")))
+    video = decode_as(cardiac_gif)
+    composite = Image.fromarray(np.asarray(video.convert("RGB")))
     composite_bytes, composite_mask = segment(composite)
     assert composite_mask.size == composite.size
     composite_left = np.asarray(composite_mask.crop((0, 0, 112, 112))) > 0

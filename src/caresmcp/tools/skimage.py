@@ -1,7 +1,6 @@
 """Denoise 2D medical images with classical filters."""
 
 from functools import partial
-from io import BytesIO
 from typing import Annotated, Literal
 
 import numpy as np
@@ -111,6 +110,6 @@ def denoise(
         return encode_as(
             Image.fromarray(np.rint(np.clip(filtered, 0, 255)).astype(np.uint8))
         )
-    output = BytesIO()
-    Image.fromarray(np.asarray(filtered, dtype=np.float32)).save(output, format="TIFF")
-    return output.getvalue()
+    return encode_as(
+        Image.fromarray(np.asarray(filtered, dtype=np.float32)), format="TIFF"
+    )

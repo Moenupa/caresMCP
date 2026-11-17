@@ -21,7 +21,7 @@ def decode_as(
 
 
 def encode_as(
-    image: Image.Image, *, format: Literal["PNG"] = "PNG", **save_kwargs
+    image: Image.Image, *, format: Literal["PNG", "TIFF"] = "PNG", **save_kwargs
 ) -> bytes:
     obj = BytesIO()
     image.save(obj, format=format, **save_kwargs)
@@ -190,6 +190,4 @@ def encode_label_mask(labels: Any) -> bytes:
         ((i * 67) % 256, (i * 131) % 256, (i * 197) % 256) for i in range(4, 256)
     )
     mask.putpalette([value for color in colors for value in color])
-    output = BytesIO()
-    mask.save(output, format="PNG", transparency=0)
-    return output.getvalue()
+    return encode_as(mask, transparency=0)

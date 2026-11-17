@@ -4,8 +4,8 @@ from io import BytesIO
 
 import numpy as np
 import pytest
-from PIL import Image
 
+from caresmcp.api.io import decode_as
 from caresmcp.ct.io import (
     _decode_ct_slice,
     _decode_mask,
@@ -44,12 +44,12 @@ def test_decode_dicom(ct_dicom: bytes) -> None:
 def test_decode_image(ct_heart_image: bytes) -> None:
     """Display decoding and model preparation preserve the source pixels."""
     decoded = _decode_ct_slice(ct_heart_image)
-    with Image.open(BytesIO(ct_heart_image)) as image:
-        np.testing.assert_array_equal(decoded.values, np.asarray(image))
-        np.testing.assert_array_equal(
-            np.asarray(_model_image(decoded, center=40, width=400)),
-            np.asarray(image.convert("RGB")),
-        )
+    image = decode_as(ct_heart_image)
+    np.testing.assert_array_equal(decoded.values, np.asarray(image))
+    np.testing.assert_array_equal(
+        np.asarray(_model_image(decoded, center=40, width=400)),
+        np.asarray(image.convert("RGB")),
+    )
     with pytest.raises(ValueError, match="requires HU values"):
         decoded.require_hu()
 
@@ -63,8 +63,8 @@ def test_calibrated_image(ct_heart_image: bytes) -> None:
         rescale_slope=slope,
         rescale_intercept=intercept,
     )
-    with Image.open(BytesIO(ct_heart_image)) as image:
-        expected = np.asarray(image).astype(np.float32) * slope + intercept
+    image = decode_as(ct_heart_image)
+    expected = np.asarray(image).astype(np.float32) * slope + intercept
     np.testing.assert_array_equal(decoded.require_hu(), expected)
     with pytest.raises(ValueError, match="Raster rescaling requires"):
         _decode_ct_slice(ct_heart_image, rescale_intercept=intercept)
@@ -93,6 +93,6 @@ def test_hu_range_mask(ct_dicom: bytes) -> None:
 
 def test_decode_mask(ct_heart_image: bytes) -> None:
     """Nonzero grayscale image pixels decode as foreground."""
-    with Image.open(BytesIO(ct_heart_image)) as image:
-        expected = np.asarray(image) != 0
+    image = decode_as(ct_heart_image)
+    expected = np.asarray(image) != 0
     np.testing.assert_array_equal(_decode_mask(ct_heart_image, "mask"), expected)
