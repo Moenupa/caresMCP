@@ -1,5 +1,5 @@
 from .annotation import unpack_literal
-from .dicom import is_dicom
+from .dicom import DicomImage, decode_dicom, is_dicom
 from .image import (
     check_bbox,
     convert_grayscale,
@@ -12,9 +12,11 @@ from .image import (
 from .tensor import device_copy, device_to, get_classification_scores
 
 __all__ = [
+    "DicomImage",
     "check_bbox",
     "convert_grayscale",
     "decode_as",
+    "decode_dicom",
     "device_copy",
     "device_to",
     "draw_legends",

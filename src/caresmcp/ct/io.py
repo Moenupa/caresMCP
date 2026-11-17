@@ -2,18 +2,19 @@
 
 import math
 from dataclasses import dataclass
-from io import BytesIO
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from caresmcp.api.decorators import requires
-from caresmcp.api.io import decode_as, is_dicom, is_grayscale
-
-if TYPE_CHECKING:
-    from pydicom.dataset import Dataset
+from caresmcp.api.io import (
+    DicomImage,
+    decode_as,
+    decode_dicom,
+    is_dicom,
+    is_grayscale,
+)
 
 CTRasterUnits = Literal["display", "hu"]
 
@@ -42,26 +43,6 @@ class DecodedCTSlice:
         return self.values
 
 
-def _finite_sequence(value: Any, length: int) -> tuple[float, ...] | None:
-    if value is None:
-        return None
-    try:
-        converted = tuple(float(item) for item in value)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    if len(converted) != length or not all(math.isfinite(item) for item in converted):
-        return None
-    return converted
-
-
-def _positive_float(value: Any) -> float | None:
-    try:
-        converted = float(value)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    return converted if math.isfinite(converted) and converted > 0 else None
-
-
 def _parse_rescale_parameters(slope: float, intercept: float) -> tuple[float, float]:
     try:
         slope = float(slope)
@@ -83,54 +64,35 @@ def _validate_slice_pixels(pixels: NDArray[Any]) -> NDArray[np.float32]:
     return pixels
 
 
-def _validate_dicom_calibration(dataset: "Dataset") -> None:
-    if "PixelData" not in dataset:
-        raise ValueError("DICOM input does not contain pixel data")
-    if (
-        "Modality" not in dataset
-        or dataset.Modality != "CT"
-        or str(dataset.get("RescaleType", "HU")).upper() != "HU"
-    ):
+def _validate_dicom_calibration(dicom: DicomImage) -> None:
+    if dicom.modality != "CT" or str(dicom.rescale_type or "HU").upper() != "HU":
         raise ValueError("DICOM input must contain CT values in HU")
-    modality_lut = dataset.get("ModalityLUTSequence")
-    if modality_lut:
-        if str(modality_lut[0].get("ModalityLUTType", "")).upper() != "HU":
+    if dicom.has_modality_lut:
+        if str(dicom.modality_lut_type or "").upper() != "HU":
             raise ValueError("DICOM modality LUT must declare HU output")
-    elif "RescaleSlope" not in dataset or "RescaleIntercept" not in dataset:
+    elif dicom.rescale_slope is None or dicom.rescale_intercept is None:
         raise ValueError("DICOM CT input requires an HU calibration")
     else:
-        slope = float(dataset.RescaleSlope)
-        intercept = float(dataset.RescaleIntercept)
+        slope = dicom.rescale_slope
+        intercept = dicom.rescale_intercept
         if not math.isfinite(slope) or slope == 0 or not math.isfinite(intercept):
             raise ValueError("DICOM rescale calibration must be finite and nonzero")
 
 
-@requires(["pydicom"], extra="dicom")
 def _decode_dicom(image: bytes) -> DecodedCTSlice:
-    import pydicom
-    from pydicom.pixels import apply_modality_lut
-
-    try:
-        dataset = pydicom.dcmread(BytesIO(image))
-        _validate_dicom_calibration(dataset)
-        pixels = np.asarray(apply_modality_lut(dataset.pixel_array, dataset))
-    except Exception as exc:
-        raise ValueError("Invalid CT DICOM") from exc
-
-    spacing = None
-    spacing_value = _finite_sequence(dataset.get("PixelSpacing"), length=2)
-    if spacing_value is not None and all(value > 0 for value in spacing_value):
-        spacing = (spacing_value[0], spacing_value[1])
-    orientation = _finite_sequence(dataset.get("ImageOrientationPatient"), length=6)
-    position = _finite_sequence(dataset.get("ImagePositionPatient"), length=3)
-    slice_thickness = _positive_float(dataset.get("SliceThickness"))
+    dicom = decode_dicom(image, modality_lut=True)
+    _validate_dicom_calibration(dicom)
+    if not dicom.is_monochrome or dicom.number_of_frames != 1:
+        raise ValueError("CT input must contain one monochrome DICOM frame")
+    if dicom.modality_values is None:
+        raise RuntimeError("DICOM modality values were not decoded")
     return DecodedCTSlice(
-        values=_validate_slice_pixels(pixels),
+        values=_validate_slice_pixels(dicom.modality_values[0]),
         intensity_units="hu",
-        pixel_spacing_row_column_mm=spacing,
-        image_orientation_patient=orientation,
-        image_position_patient=position,
-        slice_thickness_mm=slice_thickness,
+        pixel_spacing_row_column_mm=dicom.pixel_spacing_row_column_mm,
+        image_orientation_patient=dicom.image_orientation_patient,
+        image_position_patient=dicom.image_position_patient,
+        slice_thickness_mm=dicom.slice_thickness_mm,
     )
 
 

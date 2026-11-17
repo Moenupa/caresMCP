@@ -121,7 +121,6 @@ AnatomicalTarget = Literal[
 ANATOMICAL_TARGETS = get_args(AnatomicalTarget)
 
 
-@requires(["pydicom"], extra="xray")
 def _decode_dicom(image: bytes) -> np.ndarray:
     """Return a single-frame radiograph scaled to approximately [-1024, 1024]."""
     import torchxrayvision as xrv

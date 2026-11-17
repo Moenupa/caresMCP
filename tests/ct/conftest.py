@@ -12,7 +12,6 @@ def ct_heart_image() -> bytes:
 
 @pytest.fixture(scope="module")
 def ct_lung_cancer_dicom() -> bytes:
-    pytest.importorskip("pydicom")
     return _read_bytes(
         "https://saga-it.com/dicom/samples/files/ct-lung-screening-nlst/instance.dcm"
     )
@@ -20,7 +19,6 @@ def ct_lung_cancer_dicom() -> bytes:
 
 @pytest.fixture(scope="module")
 def ct_lung_nodule_dicom() -> bytes:
-    pytest.importorskip("pydicom")
     return _read_bytes(
         "https://saga-it.com/dicom/samples/files/ct-chest-lidc-idri/instance.dcm"
     )

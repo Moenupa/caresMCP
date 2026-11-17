@@ -34,7 +34,6 @@ def cxr_image_followup() -> bytes:
 @pytest.fixture(scope="module")
 def chest_dicom() -> bytes:
     """A real 1024x1024 PA chest radiograph DICOM from TorchXRayVision's tests."""
-    pytest.importorskip("pydicom")
     return _read_bytes(
         "https://raw.githubusercontent.com/mlmed/torchxrayvision/1.5.7/tests/1.2.276.0.7230010.3.1.4.8323329.6904.1517875201.850819.dcm"
     )
