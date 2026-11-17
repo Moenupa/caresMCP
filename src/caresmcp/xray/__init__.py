@@ -30,27 +30,49 @@
   musculoskeletal radiographs in :mod:`skelex.py <caresmcp.xray.skelex>`; not a
   calibrated disease score. CC-BY-NC-ND-4.0.
 
-Out of scope:
+Deferred priority candidates:
 
-* `DeepWrist <https://github.com/imedslab/DeepWrist>`_ and
-  `AIML-MED DRF <https://github.com/AIML-MED/DRF_Classification_Public>`_:
-  distal-radius fracture models requiring legacy PyTorch/Lightning stacks or a
-  manual Box download and Python 3.8 Detectron2 environment.
-* `Urinary-stone segmentation <https://github.com/job-preedanan/urinary-stones-segmentation>`_:
-  excluded because its two-stage cascade requires TensorFlow/Keras; the
-  `KUB YOLOv8 study <https://doi.org/10.1007/s44163-026-01210-6>`_ is an
-  unevaluated detection alternative.
-* Bone-lesion and osteochondroma subtyping: deferred after the released YOLOv8
-  segmenter underdetected release examples and no subtype checkpoint was found;
-  see `BTXRD <https://github.com/SHUNHANYAO/BTXRD>`_ and
+* |o| `DeepWrist <https://github.com/imedslab/DeepWrist>`_: distal-radius
+  fracture model; blocked by its legacy PyTorch/Lightning stack.
+* |o| `AIML-MED DRF
+  <https://github.com/AIML-MED/DRF_Classification_Public>`_: distal-radius
+  fracture classification; blocked by a manual Box weight download and a
+  Python 3.8 Detectron2 environment.
+* |o| Bone-lesion and osteochondroma subtyping: the released YOLOv8 segmenter
+  underdetected release examples and no subtype checkpoint was found; see
+  `BTXRD <https://github.com/SHUNHANYAO/BTXRD>`_ and
   `Bone-Tumor-Classification-XAI
   <https://github.com/psxdj6/Bone-Tumor-Classification-XAI>`_.
-* Chest support-device paths/tips and carina: `ianpan/cxr-lines-and-tubes
-  <https://huggingface.co/ianpan/cxr-lines-and-tubes>`_ and
-  `ranzcr_clip <https://github.com/asnorkin/ranzcr_clip>`_: deferred because the
-  former's loader downloads a multi-fold snapshot, mutates ``sys.path``, and
-  loads checkpoints without a safe packaged loader; the latter relies on
-  DVC/Google Drive retrieval that was not verified.
+* |o| `ianpan/cxr-lines-and-tubes
+  <https://huggingface.co/ianpan/cxr-lines-and-tubes>`_: chest support-device
+  path and tip segmentation; blocked because its loader downloads a multi-fold
+  snapshot, mutates ``sys.path``, and ships no safe packaged loader.
+* |o| `ranzcr_clip <https://github.com/asnorkin/ranzcr_clip>`_: chest
+  support-device and carina localization; blocked because its DVC/Google Drive
+  retrieval was not verified.
+* |o| `ChEX <https://github.com/philip-mueller/chex>`_: prompt-conditioned
+  finding detection and region-specific text; blocked by manual checkpoint
+  placement and a custom DETR/CLIP/generator stack.
+* |o| `CheXseg <https://github.com/stanfordmlgroup/CheXseg>`_: weakly supervised
+  pathology segmentation; blocked by manual Box checkpoint placement and a
+  Python 3.7.6 environment.
+* |o| `ReMed
+  <https://github.com/google-research/medical-ai-research-foundations>`_,
+  `Ark/Ark+ <https://github.com/jlianglab/Ark>`_, `CXR-RePaiR
+  <https://github.com/rajpurkarlab/CXR-RePaiR>`_/`X-REM
+  <https://github.com/rajpurkarlab/X-REM>`_, and `HybridGNet
+  <https://github.com/ngaggion/HybridGNet>`_/`XLSor
+  <https://github.com/rsummers11/CADLab/tree/master/Lung_Segmentation_XLSor>`_:
+  deferred until they add a capability beyond the integrated models and their
+  access is rechecked; XLSor also needs a legacy CUDA/model port.
+
+Out of scope:
+
+* `Urinary-stone segmentation
+  <https://github.com/job-preedanan/urinary-stones-segmentation>`_: excluded
+  because its two-stage cascade requires TensorFlow/Keras; the `KUB YOLOv8
+  study <https://doi.org/10.1007/s44163-026-01210-6>`_ is an unevaluated
+  detection alternative.
 * `Ankle fractures <https://github.com/FaresAlMohamad/ankle-fractures-llm>`_ and
   pediatric Salter–Harris typing: skipped because access is restricted and no
   verified pediatric ankle checkpoint exists; binary labels cannot yield Weber
@@ -72,15 +94,6 @@ Out of scope:
   landmarks exist; OrthoNet covers hip/knee implants only, and the
   `panoramic dental Fast R-CNN <https://doi.org/10.1093/dmfr/twaf079>`_ addresses
   dental restorations rather than TMJ replacement.
-* `ChEX <https://github.com/philip-mueller/chex>`_ and
-  `CheXseg <https://github.com/stanfordmlgroup/CheXseg>`_: skipped because
-  checkpoints require manual Google Drive/Box placement and both target legacy
-  environments (CheXseg Python 3.7.6; ChEX a custom DETR/CLIP/generator stack).
-* ReMed, Ark/Ark+, CXR-RePaiR/X-REM, and HybridGNet/XLSor: deferred until they
-  add a capability beyond the integrated models and their access is rechecked;
-  XLSor also needs a legacy CUDA/model port.
-* LLM/VLM tools, free-text report generation, and text-to-X-ray synthesis are
-  out of scope.
 """
 
 import importlib

@@ -20,17 +20,14 @@ preprocessing are verified.
 
 Out of scope:
 
-* `Carlsen et al. Cu-64 DOTATATE nnU-Net <https://doi.org/10.1186/s13550-022-00901-2>`_
-  :footcite:`carlsen2022dotatate`: no open code, weights, input channels, or
-  license were verified.
-* `Haque et al. Ga-68 PPGL nnU-Net <https://doi.org/10.1186/s13550-024-01168-5>`_
-  :footcite:`haque2024ppgl`: no open code, weights, or license were verified.
-* `Yang et al. PET-only hepatic network <https://doi.org/10.1109/TBME.2026.3663156>`_
-  :footcite:`yang2026dotatate`: no open code, checkpoint, or license was
-  verified.
-* `mSegResRF-SPECT <https://doi.org/10.2174/0115734056288472240129112028>`_
-  :footcite:`ji2024msegresrf`: no open implementation, weights, or license
-  was verified.
+* Carlsen et al. Cu-64 DOTATATE nnU-Net :footcite:`carlsen2022dotatate`: no
+  open code, weights, input channels, or license were verified.
+* Haque et al. Ga-68 PPGL nnU-Net :footcite:`haque2024ppgl`: no open code,
+  weights, or license were verified.
+* Yang et al. PET-only hepatic network :footcite:`yang2026dotatate`: no open
+  code, checkpoint, or license was verified.
+* mSegResRF-SPECT :footcite:`ji2024msegresrf`: no open implementation,
+  weights, or license was verified.
 * Sentinel-node localization on lymphoscintigraphy: no node-localization
   checkpoint was verified; FDG-avid node models are not lymphatic mapping.
 * `Zohaib3810/BS-80K-Bone-Scan-Metastasis-Detection-Regional-Analysis

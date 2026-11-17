@@ -6,9 +6,6 @@ loader covers one model source and standardizes how its weights are fetched, cac
 returned, so tool modules only contain model-specific preprocessing, inference, and
 postprocessing.
 
-⚙️ Shared Behavior
-------------------
-
 - 🔌 **Lazy imports** — loader modules import their backend lazily, so the package can
   be installed and documented without every optional dependency.
 - 💾 **Bounded caching** — in-memory caches are bounded by :envvar:`CARESMCP_LRU_SIZE`;
