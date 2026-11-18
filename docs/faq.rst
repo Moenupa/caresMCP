@@ -4,18 +4,21 @@
 📦 Do I need to install every model backend?
 --------------------------------------------
 
-No. Backends are optional extras grouped by modality (``xray``, ``ct``, ``ultrasound``,
-``pathology``) or by model backend (``hf``, ``monai``, ``timm``). The base install
-provides the CLI and the MCP server; loader modules import their backend lazily, so
-missing extras only affect the tools that need them, and the server logs a warning and
-skips those tools. See :doc:`installation`.
+No. Backends are optional extras grouped by modality (``xray``, ``ct``, ``mri``,
+``dsa``, ``ultrasound``, ``pathology``) or by model backend (``hf``, ``monai``,
+``timm``). The base install provides the CLI and the MCP server; loader modules import
+their backend lazily, so missing extras only affect the tools that need them, and the
+server logs a warning and skips those tools. See :doc:`installation`.
 
 🖥️ Can I run CaresMCP without a GPU?
 ------------------------------------
 
 Yes. The active device is CUDA when torch reports one and CPU otherwise. Tools still run
-on CPU, though large models take noticeably longer. Torch-based loaders keep a cached
-master model on CPU and return an independent evaluation-mode copy on the active device;
+on CPU, though large models take noticeably longer. Loaders that cache a CPU master
+model — such as the Hugging Face Hub, timm, torch.hub, and TorchXRayVision loaders —
+return an independent evaluation-mode copy on the active device; uncached loaders such
+as FleXray, MONAI, UMAIR, and the BioViL image encoder build a fresh model per call. See
+:doc:`sources/index`.
 
 🧪 How do I try a single tool without an MCP client?
 ----------------------------------------------------

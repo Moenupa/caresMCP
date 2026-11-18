@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @MEDAI.register("totalsegmentator_segment_anatomy")
 @TASK_SEG.register("totalsegmentator_segment_anatomy")
-@requires(["totalsegmentator", "nibabel"], extra="totalsegmentator")
+@requires(["totalsegmentator", "nibabel"], extra="totalseg")
 def totalsegmentator_segment_anatomy(
     image: Annotated[
         bytes, Field(description="Three-dimensional NIfTI-1 volume (.nii or .nii.gz)")

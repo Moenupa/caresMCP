@@ -184,7 +184,7 @@ def prism2_score_yes_no_question(
 
 
 @PATHOLOGY.register("prism2_image_caption")
-@requires(_PRISM2_REQUIRED_PACKAGES, extra="hf")
+@requires(_PRISM2_REQUIRED_PACKAGES, extra="pathology")
 def prism2_image_caption(
     image: Annotated[bytes, PATHOLOGY_TILE],
     prompt: Annotated[str, CAPTION_PROMPT],

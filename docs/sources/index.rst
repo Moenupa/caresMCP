@@ -12,8 +12,9 @@ postprocessing.
 - 💾 **Bounded caching** — in-memory caches are bounded by :envvar:`CARESMCP_LRU_SIZE`;
   downloaded weights and checkpoints follow the :ref:`environment-variables` cache
   layout.
-- 🧪 **Evaluation ready** — torch loaders cache a master model on CPU and return an
-  independent evaluation-mode copy on ``caresmcp.constants.DEVICE``.
+- 🧪 **Evaluation ready** — torch loaders return models on
+  ``caresmcp.constants.DEVICE``. Loaders that cache a CPU master return an independent
+  evaluation-mode copy; uncached loaders build a fresh model per call.
 - 🖥️ **Device-aware sessions** — ONNX Runtime uses its CUDA provider when ``DEVICE`` is
   CUDA and the provider is available, otherwise CPU.
 - 🔬 **Fresh Cellpose models** — Cellpose builds a new model on ``DEVICE`` for every

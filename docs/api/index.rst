@@ -29,7 +29,7 @@ pages record the candidate survey.
      - ``mammography``
      - ``caresmcp.mammography``
    - - :doc:`nuclearmed`
-     - —
+     - ``nuclearmed``
      - ``caresmcp.nuclearmed``
    - - :doc:`pathology`
      - ``pathology``

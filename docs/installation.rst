@@ -19,8 +19,8 @@ the repository:
 
    $ uv tool install git+https://github.com/Moenupa/caresMCP.git
 
-Model backends are optional and grouped into extras by modality or backend. Select them with
-`caresmcp[extra1,extra2]`.
+Model backends are optional and grouped into extras by modality or backend. Select them
+with `caresmcp[extra1,extra2]`.
 
 .. code-block:: console
 
