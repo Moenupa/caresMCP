@@ -8,6 +8,8 @@
 
 .. autofunction:: caresmcp.medai.hf.hf_image_embed
 
+.. autofunction:: caresmcp.medai.hf.hf_image_text_retrieval
+
 .. autofunction:: caresmcp.medai.hf.hf_segment_image
 
 .. automodule:: caresmcp.medai.totalsegmentator

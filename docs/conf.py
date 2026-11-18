@@ -107,7 +107,7 @@ myst_enable_extensions = [
 myst_heading_anchors = 3   # auto anchors for h1-h3 so [text](#heading) links work
 
 # -- Bibtex --------------------------------------------------------------------
-bibtex_bibfiles = ["references.bib"]
+bibtex_bibfiles = ["bib/medai.bib", "references.bib"]
 bibtex_default_style = "unsrt"
 bibtex_reference_style = "label"
 

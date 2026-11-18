@@ -14,7 +14,7 @@ from caresmcp.api.models import (
     get_hf_model_and_processor,
 )
 from caresmcp.constants import DEVICE
-from caresmcp.registry import MEDAI, TASK_CLS, TASK_EMB, TASK_SEG
+from caresmcp.registry import MEDAI, TASK_CLS, TASK_EMB, TASK_RET, TASK_SEG
 
 if TYPE_CHECKING:
     from transformers import Sam2Processor, SamProcessor
@@ -25,6 +25,12 @@ PromptableSegmentationModel = Literal[
     "facebook/sam2.1-hiera-small",
     "facebook/sam2.1-hiera-base-plus",
     "facebook/sam2.1-hiera-large",
+]
+
+ImageTextRetrievalModel = Literal[
+    "google/medsiglip-448",
+    "openai/clip-vit-base-patch32",
+    "google/siglip-base-patch16-224",
 ]
 
 
@@ -116,6 +122,90 @@ def hf_image_embed(
         pooling_used = "pooler"
     embedding = vector[0].detach().float().cpu().tolist()
     return {"model_id": model_id, "pooling": pooling_used, "embedding": embedding}
+
+
+@MEDAI.register("hf_image_text_retrieval")
+@TASK_RET.register("hf_image_text_retrieval")
+@requires(["torch", "transformers"], extra="hf")
+def hf_image_text_retrieval(
+    image: bytes,
+    texts: Annotated[
+        list[str],
+        Field(
+            min_length=1,
+            description="Candidate descriptions in comparison order.",
+        ),
+    ],
+    model_id: Annotated[
+        ImageTextRetrievalModel, Field(description=HFMODEL_ID_DESC)
+    ] = "google/medsiglip-448",
+) -> dict[str, Any]:
+    """Rank candidate texts against one image with a dual-encoder model.
+
+    Use a medical model such as MedSigLIP, or a public CLIP or SigLIP
+    baseline, to rank free-form descriptions for retrieval. When the
+    candidates are class names, the scores also provide zero-shot label
+    ranking. MedSigLIP access requires accepting the Health AI Developer
+    Foundations terms. Scores are uncalibrated cosine similarities, not
+    probabilities or diagnostic evidence.
+
+    Returns:
+        Model provenance and text/cosine-similarity pairs in input order.
+
+    See Also:
+        https://huggingface.co/google/medsiglip-448
+        https://huggingface.co/docs/transformers/model_doc/clip
+        https://huggingface.co/docs/transformers/model_doc/siglip
+    """
+    import torch
+    from torch.nn import functional as F
+
+    if not texts or any(not text.strip() for text in texts):
+        raise ValueError("texts must contain at least one non-empty description")
+
+    model, processor = get_hf_model_and_processor(model_id, HFModelType.AUTO)
+    model = cast(Any, model)
+    image_inputs = processor(
+        images=ImageOps.exif_transpose(decode_as(image, mode="RGB")),
+        return_tensors="pt",
+    )
+    image_inputs = {name: value.to(DEVICE) for name, value in image_inputs.items()}
+    text_inputs = processor(
+        text=texts, padding=True, truncation=True, return_tensors="pt"
+    )
+    text_inputs = {name: value.to(DEVICE) for name, value in text_inputs.items()}
+    try:
+        with torch.inference_mode():
+            image_features = model.get_image_features(**image_inputs)
+            text_features = model.get_text_features(**text_inputs)
+    except (AttributeError, TypeError) as exc:
+        raise ValueError(
+            "model_id must provide Transformers image and text feature methods"
+        ) from exc
+
+    if (
+        image_features.ndim != 2
+        or image_features.shape[0] != 1
+        or text_features.ndim != 2
+        or text_features.shape[0] != len(texts)
+        or not torch.isfinite(image_features).all()
+        or not torch.isfinite(text_features).all()
+        or (image_features.norm(dim=-1) == 0).any()
+        or (text_features.norm(dim=-1) == 0).any()
+    ):
+        raise RuntimeError("dual encoder returned invalid features")
+
+    image_vector = F.normalize(image_features.float(), dim=-1)[0]
+    text_vectors = F.normalize(text_features.float(), dim=-1)
+    scores = (text_vectors @ image_vector).clamp(-1.0, 1.0).detach().cpu().tolist()
+    return {
+        "model_id": model_id,
+        "score_type": "cosine_similarity",
+        "matches": [
+            {"text": text, "score": float(score)}
+            for text, score in zip(texts, scores, strict=True)
+        ],
+    }
 
 
 @MEDAI.register("hf_segment_image")
