@@ -12,6 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from caresmcp.api.decorators import requires
+from caresmcp.api.io import decode_mask
 from caresmcp.registry import CT
 
 from ._arg import (
@@ -23,7 +24,7 @@ from ._arg import (
     RasterRescaleIntercept,
     RasterRescaleSlope,
 )
-from .io import _decode_ct_slice, _decode_mask
+from .io import _decode_ct_slice
 
 _GLRLM_RENAMES = {
     "LongRunHighGrayLevelRunEmphasis": "LongRunHighGrayLevelEmphasis",
@@ -123,7 +124,7 @@ def radiomics_ct_slice(
         image_or_dicom, rescale_slope, rescale_intercept, raster_units
     )
     hu = decoded.require_hu()
-    mask = _decode_mask(roi_mask, "roi_mask")
+    mask = decode_mask(roi_mask)
     if mask.shape != hu.shape:
         raise ValueError("roi_mask and CT slice must have the same dimensions")
     if not mask.any():

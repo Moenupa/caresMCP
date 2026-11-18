@@ -24,7 +24,7 @@ def test_decodes_eagerly():
         Image.fromarray(np.arange(4096, dtype=np.uint8).reshape(64, 64))
     )
     # Image.open() accepts a half-truncated PNG; only load() detects the damage.
-    with pytest.raises(OSError, match="truncated"):
+    with pytest.raises(ValueError, match="not a readable image"):
         decode_as(payload[: len(payload) // 2])
 
 

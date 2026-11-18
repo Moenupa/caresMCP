@@ -9,9 +9,24 @@ from PIL import Image, ImageDraw, ImageFont
 def decode_as(
     image: bytes, mode: Literal["RGB", "RGBA", "L"] | None = None
 ) -> Image.Image:
-    pil_image = Image.open(BytesIO(image))
-    # Decode eagerly and detach from the buffer so the result stays usable.
-    pil_image.load()
+    """Decode encoded image bytes eagerly into a detached PIL image.
+
+    Args:
+        image: Encoded raster image bytes.
+        mode: Convert the decoded image to this pixel mode.
+
+    Returns:
+        The decoded image, detached from the source buffer.
+
+    Raises:
+        ValueError: If the bytes are not a readable raster image.
+    """
+    try:
+        pil_image = Image.open(BytesIO(image))
+        # Decode eagerly and detach from the buffer so the result stays usable.
+        pil_image.load()
+    except (OSError, SyntaxError, ValueError):
+        raise ValueError("input is not a readable image") from None
     if mode is None:
         return pil_image
     decoded = pil_image.convert(mode)

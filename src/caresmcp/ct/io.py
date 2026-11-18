@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,10 +10,12 @@ from PIL import Image
 
 from caresmcp.api.io import (
     DicomImage,
-    decode_as,
     decode_dicom,
+    decode_single_frame,
+    float_slice,
+    grayscale_array,
     is_dicom,
-    is_grayscale,
+    rgb8_slice,
 )
 
 CTRasterUnits = Literal["display", "hu"]
@@ -44,24 +46,11 @@ class DecodedCTSlice:
 
 
 def _parse_rescale_parameters(slope: float, intercept: float) -> tuple[float, float]:
-    try:
-        slope = float(slope)
-        intercept = float(intercept)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ValueError("rescale_slope and rescale_intercept must be finite") from exc
+    slope = float(slope)
+    intercept = float(intercept)
     if not math.isfinite(slope) or not math.isfinite(intercept):
         raise ValueError("rescale_slope and rescale_intercept must be finite")
-
     return slope, intercept
-
-
-def _validate_slice_pixels(pixels: NDArray[Any]) -> NDArray[np.float32]:
-    if pixels.ndim != 2 or pixels.shape[0] == 0 or pixels.shape[1] == 0:
-        raise ValueError("CT input must contain one non-empty two-dimensional slice")
-    pixels = pixels.astype(np.float32, copy=False)
-    if not np.isfinite(pixels).all():
-        raise ValueError("CT slice must contain only finite pixel values")
-    return pixels
 
 
 def _validate_dicom_calibration(dicom: DicomImage) -> None:
@@ -87,7 +76,7 @@ def _decode_dicom(image: bytes) -> DecodedCTSlice:
     if dicom.modality_values is None:
         raise RuntimeError("DICOM modality values were not decoded")
     return DecodedCTSlice(
-        values=_validate_slice_pixels(dicom.modality_values[0]),
+        values=float_slice(dicom.modality_values[0]),
         intensity_units="hu",
         pixel_spacing_row_column_mm=dicom.pixel_spacing_row_column_mm,
         image_orientation_patient=dicom.image_orientation_patient,
@@ -96,26 +85,13 @@ def _decode_dicom(image: bytes) -> DecodedCTSlice:
     )
 
 
-def _read_grayscale_raster(image: bytes) -> NDArray[Any]:
-    try:
-        source = decode_as(image)
-        if getattr(source, "n_frames", 1) != 1:
-            raise ValueError("CT input must contain exactly one raster frame")
-        if not is_grayscale(source.mode):
-            raise ValueError("CT slice image must be single-channel grayscale")
-        pixels = np.asarray(source)
-    except OSError as exc:
-        raise ValueError("image must contain a readable CT slice image") from exc
-    return pixels
-
-
 def _decode_raster(
     image: bytes, slope: float, intercept: float, units: CTRasterUnits
 ) -> DecodedCTSlice:
     if units == "display" and (slope != 1.0 or intercept != 0.0):
         raise ValueError("Raster rescaling requires raster_units='hu'")
-    pixels = _read_grayscale_raster(image).astype(np.float32) * slope + intercept
-    return DecodedCTSlice(_validate_slice_pixels(pixels), units)
+    pixels = grayscale_array(decode_single_frame(image)).astype(np.float32)
+    return DecodedCTSlice(float_slice(pixels * slope + intercept), units)
 
 
 def _decode_ct_slice(
@@ -130,20 +106,6 @@ def _decode_ct_slice(
     return _decode_raster(image, slope, intercept, raster_units)
 
 
-def _mask_foreground(source: Image.Image, name: str) -> NDArray[np.bool_]:
-    if is_grayscale(source.mode):
-        values = np.asarray(source)
-        if not np.isfinite(values).all():
-            raise ValueError(f"{name} must contain only finite mask values")
-        return values != 0
-    rgba = np.asarray(source.convert("RGBA"))
-    return np.any(rgba[..., :3] != 0, axis=-1) & (rgba[..., 3] != 0)
-
-
-def _decode_mask(mask: bytes, name: str) -> NDArray[np.bool_]:
-    return _mask_foreground(decode_as(mask), name)
-
-
 def _model_image(slice: DecodedCTSlice, center: float, width: float) -> Image.Image:
     """Prepare RGB model input, preserving already rendered display values."""
     if slice.intensity_units == "hu":
@@ -152,7 +114,7 @@ def _model_image(slice: DecodedCTSlice, center: float, width: float) -> Image.Im
         if slice.values.min() < 0 or slice.values.max() > 255:
             raise ValueError("Display model inputs must have intensities from 0 to 255")
         pixels = np.rint(slice.values).astype(np.uint8)
-    return Image.fromarray(pixels).convert("RGB")
+    return Image.fromarray(rgb8_slice(pixels))
 
 
 def _window_values(

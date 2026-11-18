@@ -5,10 +5,9 @@ from io import BytesIO
 import numpy as np
 import pytest
 
-from caresmcp.api.io import decode_as
+from caresmcp.api.io import decode_as, decode_mask
 from caresmcp.ct.io import (
     _decode_ct_slice,
-    _decode_mask,
     _hu_range_mask,
     _model_image,
     _window_values,
@@ -95,4 +94,4 @@ def test_decode_mask(ct_heart_image: bytes) -> None:
     """Nonzero grayscale image pixels decode as foreground."""
     image = decode_as(ct_heart_image)
     expected = np.asarray(image) != 0
-    np.testing.assert_array_equal(_decode_mask(ct_heart_image, "mask"), expected)
+    np.testing.assert_array_equal(decode_mask(ct_heart_image), expected)
