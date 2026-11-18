@@ -6,3 +6,7 @@ directly.
 
 .. automodule:: caresmcp.medai
    :no-members:
+
+.. rst-class:: bibliography-footnotes
+
+.. footbibliography::
