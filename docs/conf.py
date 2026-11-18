@@ -2,6 +2,7 @@
 
 from dataclasses import asdict
 from importlib.metadata import version as _get_version
+from pathlib import Path
 
 from pydantic.fields import FieldInfo
 from sphinx_design.icons import get_octicon
@@ -107,7 +108,11 @@ myst_enable_extensions = [
 myst_heading_anchors = 3   # auto anchors for h1-h3 so [text](#heading) links work
 
 # -- Bibtex --------------------------------------------------------------------
-bibtex_bibfiles = ["bib/medai.bib", "references.bib"]
+# One bib file per category under docs/bib/ avoids merge conflicts. Paths are
+# relative to this directory, as sphinxcontrib-bibtex expects.
+bibtex_bibfiles = sorted(
+    f"bib/{p.name}" for p in (Path(__file__).parent / "bib").glob("*.bib")
+)
 bibtex_default_style = "unsrt"
 bibtex_reference_style = "label"
 
