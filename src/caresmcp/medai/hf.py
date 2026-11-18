@@ -16,11 +16,13 @@ from caresmcp.api.models import (
 from caresmcp.constants import DEVICE
 from caresmcp.registry import MEDAI, TASK_CLS, TASK_EMB, TASK_RET, TASK_SEG
 
+from ._medsam import MEDSAM_MODEL_ID, medsam_mask
+
 if TYPE_CHECKING:
-    from transformers import Sam2Processor, SamProcessor
+    from transformers import Sam2Processor
 
 PromptableSegmentationModel = Literal[
-    "wanglab/medsam-vit-base",
+    "flaviagiammarino/medsam-vit-base",
     "facebook/sam2.1-hiera-tiny",
     "facebook/sam2.1-hiera-small",
     "facebook/sam2.1-hiera-base-plus",
@@ -170,8 +172,10 @@ def hf_image_text_retrieval(
         return_tensors="pt",
     )
     image_inputs = {name: value.to(DEVICE) for name, value in image_inputs.items()}
+    # SigLIP-style encoders pool a fixed final position, so pad every text to
+    # the tokenizer's maximum length as their published preprocessing does.
     text_inputs = processor(
-        text=texts, padding=True, truncation=True, return_tensors="pt"
+        text=texts, padding="max_length", truncation=True, return_tensors="pt"
     )
     text_inputs = {name: value.to(DEVICE) for name, value in text_inputs.items()}
     try:
@@ -208,6 +212,70 @@ def hf_image_text_retrieval(
     }
 
 
+def _promptable_pipeline(
+    model_id: PromptableSegmentationModel,
+) -> tuple[HFModelType, bool]:
+    """Return the loader type and mask-selection mode for one checkpoint.
+
+    MedSAM checkpoints use the official square-canvas, per-image min-max
+    preprocessing and a single-mask output. SAM2.1 checkpoints use the fixed
+    SAM2 processor and multi-mask output with predicted-IoU selection.
+    """
+    if model_id == MEDSAM_MODEL_ID:
+        return HFModelType.SAM, False
+    if model_id.startswith("facebook/sam2.1-"):
+        return HFModelType.SAM2, True
+    raise ValueError("unsupported promptable segmentation model_id")
+
+
+def promptable_segmentation_mask(
+    source: Image.Image,
+    box: tuple[float, float, float, float],
+    model_id: PromptableSegmentationModel,
+) -> np.ndarray:
+    """Return an original-size binary mask for one RGB image and box prompt.
+
+    MedSAM follows its official 1024x1024 square resize and per-image min-max
+    normalization. SAM2.1 uses its Hub processor and predicted-IoU mask
+    selection.
+
+    Args:
+        source: RGB image containing the prompted region.
+        box: Prompt box in original pixels as ``(x1, y1, x2, y2)``.
+        model_id: Promptable checkpoint selecting the model pipeline.
+
+    Returns:
+        A boolean foreground mask at the source image size.
+    """
+    import torch
+
+    model_type, multimask_output = _promptable_pipeline(model_id)
+    if model_type is HFModelType.SAM:
+        return medsam_mask(source, box, model_id)
+
+    width, height = source.size
+    x1, y1, x2, y2 = check_bbox(box, width, height)
+    model, processor = get_hf_model_and_processor(model_id, model_type)
+    inputs = processor(
+        images=source, input_boxes=[[[x1, y1, x2, y2]]], return_tensors="pt"
+    )
+    inputs = {
+        name: value.to(DEVICE) if hasattr(value, "to") else value
+        for name, value in inputs.items()
+    }
+    with torch.inference_mode():
+        outputs = model(**inputs, multimask_output=multimask_output)
+    masks = cast("Sam2Processor", processor).post_process_masks(
+        outputs.pred_masks.cpu(),
+        inputs["original_sizes"].cpu(),
+    )
+    best = int(outputs.iou_scores.detach().float().cpu()[0, 0].argmax())
+    mask = np.asarray(masks[0][0, best].numpy() > 0.0)
+    if mask.shape != (height, width) or not mask.any():
+        raise RuntimeError("Segmenter returned an empty or mis-sized mask")
+    return mask
+
+
 @MEDAI.register("hf_segment_image")
 @TASK_SEG.register("hf_segment_image")
 @requires(["torch", "torchvision", "transformers"], extra="hf")
@@ -219,46 +287,14 @@ def hf_segment_image(
     ],
     model_id: Annotated[
         PromptableSegmentationModel, Field(description=HFMODEL_ID_DESC)
-    ] = "wanglab/medsam-vit-base",
+    ] = "flaviagiammarino/medsam-vit-base",
 ) -> bytes:
     """Segment a box-prompted region in one medical image (white foreground PNG).
 
-    MedSAM is a general medical segmenter; SAM2.1 checkpoints are general-purpose.
-    The mask follows the prompted box and requires review.
+    MedSAM uses the official square-canvas, per-image min-max preprocessing of
+    its July 2023 release; SAM2.1 checkpoints are general-purpose. The mask
+    follows the prompted box and requires review.
     """
-    import torch
-
-    is_sam2 = model_id.startswith("facebook/sam2.1-")
-    model, processor = get_hf_model_and_processor(
-        model_id, HFModelType.SAM2 if is_sam2 else HFModelType.SAM
-    )
     source = ImageOps.exif_transpose(decode_as(image, mode="RGB"))
-    width, height = source.size
-    x1, y1, x2, y2 = check_bbox(box, width, height)
-    inputs = processor(
-        images=source,
-        input_boxes=[[[x1, y1, x2, y2]]],
-        return_tensors="pt",
-    )
-    inputs = {
-        name: value.to(DEVICE) if hasattr(value, "to") else value
-        for name, value in inputs.items()
-    }
-    with torch.inference_mode():
-        outputs = model(**inputs)
-    if is_sam2:
-        masks = cast("Sam2Processor", processor).post_process_masks(
-            outputs.pred_masks.cpu(),
-            inputs["original_sizes"].cpu(),
-        )
-    else:
-        masks = cast("SamProcessor", processor).post_process_masks(
-            outputs.pred_masks.cpu(),
-            inputs["original_sizes"].cpu(),
-            inputs["reshaped_input_sizes"].cpu(),
-        )
-    best = int(outputs.iou_scores.detach().float().cpu()[0, 0].argmax())
-    mask = np.asarray(masks[0][0, best].numpy() > 0.0)
-    if mask.shape != (height, width) or not mask.any():
-        raise RuntimeError("Segmenter returned an empty or mis-sized mask")
+    mask = promptable_segmentation_mask(source, box, model_id)
     return encode_as(Image.fromarray(mask.astype(np.uint8) * 255))

@@ -5,7 +5,7 @@ from typing import get_args
 import numpy as np
 import pytest
 
-from caresmcp.api.decorators import save_returns
+from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.io import decode_as
 from caresmcp.tools.skimage import DenoiseMethod, denoise
 
@@ -16,11 +16,10 @@ from caresmcp.tools.skimage import DenoiseMethod, denoise
     get_args(DenoiseMethod),
 )
 @pytest.mark.parametrize("invariant", [False, True])
+@skip_on_import_error
 @save_returns("denoise")
 def test_denoise(dummy_jpeg: bytes, method: DenoiseMethod, invariant: bool):
     """Denoise a real image and retain its dimensions and intensity scale."""
-    pytest.importorskip("skimage")
-    pytest.importorskip("pywt")
     result = denoise(image=dummy_jpeg, method=method, invariant=invariant)
     filtered = decode_as(result)
     assert filtered.mode == "RGB"

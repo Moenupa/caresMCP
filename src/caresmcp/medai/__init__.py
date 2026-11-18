@@ -21,10 +21,10 @@
     <https://huggingface.co/google/siglip-base-patch16-224>`_
     :footcite:`zhai2023siglip`.
   * |x| :func:`hf_segment_image <caresmcp.medai.hf.hf_segment_image>`:
-    box-prompted segmentation with `wanglab/medsam-vit-base
-    <https://huggingface.co/wanglab/medsam-vit-base>`_
-    :footcite:`ma2024medsam`, which keeps its original square-canvas
-    preprocessing, or `facebook/sam2.1-hiera-large
+    box-prompted segmentation with `flaviagiammarino/medsam-vit-base
+    <https://huggingface.co/flaviagiammarino/medsam-vit-base>`_
+    :footcite:`ma2024medsam` (the July 2023 MedSAM release converted to
+    Transformers format), or `facebook/sam2.1-hiera-large
     <https://huggingface.co/facebook/sam2.1-hiera-large>`_
     :footcite:`ravi2024sam2`.
 * |x| `TotalSegmentator <https://github.com/wasserth/TotalSegmentator>`_:
