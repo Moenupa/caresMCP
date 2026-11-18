@@ -9,35 +9,28 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+from caresmcp.api.availability import unavailable_reasons
 from caresmcp.api.decorators import adapt_fastmcp_tool
-from caresmcp.api.decorators.deps import unmet_requirements
 from caresmcp.registry import PROMPT, REGISTRIES
 
 
-def _skip_for_missing_packages(
-    kind: str, name: str, function: Callable[..., Any]
-) -> bool:
-    """Warn and return True when a registry entry lacks optional packages.
+def _skip_if_unavailable(kind: str, name: str, function: Callable[..., Any]) -> bool:
+    """Warn and return True when a registry entry cannot be served.
 
     Args:
         kind: Entry kind used in the warning, such as ``"tool"`` or ``"prompt"``.
         name: Registered entry name used in the warning.
-        function: Registry function that may carry :func:`requires` metadata.
+        function: Registry function to inspect for incomplete implementations or
+            missing optional packages.
 
     Returns:
-        True when the function requires packages that are not installed.
+        True when the function is unfinished or requires packages that are not
+        installed.
     """
-    missing = unmet_requirements(function)
-    if not missing:
+    reasons = unavailable_reasons(function)
+    if not reasons:
         return False
-    noun = "package" if len(missing) == 1 else "packages"
-    joined = ", ".join(f"'{package}'" for package in missing)
-    message = f"Skipping {kind} '{name}': requires the optional {noun} {joined}."
-    extra = getattr(function, "__required_extra__", None)
-    if extra:
-        pronoun = "it" if len(missing) == 1 else "them"
-        message += f" Install {pronoun} with the '{extra}' extra."
-    warnings.warn(message, stacklevel=2)
+    warnings.warn(f"Skipping {kind} '{name}': {'; '.join(reasons)}.", stacklevel=2)
     return True
 
 
@@ -46,11 +39,11 @@ mcp = FastMCP(name="caresmcp")
 
 for category, registry in REGISTRIES.items():
     for name, function in registry.get_all().items():
-        if _skip_for_missing_packages("tool", f"{category}.{name}", function):
+        if _skip_if_unavailable("tool", f"{category}.{name}", function):
             continue
         mcp.tool(name=name)(adapt_fastmcp_tool(function))
 
 for name, function in PROMPT.get_all().items():
-    if _skip_for_missing_packages("prompt", name, function):
+    if _skip_if_unavailable("prompt", name, function):
         continue
     mcp.resource(uri=name if "://" in name else f"prompt://{name}")(function)

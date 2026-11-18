@@ -7,27 +7,32 @@ pkg_name = Path(__file__).parent.name
 IMAGE_PROC = catalogue.create(pkg_name, "image")
 MEDAI = catalogue.create(pkg_name, "medai")
 PROMPT = catalogue.create(pkg_name, "prompt")
-PATHOLOGY = catalogue.create(pkg_name, "pathology")
-XRAY = catalogue.create(pkg_name, "xray")
-ULTRASOUND = catalogue.create(pkg_name, "ultrasound")
-MRI = catalogue.create(pkg_name, "mri")
+
 CT = catalogue.create(pkg_name, "ct")
-MAMMOGRAPHY = catalogue.create(pkg_name, "mammography")
 DSA = catalogue.create(pkg_name, "dsa")
+MAMMOGRAPHY = catalogue.create(pkg_name, "mammography")
+MRI = catalogue.create(pkg_name, "mri")
 NUCLEARMED = catalogue.create(pkg_name, "nuclearmed")
+PATHOLOGY = catalogue.create(pkg_name, "pathology")
+ULTRASOUND = catalogue.create(pkg_name, "ultrasound")
+XRAY = catalogue.create(pkg_name, "xray")
 
 # categorical dict for tools/prompts
 # strict 1-to-n mapping without overlap
 REGISTRIES = {
-    "image": IMAGE_PROC,
-    "medai": MEDAI,
-    "pathology": PATHOLOGY,
-    "xray": XRAY,
-    "ultrasound": ULTRASOUND,
-    "mri": MRI,
-    "ct": CT,
-    "mammography": MAMMOGRAPHY,
-    "dsa": DSA,
+    each_category.namespace[-1]: each_category
+    for each_category in [
+        IMAGE_PROC,
+        MEDAI,
+        CT,
+        DSA,
+        MAMMOGRAPHY,
+        MRI,
+        NUCLEARMED,
+        PATHOLOGY,
+        ULTRASOUND,
+        XRAY,
+    ]
 }
 
 # many-to-many mapping for tag for flexible association

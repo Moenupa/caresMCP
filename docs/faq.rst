@@ -4,18 +4,18 @@
 📦 Do I need to install every model backend?
 --------------------------------------------
 
-No. Backends are optional extras grouped by modality, such as ``xray``, ``mri``, ``ct``,
-``ultrasound``, and ``pathology``. The base install provides the CLI and the MCP server;
-loader modules import their backend lazily, so missing extras only affect the tools that
-need them. See :doc:`installation`.
+No. Backends are optional extras grouped by modality (``xray``, ``ct``, ``ultrasound``,
+``pathology``) or by model backend (``hf``, ``monai``, ``timm``). The base install
+provides the CLI and the MCP server; loader modules import their backend lazily, so
+missing extras only affect the tools that need them, and the server logs a warning and
+skips those tools. See :doc:`installation`.
 
 🖥️ Can I run CaresMCP without a GPU?
 ------------------------------------
 
 Yes. The active device is CUDA when torch reports one and CPU otherwise. Tools still run
-on CPU, though large models take noticeably longer. On CUDA, some loaders keep a master
-model on CPU and return an independent eval-mode copy; on CPU they return the cached
-instance itself.
+on CPU, though large models take noticeably longer. Torch-based loaders keep a cached
+master model on CPU and return an independent evaluation-mode copy on the active device;
 
 🧪 How do I try a single tool without an MCP client?
 ----------------------------------------------------
@@ -30,3 +30,19 @@ outputs are saved.
 No. Inference for language and vision-language models belongs to their dedicated APIs.
 CaresMCP wraps medical imaging models and utilities — including CLIP-style image and
 text encoders — so an agent can pair them with any LLM it already uses.
+
+🌑 Why are some rows dimmed in ``caresmcp list``?
+-------------------------------------------------
+
+A dimmed row marks a tool that is registered but not currently servable: its docstring
+is still a TODO placeholder, or an optional package required by the tool is missing. The
+MCP server logs a warning and skips these tools. Installing the matching extra (or
+``caresmcp[all]``) clears dependency-related dimming. See :doc:`installation` and
+:doc:`quick-start`.
+
+🔑 How do I access gated Hugging Face checkpoints?
+--------------------------------------------------
+
+Set ``HF_TOKEN`` to a Hugging Face access token with access to the repository before
+starting the CLI or MCP server. CaresMCP does not manage this variable; see
+:doc:`envvar`.

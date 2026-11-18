@@ -12,11 +12,10 @@ from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 
-from caresmcp.api.decorators.deps import unmet_requirements
+from caresmcp.api.availability import docstring_summary, unavailable_reasons
 from caresmcp.registry import REGISTRIES, TAGS, TASKS
 
 from .annotation import field_description, format_annotation, unpack_literal
-from .string import has_todo
 
 # Cycle of row styles assigned to categories (by sorted index)
 CATEGORY_COLORS = [
@@ -74,8 +73,7 @@ def registry_table(category: str | None = None) -> Table:
         registry = REGISTRIES[cat_name]
         table.add_section()
         for name, function in sorted(registry.get_all().items()):
-            summary = (function.__doc__ or "").strip().splitlines()
-            description = summary[0] if summary else ""
+            description = docstring_summary(function)
             tags = ", ".join(
                 f"[white on {tag_colors[tag_name]}]{tag_name.split('_')[-1]}[/]"
                 for tag_name, tag_registry in sorted((TAGS | TASKS).items())
@@ -87,11 +85,7 @@ def registry_table(category: str | None = None) -> Table:
                 ",\n".join(unpack_literal(function)),
                 tags,
                 description,
-                style=(
-                    "dim"
-                    if has_todo(description) or unmet_requirements(function)
-                    else None
-                ),
+                style="dim" if unavailable_reasons(function) else None,
             )
     return table
 

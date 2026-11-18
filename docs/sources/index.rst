@@ -1,7 +1,8 @@
-🧩 Supported Sources
+🗂️ Supported Sources
 ====================
 
-CaresMCP accesses every checkpoint through the loaders in ``caresmcp.api.models``. Each
+CaresMCP accesses model checkpoints through the loaders in ``caresmcp.api.models``
+(TotalSegmentator manages its own weights under :envvar:`TOTALSEG_HOME_DIR`). Each
 loader covers one model source and standardizes how its weights are fetched, cached, and
 returned, so tool modules only contain model-specific preprocessing, inference, and
 postprocessing.
@@ -11,10 +12,10 @@ postprocessing.
 - 💾 **Bounded caching** — in-memory caches are bounded by :envvar:`CARESMCP_LRU_SIZE`;
   downloaded weights and checkpoints follow the :ref:`environment-variables` cache
   layout.
-- 🧪 **Evaluation ready** — model-returning loaders hand out models in evaluation mode,
-  moved to ``caresmcp.constants.DEVICE`` when that is not the CPU.
-- 🖥️ **Device-aware sessions** — Pytorch/ONNX Runtime sessions prefer CUDA with CPU
-  fallback when both the device and the installed runtime support it.
+- 🧪 **Evaluation ready** — torch loaders cache a master model on CPU and return an
+  independent evaluation-mode copy on ``caresmcp.constants.DEVICE``.
+- 🖥️ **Device-aware sessions** — ONNX Runtime uses its CUDA provider when ``DEVICE`` is
+  CUDA and the provider is available, otherwise CPU.
 - 🔬 **Fresh Cellpose models** — Cellpose builds a new model on ``DEVICE`` for every
   call, while reusing weights already downloaded to the model cache.
 

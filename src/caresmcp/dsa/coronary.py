@@ -138,7 +138,7 @@ def _label_components(
 
 @DSA.register("detect_coronary_stenosis")
 @TASK_LOC.register("detect_coronary_stenosis")
-@requires(_CORONARY_DEPS, extra="hf")
+@requires(_CORONARY_DEPS, extra="dsa")
 def detect_coronary_stenosis(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,
@@ -188,7 +188,7 @@ def detect_coronary_stenosis(
 
 @DSA.register("segment_coronary_stenosis")
 @TASK_SEG.register("segment_coronary_stenosis")
-@requires(_CORONARY_DEPS, extra="hf")
+@requires(_CORONARY_DEPS, extra="dsa")
 def segment_coronary_stenosis(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,
@@ -208,7 +208,7 @@ def segment_coronary_stenosis(
 
 @DSA.register("segment_coronary_vessels")
 @TASK_SEG.register("segment_coronary_vessels")
-@requires(_CORONARY_DEPS, extra="hf")
+@requires(_CORONARY_DEPS, extra="dsa")
 def segment_coronary_vessels(
     image: CoronaryAngiogramImage,
     score_threshold: ScoreThreshold = 0.5,

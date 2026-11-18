@@ -14,6 +14,8 @@ New to CaresMCP? Follow this path:
 - :doc:`intro` — understand what CaresMCP does and how its pieces fit together.
 - :doc:`installation` — install the package and the optional model backends.
 - :doc:`quick-start` — list tools, serve them over MCP, and run one directly.
+- :doc:`envvar` — relocate model caches and tune cache size and HTTP timeouts
+  (optional).
 - :doc:`faq` — find answers to common questions.
 
 .. toctree::
@@ -27,7 +29,7 @@ New to CaresMCP? Follow this path:
    faq
 
 .. toctree::
-   :hidden:
+   :caption: ℹ️ What's in the MCP?
 
    tools/index
 

@@ -17,7 +17,8 @@ agent workflows.
 - 🔌 **Framework adapters** — unified loaders for
   :external+transformers:doc:`transformers <index>`, :external+monai:doc:`MONAI
   <index>`, :external+timm:doc:`timm <index>`, :external+torch:doc:`torch.hub <hub>`,
-  and more, so new models only need thin wrappers for inference logic.
+  and more (see :doc:`sources/index`), so new models only need thin wrappers for
+  inference logic.
 - 🩻 **Modality coverage** — DSA and catheter angiography, echocardiography and
   ultrasound, mammography, MRI, musculoskeletal imaging, pathology, and X-ray and CT.
 - 📤 **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and

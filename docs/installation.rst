@@ -8,23 +8,23 @@
 CaresMCP requires **Python 3.12** and uses `uv <https://docs.astral.sh/uv/>`_ for
 dependency management.
 
-🧰 Install as a Tool
---------------------
+🧰 Install globally
+-------------------
 
-Install CaresMCP directly from GitHub with `uv tool
-<https://docs.astral.sh/uv/concepts/tools/>`_. This creates an isolated environment and
-adds the ``caresmcp`` executable to your ``PATH``, without cloning the repository:
+Install CaresMCP as a `uv tool <https://docs.astral.sh/uv/concepts/tools/>`_. This adds
+the ``caresmcp`` executable to your ``PATH`` in an isolated environment, without cloning
+the repository:
 
 .. code-block:: console
 
    $ uv tool install git+https://github.com/Moenupa/caresMCP.git
 
-Model backends are optional and grouped into extras by modality. Select them with a PEP
-508 requirement around the Git URL:
+Model backends are optional and grouped into extras by modality or backend. Select them with
+`caresmcp[extra1,extra2]`.
 
 .. code-block:: console
 
-   $ uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ uv tool install "caresmcp[xray,ct] @ git+https://github.com/Moenupa/caresMCP.git"
    $ uv tool install "caresmcp[all] @ git+https://github.com/Moenupa/caresMCP.git"
 
 Reinstall to update the tool to the latest commit:
@@ -33,24 +33,24 @@ Reinstall to update the tool to the latest commit:
 
    $ uv tool upgrade caresmcp --reinstall
 
-🔽 Install from Source
+⏬ Install from Source
 ----------------------
 
 1. Clone the repository and install the base dependencies:
 
-.. code-block:: console
+   .. code-block:: console
 
-   $ git clone https://github.com/Moenupa/caresMCP.git
-   $ cd caresMCP
-   $ uv sync
+      $ git clone https://github.com/Moenupa/caresMCP.git
+      $ cd caresMCP
+      $ uv sync
 
-2. 🧩 Install the model backends you need. They are optional and grouped into extras by
-   modality, so install only what your workflows require:
+2. 🧩 Install the model backends you need. Extras are optional and grouped by modality
+   or backend; pass one ``--extra`` flag per group, or install them all:
 
-.. code-block:: console
+   .. code-block:: console
 
-   $ uv sync --extra xray --extra mri
-   $ uv sync --all-extras
+      $ uv sync --extra xray --extra ct
+      $ uv sync --all-extras
 
 See ``pyproject.toml`` for the full list of extras.
 

@@ -3,21 +3,20 @@
 
 🏁 Get from an installed CaresMCP to a running MCP server in three steps.
 
-.. note::
-
-   The commands below assume ``caresmcp`` is on your ``PATH``. If you installed from
-   source, activate the environment first (e.g., ``source .venv/bin/activate``), or
-   prefix commands with ``uv run`` (e.g., ``uv run caresmcp list``).
-
 📋 List Available Tools
 -----------------------
 
-``caresmcp list`` prints every registered and usable tool grouped by category, with the
-supported models, tags, and a short description:
+``caresmcp list`` prints every registered tool grouped by category, with its supported
+models, tags, and a short description:
 
 .. code-block:: console
 
    $ caresmcp list
+
+Tools are dimmed when their docstring is still a TODO placeholder or when an optional
+dependency is missing; dimmed tools are not served over MCP. Installing the matching
+extra (or ``caresmcp[all]``) supplies the dependencies, but TODO placeholders stay
+dimmed until implemented.
 
 Pass a category to narrow the listing, and an output path to also write it as
 tab-separated values:
@@ -33,7 +32,7 @@ Start the FastMCP server over streamable HTTP:
 
 .. code-block:: console
 
-   $ caresmcp mcp  # pass --help to customize the endpoint
+   $ caresmcp mcp  # pass --help for host, port, and transport options
 
 The server listens on ``http://127.0.0.1:8000/mcp``. Point an MCP client at that URL,
 for example:

@@ -4,9 +4,9 @@
 Cell segmentation models are created and loaded by Cellpose from its `pretrained model
 zoo <https://cellpose.readthedocs.io/en/latest/models.html>`_. Weights are downloaded on
 first use to the location set by :envvar:`CELLPOSE_LOCAL_MODELS_PATH` and reused from
-disk afterwards. Each call builds a new model on ``caresmcp.constants.DEVICE`` and the
-model is not retained in memory, so callers that segment repeatedly should keep and
-reuse the returned instance.
+disk afterwards. Each call builds a new model on ``caresmcp.constants.DEVICE``; CaresMCP
+does not retain the instance, so callers that segment repeatedly should keep and reuse
+the returned model.
 
 📦 Supported pretrained models:
 

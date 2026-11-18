@@ -6,7 +6,7 @@ the TorchXRayVision model zoo. The ``anatomy`` weights select the PSPNet chest-a
 segmenter; other names select a DenseNet, or a ResNet when the name starts with
 ``resnet``.
 
-Weights are cached under :envvar:`CARESMCP_CACHE` (see :ref:`environment-variables`).
+Weights are cached under ``$CARESMCP_CACHE/models`` (see :ref:`environment-variables`).
 
 🧩 Requires the ``xray`` extra.
 

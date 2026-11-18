@@ -38,14 +38,14 @@ variables that are unset.
       * - :envvar:`TOTALSEG_HOME_DIR`
         - ``$CARESMCP_CACHE/models/totalseg``
         - :doc:`medai </tools/medai>`
-      * - —
-        - ``$CARESMCP_CACHE/models``
-        - :doc:`onnx </sources/onnx>`, :doc:`torchxrayvision
-          </sources/torchxrayvision>`
+
+   ONNX Runtime and TorchXRayVision checkpoints have no dedicated variable; they write
+   directly into ``$CARESMCP_CACHE/models``.
 
 .. envvar:: CARESMCP_LRU_SIZE
 
    Maximum number of entries retained by each in-memory model cache. Default: ``2``.
+   Cellpose models and ONNX Runtime sessions are not cached.
 
 .. envvar:: CARESMCP_TIMEOUT
 

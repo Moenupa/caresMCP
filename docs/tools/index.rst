@@ -13,8 +13,8 @@ record the candidate model survey instead.
   radiomics, and HU-based image utilities.
 - :doc:`dsa` — coronary stenosis detection and vessel segmentation in catheter
   angiography.
-- :doc:`fluoroscopy` — model survey for fluoroscopic examinations; no task-trained model
-  with a verified license is integrated.
+- :doc:`fluoroscopy` — model survey for fluoroscopic examinations; no licensed, servable
+  model is integrated.
 - :doc:`mammography` — breast-density and mammogram-patch classification.
 - :doc:`nuclearmed` — FDG PET/CT tumor segmentation and PET/CT anatomical-context
   candidates; no checkpoint integrated yet.

@@ -1,6 +1,9 @@
 📐 Generic Tools API
 ====================
 
+Registry category: ``image`` — use ``caresmcp debug image <tool> ...`` to run a
+function directly.
+
 .. automodule:: caresmcp.tools.pil
    :no-members:
 

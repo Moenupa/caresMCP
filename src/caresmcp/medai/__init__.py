@@ -1,3 +1,12 @@
+"""
+* |x| Hugging Face checkpoints through the shared loaders in
+  :mod:`hf.py <caresmcp.medai.hf>`: image classification, image embedding, and
+  box-prompted segmentation for any compatible Hub checkpoint.
+* |x| `TotalSegmentator <https://github.com/wasserth/TotalSegmentator>`_: volumetric CT
+  and MR anatomy segmentation for the released task set in
+  :mod:`totalsegmentator.py <caresmcp.medai.totalsegmentator>`.
+"""
+
 import importlib
 from pathlib import Path
 
