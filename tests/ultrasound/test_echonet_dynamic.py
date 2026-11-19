@@ -11,6 +11,7 @@ import caresmcp.ultrasound.echonet_dynamic as echonet
 from caresmcp.api.decorators import save_returns
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.io import decode_as, encode_as
+from caresmcp.api.metrics import mask_overlap
 from caresmcp.ultrasound.echonet_dynamic import (
     _load_echonet_dynamic_model,
     _load_echonet_dynamic_segmentation_model,
@@ -131,10 +132,8 @@ def test_echonet_dynamic_segment_lv_with_real_image(
         > 0
     )
     assert original.any() and restored.any()
-    dice = (
-        2 * np.logical_and(original, restored).sum() / (original.sum() + restored.sum())
-    )
-    assert dice > 0.6
+    dice = mask_overlap(original, restored).dice
+    assert dice is not None and dice > 0.6
     square_restored = (
         np.asarray(
             square_mask.crop((112, 112, 336, 336)).resize(
@@ -143,23 +142,15 @@ def test_echonet_dynamic_segment_lv_with_real_image(
         )
         > 0
     )
-    square_dice = (
-        2
-        * np.logical_and(original, square_restored).sum()
-        / (original.sum() + square_restored.sum())
-    )
-    assert square_dice > 0.6
+    square_dice = mask_overlap(original, square_restored).dice
+    assert square_dice is not None and square_dice > 0.6
     video = decode_as(cardiac_gif)
     composite = Image.fromarray(np.asarray(video.convert("RGB")))
     composite_bytes, composite_mask = segment(composite)
     assert composite_mask.size == composite.size
     composite_left = np.asarray(composite_mask.crop((0, 0, 112, 112))) > 0
-    composite_dice = (
-        2
-        * np.logical_and(original, composite_left).sum()
-        / (original.sum() + composite_left.sum())
-    )
-    assert composite_dice > 0.9
+    composite_dice = mask_overlap(original, composite_left).dice
+    assert composite_dice is not None and composite_dice > 0.9
     return {
         "original_mask": original_bytes,
         "letterboxed_mask": letterbox_bytes,
