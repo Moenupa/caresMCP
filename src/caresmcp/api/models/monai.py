@@ -34,6 +34,9 @@ def _build_monai_model(model_id: MonaiModels) -> "Module":
                 use_conv=False,
                 bias=True,
                 pretrained=False,
+                # The bundle sets pretrained=True, which enables torchvision's
+                # ImageNet input transform; the checkpoint replaces the weights.
+                transform_input=True,
             )
         case "MONAI/pathology_tumor_detection":
             return TorchVisionFCModel(

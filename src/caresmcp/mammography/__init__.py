@@ -1,5 +1,5 @@
 """
-* |x| `MONAI breast density <https://huggingface.co/MONAI/breast_density_classification>`_
+* |x| `MONAI/breast_density_classification <https://huggingface.co/MONAI/breast_density_classification>`_
   :footcite:`gupta2022density`: BI-RADS A–D scores in
   :mod:`density.py <caresmcp.mammography.density>`.
 * |x| `umairinayat/medical-models <https://huggingface.co/umairinayat/medical-models>`_:
