@@ -24,7 +24,7 @@ EXPECTED_TOP = {
 
 @pytest.mark.parametrize("image", tuple(EXPECTED_SCORES))
 @skip_on_exception(ImportError, OSError)
-@save_returns("mammography_classification")
+@save_returns()
 def test_classify_mammogram_patch(image: str, request: pytest.FixtureRequest):
     """Score real mammograms with recorded calibrated class probabilities."""
     scores = classify_mammogram_patch(request.getfixturevalue(image))

@@ -66,7 +66,7 @@ CLAIMED_SCORES = {
 
 @pytest.mark.parametrize("image", tuple(EXPECTED_SCORES))
 @skip_on_exception(ImportError, OSError)
-@save_returns("mammography_density")
+@save_returns()
 def test_classify_breast_density(image: str, request: pytest.FixtureRequest):
     """Pin the released checkpoint's scores on real mammograms."""
     density_scores = classify_breast_density(request.getfixturevalue(image))
@@ -83,7 +83,7 @@ def test_classify_breast_density(image: str, request: pytest.FixtureRequest):
 
 
 @skip_on_exception(ImportError, OSError)
-@save_returns("mammography_density")
+@save_returns()
 def test_model_card_claimed_scores(model_card_samples: dict[str, bytes]):
     """Reproduce MONAI's published sigmoid scores for every card sample."""
     observed = {}
