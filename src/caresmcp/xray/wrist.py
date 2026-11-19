@@ -3,6 +3,7 @@
 from typing import Annotated
 
 import numpy as np
+from PIL import Image
 from pydantic import Field
 
 from caresmcp.api.decorators import requires
@@ -29,6 +30,21 @@ WRIST_MODEL_FILENAME = "yolov7-p6-bonefracture.onnx"
 WRIST_MODEL_SHA256 = "bf65ea16ed4a6b7cc911e60420100aeae0eb748eb8ab8ff7e88544c7c00a9320"
 
 
+def _decode_wrist_rgb(image: bytes) -> np.ndarray:
+    """Return 8-bit RGB pixels, scaling 16-bit radiographs like OpenCV.
+
+    GRAZPEDWRI-DX releases 16-bit PNGs. Converting ``I;16`` directly to RGB
+    clips values above 255 instead of rescaling, which erases most of the
+    radiograph's contrast; the released detector code read these files with
+    OpenCV, whose 8-bit conversion keeps the high byte (``value >> 8``).
+    """
+    source = decode_as(image)
+    if source.mode.startswith("I;16"):
+        pixels = np.asarray(source).astype(np.uint16)
+        source = Image.fromarray(pixels >> 8)
+    return np.asarray(source.convert("RGB"), dtype=np.uint8)
+
+
 @XRAY.register("detect_pediatric_wrist_findings")
 @TASK_LOC.register("detect_pediatric_wrist_findings")
 @requires(["torch", "onnxruntime"], extra="xray")
@@ -51,7 +67,7 @@ def detect_pediatric_wrist_findings(
     """
     import cv2
 
-    pixels = np.asarray(decode_as(image, mode="RGB"), dtype=np.uint8)
+    pixels = _decode_wrist_rgb(image)
     height, width = pixels.shape[:2]
     # Follow the released ONNX script's direct resize, RGB and [0, 1] scaling.
     resized = cv2.resize(pixels, (640, 640), interpolation=cv2.INTER_LINEAR)

@@ -10,6 +10,7 @@ from PIL import Image
 from caresmcp.api.decorators import save_returns, skip_on_import_error
 from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.io import decode_as
+from caresmcp.api.metrics import mask_overlap
 from caresmcp.constants import DEVICE
 from caresmcp.medai.hf import hf_segment_image
 
@@ -43,14 +44,6 @@ def _assert_mask(
     assert box[0] <= x_coordinates.mean() <= box[2]
     assert box[1] <= y_coordinates.mean() <= box[3]
     return mask
-
-
-def _dice(predicted: np.ndarray, target: np.ndarray) -> float:
-    """Return the Dice similarity coefficient for two binary masks."""
-    denominator = predicted.sum() + target.sum()
-    if not denominator:
-        return 1.0
-    return float(2 * np.logical_and(predicted, target).sum() / denominator)
 
 
 def _published_demo_mask(output_png: bytes, size: tuple[int, int]) -> np.ndarray:
@@ -106,11 +99,12 @@ def test_medsam_reproduces_published_demo(
     input_bytes, output_bytes = medsam_demo
     source = decode_as(input_bytes, mode="RGB")
     expected = _published_demo_mask(output_bytes, source.size)
+    assert expected.any(), "Expected the published demo overlay to yield a mask"
     predicted = (
         np.asarray(decode_as(hf_segment_image(input_bytes, DEMO_BOX, MEDSAM_REPO))) > 0
     )
-    dice = _dice(predicted, expected)
-    assert dice >= MIN_DICE, {"dice": dice}
+    dice = mask_overlap(predicted, expected).dice
+    assert dice is not None and dice >= MIN_DICE, {"dice": dice}
     return {"model_id": MEDSAM_REPO, "box": list(DEMO_BOX), "dice": dice}
 
 
