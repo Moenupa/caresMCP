@@ -94,6 +94,11 @@ def flexray_segment_anatomy(
     black for background, and can overlap across separate calls. Paired bones are
     not separated by laterality.
 
+    References:
+        Butoi, Victor Ion, et al. FleXray: Universal Clinical X-ray
+        Segmentation. arXiv preprint
+        `arXiv:2609.26756 <https://arxiv.org/abs/2609.26756>`_ (2026).
+
     See Also:
         https://huggingface.co/VictorButoi/flexray
     """
