@@ -20,6 +20,11 @@ it. Describe inputs in Pydantic `Field`s instead.
   self-explanatory output field lists, and when-to-use advice.
 - Add sources and licenses whenever possible (models, repos, papers),
   keeping each reference next to what it supports.
+- Cite papers in a standalone Google-style `References:` section with the full
+  citation and a linked identifier (e.g.
+  \`arXiv:2202.08238 <https://arxiv.org/abs/2202.08238>\`_). Don't use
+  `:footcite:` in tool docstrings: `docs/api/` pages have no `footbibliography`,
+  so the marker dangles. Keep repo/model links in `See Also:`.
 - For `bytes` output, explain in docstring or legend the colors; single-color
   outputs can be explained in prose.
 

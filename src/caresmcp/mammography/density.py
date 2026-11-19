@@ -2,6 +2,7 @@
 
 from typing import Annotated, Any
 
+import numpy as np
 from pydantic import Field
 
 from caresmcp.api.decorators import adapt_inputs, requires
@@ -20,18 +21,28 @@ _LABELS = (
 
 
 def _prepare_image(image: bytes) -> Any:
-    """Apply the bundle's intensity scaling and spatial resize."""
-    from monai.transforms import Compose, Resize, ScaleIntensity
-    from torchvision.transforms.v2 import ToTensor
+    """Replicate the bundle's ``inference.json`` preprocessing exactly.
 
+    MONAI's ``LoadImaged`` uses ``PILReader(reverse_indexing=True)``, which
+    swaps the first two axes of a 2-D image, so encoding the swap here keeps
+    the scores identical to a literal CPU bundle run.
+    """
+    from monai.transforms import (
+        Compose,
+        EnsureChannelFirst,
+        Resize,
+        ScaleIntensity,
+    )
+
+    array = np.moveaxis(np.array(decode_as(image, "RGB")), 0, 1)
     preprocessing = Compose(
         [
-            ToTensor(),
+            EnsureChannelFirst(channel_dim=2),
             ScaleIntensity(minv=0.0, maxv=1.0),
             Resize(spatial_size=(299, 299)),
         ]
     )
-    return preprocessing(decode_as(image, "RGB")).unsqueeze(0).to(DEVICE)
+    return preprocessing(array).unsqueeze(0).to(DEVICE)
 
 
 @MAMMOGRAPHY.register("classify_breast_density")
@@ -46,6 +57,11 @@ def classify_breast_density(
 
     See Also:
         https://project-monai.github.io/model-zoo.html#/model/breast_density_classification
+
+    References:
+        Gupta, Vikash, et al. A multi-reconstruction study of breast density
+        estimation using Deep Learning. arXiv preprint
+        `arXiv:2202.08238 <https://arxiv.org/abs/2202.08238>`_ (2022).
     """
     import torch
 
