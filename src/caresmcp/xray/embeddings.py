@@ -8,8 +8,9 @@ from caresmcp.api.decorators import requires
 from caresmcp.api.embeddings import cosine_similarity
 from caresmcp.api.models import HFMODEL_ID_DESC
 from caresmcp.registry import TASK_EMB, TASK_RET, XRAY
-from caresmcp.xray.biovil import _embed_biovil_image
-from caresmcp.xray.cxr_encoder import _extract_cxr_embedding
+
+from ._cxr_encoder import _extract_cxr_embedding
+from .biovil import _embed_biovil_image
 
 XrayEncoder = Literal[
     "microsoft/rad-dino",

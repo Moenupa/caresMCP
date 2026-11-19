@@ -1,10 +1,11 @@
 import base64
 import binascii
+import hashlib
 from collections.abc import Callable
 from inspect import signature
 from os import PathLike
 from types import UnionType
-from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, Literal, Union, get_args, get_origin, get_type_hints
 from urllib.parse import unquote_to_bytes, urlsplit
 
 from curl_cffi import requests
@@ -28,6 +29,32 @@ def adapt_byte_inputs[**P, R](function: Callable[P, R]) -> Callable[P, R]:
     if not byte_inputs:
         return function
     return adapt_inputs(**byte_inputs)(function)
+
+
+def download_bytes(
+    value: Any, *, checksum: str | None = None, method: Literal["sha256"] = "sha256"
+) -> bytes:
+    """Resolve a byte input and optionally verify its checksum.
+
+    Args:
+        value: Bytes, a path, a data URI, or an HTTP(S) URL.
+        checksum: Expected hexadecimal digest, or None to skip verification.
+        method: Hash algorithm used to compute the digest.
+
+    Returns:
+        The resolved bytes.
+
+    Raises:
+        ValueError: If the resolved bytes do not match ``checksum``.
+    """
+    obj = _read_bytes(value)
+    if checksum is not None:
+        digest = hashlib.new(method, obj).hexdigest()
+        if digest != checksum.lower():
+            # Omits the source, which may contain credentials or signed queries.
+            raise ValueError("Byte input checksum does not match the expected value")
+
+    return obj
 
 
 def _byte_input_names(function: Callable[..., Any]) -> tuple[str, ...]:

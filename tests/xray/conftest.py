@@ -1,17 +1,16 @@
-import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
-from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators import download_bytes
 from caresmcp.constants import CACHE_ROOT
 
 
 @pytest.fixture(scope="session")
 def hernia_image() -> bytes:
     """First study of NIH patient 00000003, whose record includes a hernia."""
-    return _read_bytes(
+    return download_bytes(
         "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_000.png"
     )
 
@@ -19,7 +18,7 @@ def hernia_image() -> bytes:
 @pytest.fixture(scope="session")
 def cxr_image() -> bytes:
     """Second study of NIH patient 00000003."""
-    return _read_bytes(
+    return download_bytes(
         "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"
     )
 
@@ -27,16 +26,8 @@ def cxr_image() -> bytes:
 @pytest.fixture(scope="session")
 def cxr_image_followup() -> bytes:
     """Third study of the same patient, used as the later temporal image."""
-    return _read_bytes(
+    return download_bytes(
         "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_002.png"
-    )
-
-
-@pytest.fixture(scope="session")
-def unrelated_cxr_image() -> bytes:
-    """A chest radiograph from a different NIH patient than the 00000003 series."""
-    return _read_bytes(
-        "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000001_000.png"
     )
 
 
@@ -47,7 +38,7 @@ def chest_dicom() -> bytes:
     jsDelivr mirrors the file at the pinned tag; raw.githubusercontent.com
     intermittently returns 503 for this path.
     """
-    return _read_bytes(
+    return download_bytes(
         "https://cdn.jsdelivr.net/gh/mlmed/torchxrayvision@1.5.7/tests/1.2.276.0.7230010.3.1.4.8323329.6904.1517875201.850819.dcm"
     )
 
@@ -96,42 +87,40 @@ def _read_wrist_source(image_id: str) -> tuple[bytes, dict]:
 
     root = CACHE_ROOT / "wrist_reference"
     image_path, metadata_path = root / (image_id + ".png"), root / (image_id + ".json")
+    checksum = WRIST_IMAGE_SHA256[image_id]
     if image_path.exists() and metadata_path.exists():
         metadata = json.loads(metadata_path.read_text())
         assert metadata["image_id"] == image_id, (
             "Cached reference image identity changed"
         )
-        image = image_path.read_bytes()
-    else:
-        url = (
-            "https://datasets-server.huggingface.co/rows?"
-            "dataset=tirandazdylan/open-radiograph-findings&config=default&split=test"
-            f"&offset={WRIST_ROW_OFFSETS[image_id]}&length=1"
-            f"&revision={WRIST_DATASET_REVISION}"
-        )
-        # Cold dataset-server rows take longer than ordinary byte downloads.
-        response = requests.get(url, impersonate="chrome", timeout=60)
-        response.raise_for_status()
-        row = response.json()["rows"][0]["row"]
-        assert row["image_id"] == image_id, (
-            "Dataset row order changed; review source identity"
-        )
-        assert row["source"] == "graz"
-        image = _read_bytes(row["image"]["src"])
-        metadata = {key: value for key, value in row.items() if key != "image"}
-        metadata["source_row_url"] = url
-        root.mkdir(parents=True, exist_ok=True)
-        # Multiple slow-test workers may fetch the same reference concurrently.
-        for destination, content in (
-            (image_path, image),
-            (metadata_path, json.dumps(metadata).encode()),
-        ):
-            with NamedTemporaryFile(dir=root, delete=False) as temporary:
-                temporary.write(content)
-            Path(temporary.name).replace(destination)
-    assert hashlib.sha256(image).hexdigest() == WRIST_IMAGE_SHA256[image_id], (
-        "Wrist reference image bytes changed"
+        return download_bytes(image_path, checksum=checksum), metadata
+
+    url = (
+        "https://datasets-server.huggingface.co/rows?"
+        "dataset=tirandazdylan/open-radiograph-findings&config=default&split=test"
+        f"&offset={WRIST_ROW_OFFSETS[image_id]}&length=1"
+        f"&revision={WRIST_DATASET_REVISION}"
     )
+    # Cold dataset-server rows take longer than ordinary byte downloads.
+    response = requests.get(url, impersonate="chrome", timeout=60)
+    response.raise_for_status()
+    row = response.json()["rows"][0]["row"]
+    assert row["image_id"] == image_id, (
+        "Dataset row order changed; review source identity"
+    )
+    assert row["source"] == "graz"
+    image = download_bytes(row["image"]["src"], checksum=checksum)
+    metadata = {key: value for key, value in row.items() if key != "image"}
+    metadata["source_row_url"] = url
+    root.mkdir(parents=True, exist_ok=True)
+    # Multiple slow-test workers may fetch the same reference concurrently.
+    for destination, content in (
+        (image_path, image),
+        (metadata_path, json.dumps(metadata).encode()),
+    ):
+        with NamedTemporaryFile(dir=root, delete=False) as temporary:
+            temporary.write(content)
+        Path(temporary.name).replace(destination)
     return image, metadata
 
 

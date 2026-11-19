@@ -5,7 +5,6 @@ CPU run, and the anatomy model is checked against the official ChestX-Det demo
 output.
 """
 
-import hashlib
 from dataclasses import asdict
 from io import BytesIO
 from typing import Literal
@@ -15,8 +14,7 @@ import pydicom
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns, skip_on_import_error
-from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators import download_bytes, save_returns, skip_on_import_error
 from caresmcp.api.io import decode_as, encode_as
 from caresmcp.api.metrics import mask_overlap
 from caresmcp.api.models import get_torchxrayvision_model
@@ -104,14 +102,11 @@ MINIMUM_DEMO_DICE = 0.99
 def chestx_det_demo() -> tuple[bytes, bytes]:
     """Download the official ChestX-Det PSPNet demo image and Left Lung mask."""
     contents = {
-        name: _read_bytes(CHESTX_DET_DEMO_ROOT + name)
+        name: download_bytes(
+            CHESTX_DET_DEMO_ROOT + name, checksum=CHESTX_DET_DEMO_SHA256[name]
+        )
         for name in CHESTX_DET_DEMO_SHA256
     }
-    for name, content in contents.items():
-        digest = hashlib.sha256(content).hexdigest()
-        assert digest == CHESTX_DET_DEMO_SHA256[name], (
-            f"{name}: official artifact bytes changed"
-        )
     return contents["demo.png"], contents["demo_left_lung.png"]
 
 

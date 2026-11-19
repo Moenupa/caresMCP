@@ -1,4 +1,20 @@
-"""RAD-DINO feature extraction for the unified X-ray embedding interface."""
+"""RAD-DINO feature extraction for the unified X-ray embedding interface.
+
+Workflow: preprocess the image with ``AutoImageProcessor``, run the released
+``microsoft/rad-dino`` checkpoint through ``AutoModel``, then return the CLS
+token or the mean of the patch tokens as the embedding.
+
+This module intentionally has no tests:
+
+1. The model and preprocessing come from ``transformers``, a widely used
+   library that is already tested upstream.
+2. Our code is a thin wrapper that only picks tokens from the model output.
+3. A test could only compare the wrapper with its own output. That records
+   current behavior, not an independent ground truth, so it would not catch a
+   real bug.
+
+Keep this note in place instead of adding a test.
+"""
 
 from typing import Any, Literal
 
