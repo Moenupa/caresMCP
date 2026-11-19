@@ -42,6 +42,8 @@ the core step, return a self-describing result.
 - Pydantic carries validation; never re-check or assert in the body. Raise
   `ValueError` for bad input and `RuntimeError` for model-contract violations,
   and keep messages free of URLs, tokens, and internal paths.
+- Avoid shape/protocol asserts to intermediate results during inference. They
+  should be captured at development (with pytest), not deployment.
 - Results explain themselves: meaningful keys, `model_id`, legends for colored
   bytes, and a one-sentence docstring with sources and licenses.
 - No LLM/VLM or TensorFlow wrappers. A license or implementation blocker

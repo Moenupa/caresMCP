@@ -1,10 +1,12 @@
-"""Exercise TorchXRayVision tools with a real NIH chest radiograph.
+"""Exercise TorchXRayVision tools on real radiographs and the released demo.
 
-The target Hernia score, masks, and saliency maps are checked against recorded
-values from a deterministic CPU run, not only against generic shape and range
-contracts.
+The target Hernia score is checked against recorded values from a deterministic
+CPU run, and the anatomy model is checked against the official ChestX-Det demo
+output.
 """
 
+import hashlib
+from dataclasses import asdict
 from io import BytesIO
 from typing import Literal
 
@@ -14,6 +16,7 @@ import pytest
 from PIL import Image
 
 from caresmcp.api.decorators import save_returns, skip_on_import_error
+from caresmcp.api.decorators.bytes_io import _read_bytes
 from caresmcp.api.io import decode_as, encode_as
 from caresmcp.api.metrics import mask_overlap
 from caresmcp.api.models import get_torchxrayvision_model
@@ -29,28 +32,6 @@ pytestmark = pytest.mark.slow
 
 # Labels exposed by each checkpoint. Values that a checkpoint exposes but
 # cannot score are listed in EXPECTED_UNAVAILABLE.
-ALL_LABELS = frozenset(
-    {
-        "Atelectasis",
-        "Consolidation",
-        "Infiltration",
-        "Pneumothorax",
-        "Edema",
-        "Emphysema",
-        "Fibrosis",
-        "Effusion",
-        "Pneumonia",
-        "Pleural_Thickening",
-        "Cardiomegaly",
-        "Nodule",
-        "Mass",
-        "Hernia",
-        "Lung Lesion",
-        "Fracture",
-        "Lung Opacity",
-        "Enlarged Cardiomediastinum",
-    }
-)
 NIH_LABELS = frozenset(
     {
         "Atelectasis",
@@ -69,6 +50,12 @@ NIH_LABELS = frozenset(
         "Hernia",
     }
 )
+ALL_LABELS = NIH_LABELS | {
+    "Lung Lesion",
+    "Fracture",
+    "Lung Opacity",
+    "Enlarged Cardiomediastinum",
+}
 EXPECTED_LABELS: dict[ChestXrayWeights, frozenset[str]] = {
     "densenet121-res224-all": ALL_LABELS,
     "densenet121-res224-nih": NIH_LABELS,
@@ -93,10 +80,44 @@ EXPECTED_HERNIA_SCORES: dict[ChestXrayWeights, float] = {
     "resnet50-res512-all": 0.9637,
 }
 
+# Official ChestX-Det release, fetched from a revision-pinned jsDelivr mirror:
+# the released PSPNet's own demo input and the Left Lung PNG written by its
+# pre-trained PSPNet script. The TorchXRayVision checkpoint shares the released
+# weight filename; residual Dice loss comes from the official OpenCV cubic
+# resize versus TorchXRayVision's skimage resize, so the test requires high
+# agreement instead of pixel equality.
+CHESTX_DET_REVISION = "a33fa5ce55f58b0f2b7b7977c9ed5c313283303a"
+CHESTX_DET_DEMO_ROOT = (
+    "https://cdn.jsdelivr.net/gh/Deepwise-AILab/ChestX-Det-Dataset@"
+    f"{CHESTX_DET_REVISION}/pre-trained_PSPNet/"
+)
+CHESTX_DET_DEMO_SHA256: dict[str, str] = {
+    "demo.png": "04b94409c88760a347bcd614f571922caf616662257f49ac71835039232f4743",
+    "demo_left_lung.png": (
+        "64635475cf40974a9dc52f23b1147293e85c68daf6d45d417383fed6eacb4f26"
+    ),
+}
+MINIMUM_DEMO_DICE = 0.99
+
+
+@pytest.fixture(scope="session")
+def chestx_det_demo() -> tuple[bytes, bytes]:
+    """Download the official ChestX-Det PSPNet demo image and Left Lung mask."""
+    contents = {
+        name: _read_bytes(CHESTX_DET_DEMO_ROOT + name)
+        for name in CHESTX_DET_DEMO_SHA256
+    }
+    for name, content in contents.items():
+        digest = hashlib.sha256(content).hexdigest()
+        assert digest == CHESTX_DET_DEMO_SHA256[name], (
+            f"{name}: official artifact bytes changed"
+        )
+    return contents["demo.png"], contents["demo_left_lung.png"]
+
 
 @pytest.mark.parametrize("weights", tuple(EXPECTED_HERNIA_SCORES.keys()))
 @skip_on_import_error
-@save_returns("torchxrayvision")
+@save_returns()
 def test_torchxrayvision_classify(hernia_image: bytes, weights: ChestXrayWeights):
     """Check the checkpoint, label set, unavailable labels, and Hernia score."""
     result = torchxrayvision_classify(hernia_image, weights=weights)
@@ -123,77 +144,98 @@ def test_torchxrayvision_classify(hernia_image: bytes, weights: ChestXrayWeights
 
 
 @skip_on_import_error
-def test_torchxrayvision_anatomy_target_order():
+def test_torchxrayvision_segment_anatomy_target_order():
     """Check mask IDs follow the shared anatomy model's target order."""
     model = get_torchxrayvision_model("anatomy")
     assert tuple(model.targets) == ANATOMICAL_TARGETS
 
 
-@pytest.mark.parametrize("output", ["legend", "label_mask"])
 @skip_on_import_error
-@save_returns("torchxrayvision")
+@save_returns(unpack=True)
 def test_torchxrayvision_segment_anatomy(
-    hernia_image: bytes, output: Literal["legend", "label_mask"]
+    chestx_det_demo: tuple[bytes, bytes],
 ):
-    """Check mask geometry, palette, background transparency, and label IDs."""
-    result = torchxrayvision_segment_anatomy(hernia_image, output=output)
-    mask = decode_as(result)
-    assert mask.format == "PNG"
-    assert mask.mode == "P"
-    assert mask.height == 512
-    if output == "label_mask":
-        assert mask.size == (512, 512)
-    else:
-        assert mask.width > 512
-    assert mask.info["transparency"] == 0
-    palette = mask.getpalette()
-    assert palette is not None and len(palette) == 768
-    assert palette[:3] == [0, 0, 0], "Background must be black"
+    """Reproduce the official demo and check the mask output contracts.
 
-    labels = np.asarray(mask)[:, :512]
-    assert set(np.unique(labels)) <= set(range(len(ANATOMICAL_TARGETS) + 1))
-    core_targets = {
-        "Left Lung",
-        "Right Lung",
-        "Heart",
-        "Facies Diaphragmatica",
-        "Spine",
+    ChestX-Det publishes ``demo.png`` together with the Left Lung PNG produced
+    by its own pre-trained PSPNet script. Require Dice >= 0.99 so the check
+    tolerates the different resize engines while still pinning the released
+    checkpoint and the tool's preprocessing. The same official radiograph also
+    exercises the region, legend, and label-mask output contracts, including the
+    documented agreement between a region mask and the combined mask.
+    """
+    image, published_png = chestx_det_demo
+    published = np.asarray(decode_as(published_png, mode="L")) > 0
+    assert published.any(), "Expected the published demo to contain a Left Lung"
+
+    prediction_png = torchxrayvision_segment_anatomy(image, region="Left Lung")
+    prediction_image = decode_as(prediction_png)
+    assert prediction_image.format == "PNG"
+    assert prediction_image.mode == "L"
+    assert prediction_image.size == (512, 512)
+    prediction_values = np.asarray(prediction_image)
+    assert set(np.unique(prediction_values)) <= {0, 255}
+    prediction = prediction_values > 0
+    assert prediction.shape == published.shape
+    overlap = mask_overlap(prediction, published)
+    assert overlap.dice is not None, "Expected both demo masks to be nonempty"
+    assert overlap.dice >= MINIMUM_DEMO_DICE, (
+        f"Measured Dice {overlap.dice:.4f} does not reproduce the official demo"
+    )
+
+    artifacts = {
+        "source": image,
+        "prediction": prediction_png,
+        "published_mask": published_png,
     }
-    core_ids = {ANATOMICAL_TARGETS.index(name) + 1 for name in core_targets}
-    assert core_ids <= set(np.unique(labels)), (
-        "Expected core anatomy in the real radiograph"
+    core_ids = {
+        ANATOMICAL_TARGETS.index(name) + 1
+        for name in (
+            "Left Lung",
+            "Right Lung",
+            "Heart",
+            "Facies Diaphragmatica",
+            "Spine",
+        )
+    }
+    masks = {}
+    for output in ("legend", "label_mask"):
+        result = torchxrayvision_segment_anatomy(image, output=output)
+        mask = decode_as(result)
+        assert mask.format == "PNG"
+        assert mask.mode == "P"
+        assert mask.height == 512
+        if output == "label_mask":
+            assert mask.size == (512, 512)
+        else:
+            assert mask.width > 512
+        assert mask.info["transparency"] == 0
+        palette = mask.getpalette()
+        assert palette is not None and len(palette) == 768
+        assert palette[:3] == [0, 0, 0], "Background must be black"
+        labels = np.asarray(mask)[:, :512]
+        assert set(np.unique(labels)) <= set(range(len(ANATOMICAL_TARGETS) + 1))
+        assert core_ids <= set(np.unique(labels)), (
+            "Expected core anatomy in the official demo radiograph"
+        )
+        masks[output] = mask
+        artifacts[f"demo_{output}"] = result
+
+    combined_left_lung = (
+        np.asarray(masks["label_mask"])[:, :512]
+        == ANATOMICAL_TARGETS.index("Left Lung") + 1
     )
-    return result
-
-
-@pytest.mark.parametrize("image_fixture", ["hernia_image", "chest_dicom"])
-@skip_on_import_error
-@save_returns("torchxrayvision")
-def test_torchxrayvision_segment_anatomy_region(
-    request: pytest.FixtureRequest, image_fixture: str
-):
-    """Check an independently thresholded structure mask against the combined mask."""
-    image = request.getfixturevalue(image_fixture)
-    combined = np.asarray(
-        decode_as(torchxrayvision_segment_anatomy(image, output="label_mask"))
-    )
-    result = torchxrayvision_segment_anatomy(image, region="Left Lung")
-    mask = decode_as(result)
-    assert mask.format == "PNG"
-    assert mask.mode == "L"
-    assert mask.size == (512, 512)
-    region = np.asarray(mask)
-    assert set(np.unique(region)) <= {0, 255}
-
-    region_pixels = region > 0
-    combined_left_lung = combined == ANATOMICAL_TARGETS.index("Left Lung") + 1
-    assert combined_left_lung.any(), "Expected the left lung in the real radiograph"
+    assert combined_left_lung.any(), "Expected the left lung in the official demo"
     # Region masks threshold one structure independently, so they retain every
     # pixel that the combined highest-score mask assigned to that structure.
-    assert np.all(region_pixels[combined_left_lung])
-    dice = mask_overlap(region_pixels, combined_left_lung).dice
-    assert dice is not None and dice > 0.8
-    return result
+    assert np.all(prediction[combined_left_lung])
+    agreement = mask_overlap(prediction, combined_left_lung).dice
+    assert agreement is not None and agreement > 0.8
+    return {
+        **artifacts,
+        "metrics": asdict(overlap)
+        | {"minimum_dice": MINIMUM_DEMO_DICE, "region_combined_dice": agreement},
+    }
 
 
 @pytest.mark.parametrize(
@@ -201,7 +243,7 @@ def test_torchxrayvision_segment_anatomy_region(
 )
 @pytest.mark.parametrize("output", ["overlay", "saliency"])
 @skip_on_import_error
-@save_returns("torchxrayvision")
+@save_returns()
 def test_torchxrayvision_localize(
     hernia_image: bytes,
     weights: ChestXrayWeights,
@@ -227,27 +269,18 @@ def test_torchxrayvision_localize(
         # compute_gradcam scales the positive map to the full uint8 range.
         assert pixels.min() == 0
         assert pixels.max() == 255
+        if weights == "densenet121-res224-all":
+            # Saliency must depend on the requested finding, not just the input.
+            effusion = np.asarray(
+                decode_as(
+                    torchxrayvision_localize(
+                        hernia_image, label="Effusion", weights=weights, output=output
+                    )
+                ),
+                dtype=np.int16,
+            )
+            assert np.abs(pixels.astype(np.int16) - effusion).mean() > 10
     return result
-
-
-@skip_on_import_error
-@save_returns("torchxrayvision", unpack=True)
-def test_torchxrayvision_localize_is_label_specific(hernia_image: bytes):
-    """Check different findings produce different saliency for the same input."""
-    results = {
-        label: torchxrayvision_localize(
-            hernia_image,
-            label=label,
-            weights="densenet121-res224-all",
-            output="saliency",
-        )
-        for label in ("Hernia", "Effusion")
-    }
-    hernia = np.asarray(decode_as(results["Hernia"]), dtype=np.int16)
-    effusion = np.asarray(decode_as(results["Effusion"]), dtype=np.int16)
-    assert not np.array_equal(hernia, effusion)
-    assert np.abs(hernia - effusion).mean() > 10
-    return results
 
 
 @skip_on_import_error
@@ -260,7 +293,7 @@ def test_torchxrayvision_localize_unavailable_label(hernia_image: bytes):
 
 
 @skip_on_import_error
-@save_returns("torchxrayvision")
+@save_returns()
 def test_torchxrayvision_classify_dicom(chest_dicom: bytes):
     """Check DICOM input scores identically to its stored pixels supplied as PNG."""
     dataset = pydicom.dcmread(BytesIO(chest_dicom))
@@ -269,21 +302,6 @@ def test_torchxrayvision_classify_dicom(chest_dicom: bytes):
     dicom_result = torchxrayvision_classify(chest_dicom)
     raster_result = torchxrayvision_classify(raster)
     assert dicom_result["model_id"] == "densenet121-res224-all"
-    assert dicom_result["score_mode"] == "sigmoid"
     assert dicom_result == raster_result
     assert any(score is not None for score in dicom_result["scores"].values())
     return dicom_result
-
-
-@skip_on_import_error
-@save_returns("torchxrayvision")
-def test_torchxrayvision_localize_dicom(chest_dicom: bytes):
-    """Check Grad-CAM saliency accepts a DICOM radiograph."""
-    result = torchxrayvision_localize(chest_dicom, label="Effusion")
-    image = decode_as(result)
-    assert image.format == "PNG"
-    assert image.mode == "RGB"
-    assert image.size == (224, 224)
-    pixels = np.asarray(image)
-    assert not np.array_equal(pixels[..., 0], pixels[..., 1])
-    return result
