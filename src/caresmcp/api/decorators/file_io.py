@@ -10,16 +10,31 @@ from filetype import guess_extension
 from caresmcp.constants import CACHE_ROOT
 
 
+def _collection_dir(collection: str | None, request: Any) -> Path:
+    """Return the cache subdirectory for a collection name or test module path."""
+    if collection is not None and "/" not in collection:
+        return Path(collection)
+    path = Path(collection or request.node.path)
+    if "tests" in path.parts:
+        # Drop the prefix through tests/, e.g. repo/tests/x/test_y.py -> x/test_y.py
+        path = Path(*path.parts[path.parts.index("tests") + 1 :])
+    elif path.is_absolute():
+        path = Path(path.name)
+    return path.with_suffix("") if path.suffix == ".py" else path
+
+
 def save_returns(
-    collection: str,
+    collection: str | None = None,
     *,
     unpack: bool = False,
 ) -> Callable[[Callable[..., Any]], Callable[..., None]]:
     """Save a pytest function's return value under its parametrized test name.
 
-    Use ``@save_returns("collection")`` on a test that returns JSON-serializable data
-    or bytes. Results are saved to ``CACHE_ROOT / collection / pytest_node_name``
-    with a JSON or detected binary extension.
+    Use ``@save_returns()`` on a test that returns JSON-serializable data or bytes.
+    Without ``collection``, results are saved under the test module's path below
+    ``tests/``, so ``tests/mammography/test_density.py`` is saved to
+    ``CACHE_ROOT / mammography / test_density / pytest_node_name`` with a JSON or
+    detected binary extension. Pass ``collection`` to override the directory.
 
     Tests may also declare the pytest ``request`` fixture themselves.
     With ``unpack=True``, return a dictionary of artifact names to values to save
@@ -36,7 +51,8 @@ def save_returns(
             if not has_request:
                 kwargs.pop("request")
             result = func(*args, **kwargs)
-            path = CACHE_ROOT / collection / request.node.name
+            collection_dir = _collection_dir(collection, request)
+            path = CACHE_ROOT / collection_dir / request.node.name
             if unpack:
                 for name, value in result.items():
                     artifact = path / name
