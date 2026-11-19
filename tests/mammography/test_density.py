@@ -6,9 +6,10 @@ reproduce a literal CPU bundle run. MONAI's model author published sigmoid
 scores for all 16 labeled sample images in model-zoo PR #150; this test
 reproduces one sample per category to bound the slow run, within 1% relative
 or 0.01 absolute. Uncomment the remaining samples in ``CLAIMED_SCORES`` and
-set ``MODEL_CARD_SAMPLES_PER_CATEGORY`` to 4 for full coverage. The 0.96 accuracy in the bundle
-metadata is measured on Mayo Clinic's private test set, so the public sample
-images pin the published scores rather than that metric.
+set ``MODEL_CARD_SAMPLES_PER_CATEGORY`` to 4 for full coverage. The 0.96
+accuracy in the bundle metadata is measured on Mayo Clinic's private test
+set, so the public sample images pin the published scores rather than that
+metric.
 """
 
 import math
@@ -27,8 +28,8 @@ LABEL_D = "D: extremely dense"
 EXPECTED_LABELS = (LABEL_A, LABEL_B, LABEL_C, LABEL_D)
 
 # Recorded outputs from a deterministic CPU run of the bundle's preprocessing
-# on the released 0.1.8 checkpoint. The model-card samples, including B1 and
-# C2, are covered by CLAIMED_SCORES instead of being pinned twice.
+# on the released 0.1.8 checkpoint. The enabled model-card samples are
+# covered by CLAIMED_SCORES instead of being pinned twice.
 EXPECTED_SCORES = {
     "mlo_scattered_density": {
         LABEL_A: 0.0172,
