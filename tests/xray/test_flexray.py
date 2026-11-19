@@ -26,8 +26,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from caresmcp.api.decorators import save_returns, skip_on_import_error
-from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators import download_bytes, save_returns, skip_on_import_error
 from caresmcp.api.io import decode_as, encode_as
 from caresmcp.api.metrics import mask_overlap
 from caresmcp.xray.flexray import AnatomicalRegion, flexray_segment_anatomy
@@ -93,7 +92,7 @@ def flexray_released_dataset(request):
     name = request.param
     config = FLEXRAY_DATASETS[name]
     regions: tuple[str, ...] = config["regions"]
-    manifest = yaml.safe_load(_read_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/dataset.yml"))
+    manifest = yaml.safe_load(download_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/dataset.yml"))
     assert manifest["dataset_name"] == name, "Released manifest identity changed"
     test_samples = [
         sample for sample in manifest["samples"] if sample["split"] == "test"
@@ -121,8 +120,8 @@ def flexray_released_dataset(request):
 
     def read_sample(sample: dict[str, Any]) -> tuple[bytes, bytes]:
         """Read one image/label pair from the revision-pinned snapshot."""
-        image = _read_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/{quote(sample['image'])}")
-        label = _read_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/{quote(sample['label'])}")
+        image = download_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/{quote(sample['image'])}")
+        label = download_bytes(f"{FLEXRAY_DATA_ROOT}/{name}/{quote(sample['label'])}")
         return image, label
 
     def reference_masks(label: bytes) -> dict[str, np.ndarray]:
@@ -225,7 +224,7 @@ def test_flexray_released_contract(flexray_cached_model):
 
 
 @skip_on_import_error
-@save_returns("flexray", unpack=True)
+@save_returns(unpack=True)
 def test_flexray_segment_anatomy(flexray_released_dataset, flexray_cached_model):
     """Check output geometry and agreement with each official reference mask."""
     case = flexray_released_dataset
@@ -259,7 +258,7 @@ def test_flexray_segment_anatomy(flexray_released_dataset, flexray_cached_model)
 
 
 @skip_on_import_error
-@save_returns("flexray", unpack=True)
+@save_returns(unpack=True)
 def test_flexray_probability_threshold(flexray_released_dataset, flexray_cached_model):
     """Check thresholds filter one official structure monotonically."""
     case = flexray_released_dataset
@@ -284,7 +283,7 @@ def test_flexray_probability_threshold(flexray_released_dataset, flexray_cached_
 
 
 @skip_on_import_error
-@save_returns("flexray", unpack=True)
+@save_returns(unpack=True)
 def test_flexray_masks_threshold_independently(
     flexray_released_dataset, flexray_cached_model
 ):
@@ -319,7 +318,7 @@ def test_flexray_masks_threshold_independently(
 
 
 @skip_on_import_error
-@save_returns("flexray", unpack=True)
+@save_returns(unpack=True)
 def test_flexray_released_annotation_dice(
     flexray_released_dataset, flexray_cached_model
 ):

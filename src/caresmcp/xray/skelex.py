@@ -16,16 +16,19 @@ from caresmcp.registry import TASK_EVAL, XRAY
 def _prepare_skelex_image(image: bytes) -> Image.Image:
     """Apply the upstream image-wise min/max conversion, retaining 16-bit contrast."""
     source = ImageOps.exif_transpose(decode_as(image))
+    # Upstream lets np.asarray expose palette indices; convert first so a
+    # palette-encoded image uses its rendered colors.
     if source.mode == "P":
         source = source.convert("RGB")
     pixels = np.asarray(source)
     if pixels.ndim == 3 and pixels.shape[-1] == 4:
         pixels = pixels[..., :3]
     pixels = pixels.astype(np.float32)
-    low, high = float(pixels.min()), float(pixels.max())
-    scaled = (
-        (pixels - low) / (high - low) * 255 if high > low else np.zeros_like(pixels)
-    )
+    low, high = np.nanmin(pixels), np.nanmax(pixels)
+    if not np.isfinite([low, high]).all() or high <= low:
+        scaled = np.zeros_like(pixels)
+    else:
+        scaled = (pixels - low) / (high - low) * 255
     return Image.fromarray(scaled.clip(0, 255).astype(np.uint8)).convert("RGB")
 
 
@@ -73,6 +76,10 @@ def skelex_reconstruction_error(
     patch_count = (pixels.shape[-2] // patch_size) * (pixels.shape[-1] // patch_size)
     generator = torch.Generator(device="cpu").manual_seed(seed)
     std = torch.tensor(processor.image_std, device=DEVICE)[None, :, None, None]
+    mean = torch.tensor(processor.image_mean, device=DEVICE)[None, :, None, None]
+    # The released pipeline denormalizes both images to [0, 1] and clamps
+    # before subtracting, so saturated reconstructions cannot exceed unit range.
+    source_pixels = (pixels * std + mean).clamp(0, 1)
     error_sum = torch.zeros_like(pixels[0, 0])
     hits = torch.zeros_like(error_sum)
     with torch.inference_mode():
@@ -80,8 +87,8 @@ def skelex_reconstruction_error(
             noise = torch.rand((1, patch_count), generator=generator).to(DEVICE)
             output = model(pixel_values=pixels, noise=noise)
             reconstruction = model.unpatchify(output.logits)
-            # Subtraction cancels the processor mean; std restores RGB units.
-            error = ((reconstruction - pixels) * std).square().mean(dim=1)[0]
+            restored = (reconstruction * std + mean).clamp(0, 1)
+            error = (restored - source_pixels).square().mean(dim=1)[0]
             mask = model.unpatchify(
                 output.mask[..., None].expand(-1, -1, patch_size**2 * 3)
             )[0, 0]
