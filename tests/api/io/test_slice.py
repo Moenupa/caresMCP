@@ -23,7 +23,7 @@ CT_IMAGE_URL = (
     "https://prod-images-static.radiopaedia.org/images/69161224/dr-original.jpg"
 )
 WIDE_GRAYSCALE_URL = (
-    "https://raw.githubusercontent.com/python-pillow/Pillow/11.3.0/"
+    "https://cdn.jsdelivr.net/gh/python-pillow/Pillow@11.3.0/"
     "Tests/images/16bit.cropped.tif"
 )
 COLOR_IMAGE_URL = (
@@ -31,9 +31,11 @@ COLOR_IMAGE_URL = (
     "6f22f016116baa92e86b44a6bec617b490d615e54ebdbdc31078981193d6a675.png"
 )
 TRANSPARENT_IMAGE_URL = (
-    "https://raw.githubusercontent.com/python-pillow/Pillow/11.3.0/"
+    "https://cdn.jsdelivr.net/gh/python-pillow/Pillow@11.3.0/"
     "Tests/images/transparent.png"
 )
+# jsDelivr rejects the Pillow package for exceeding its 50 MB limit, so this
+# one stays on raw.githubusercontent.com at the pinned tag.
 MULTIFRAME_URL = (
     "https://raw.githubusercontent.com/python-pillow/Pillow/11.3.0/"
     "Tests/images/iss634.gif"
