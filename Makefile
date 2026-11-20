@@ -45,10 +45,10 @@ list:
 	$(RUN) caresmcp list
 
 catalog:
-	$(RUN) scripts/generate_catalog.py
+	$(RUN) --no-dev scripts/generate_catalog.py
 
 catalog-check:
-	$(RUN) scripts/generate_catalog.py --check
+	$(RUN) --no-dev scripts/generate_catalog.py --check
 
 docs: catalog format
 	rm -r $(DOCS_OUT)
