@@ -1,170 +1,96 @@
 # CaresMCP
 
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Docs](https://img.shields.io/readthedocs/caresmcp)](https://caresmcp.readthedocs.io/)
 
-CaresMCP brings dedicated medical ML models & tools to agents through
-the Model Context Protocol (MCP). Our goal is to help medical vision-language
-models (VLMs) overcome bottlenecks in medical reasoning, data sourcing, and
-interpretability: diagnostic conclusions should be traceable to evidence and
-even to individual images. These tools also provide a foundation for test-time training and
-self-evolving agent workflows.
+Medical imaging tools for AI agents, served over the Model Context Protocol
+(MCP). CaresMCP wraps dedicated medical models behind 50+ callable tools and
+returns evidence an agent can cite: scores, masks, heatmaps, measurements, and
+embeddings.
+
+**Documentation:** <https://caresmcp.readthedocs.io/>
+
+Starting from the patient's presentation, an agent proactively orders
+examinations, calls medical imaging tools on the studies, and grounds its
+diagnosis in the evidence:
 
 ```mermaid
 flowchart TD
-    input(["<b>Input</b><br/>medical image, clinical question"])
-    vlm[["<b>VLM</b><br/>Model API"]]
-    agent{{"<b>Agent</b><br/>plans, calls tools, checks evidence"}}
+    patient(["<b>Patient</b><br/><i>demographics · symptoms</i>"])
 
-    framework["<b>CaresMCP</b><br/>Medical AI, Image tools"]
-
-    evidence("<b>Evidence</b><br/>findings, groundings, measurements")
-    diagnosis(["<b>Diagnosis</b><br/>grounded in evidence"])
-
-    subgraph adaptation["<b>Self-Evolution</b> · our vision"]
-        direction LR
-        training["Test-time training"]
-        evaluation["Agent Evaluation"]
-        evolution["Self-evolving workflows"]
-        training -.-> evaluation -.-> evolution
+    subgraph agent["<b>Agent</b> · <i>orchestrator</i>"]
+        direction TB
+        vlm[["<b>VLM</b><br/><i>perception · reasoning</i>"]]
     end
 
-    input -->|"① question + images"| agent
-    agent <-->|"② reason / perceive"| vlm
-    agent ==>|"③ select and execute"| framework
-    framework ==>|"④ return results"| evidence
-    evidence ==>|"⑤ ground reasoning,<br/>guide next step"| agent
-    agent -->|"⑥ conclude"| diagnosis
-    evidence -->|"traceability"| diagnosis
+    his[("<b>HIS</b> <i>(simulated)</i><br/>records · lab tests · images")]
 
-    evidence -.->|"inform adaptation"| adaptation
-    adaptation -.->|"refine future tool use"| agent
+    subgraph caresmcp["<b>CaresMCP</b> · <i>diagnostic toolkit</i>"]
+        direction TB
+        evidence[/"<b>Evidence</b><br/><i>scores · masks · measurements</i>"/]
+    end
+
+    diagnosis(["<b>Diagnosis</b><br/><i>grounded in evidence</i>"])
+
+    patient -->|"① presents"| agent
+    agent <-->|"② orders exam → images"| his
+    agent ==>|"③ calls tools"| caresmcp
+    caresmcp ==>|"④ returns evidence"| agent
+    caresmcp -.->|"<i>traceability</i>"| diagnosis
+    agent -->|"⑤ concludes"| diagnosis
 
     classDef io fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B,stroke-width:1.5px
-    classDef tool fill:#FEF3C7,stroke:#D97706,color:#451A03,stroke-width:3px
-    classDef model fill:#F3E8FF,stroke:#9333EA,color:#3B0764,stroke-width:1.5px
-    classDef agentNode fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#14532D
-    classDef evid fill:#E0F2FE,stroke:#0284C7,color:#082F49,stroke-width:1.5px
+    classDef model fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.5px
+    classDef db fill:#CCFBF1,stroke:#0D9488,color:#042F2E,stroke-width:1.5px
+    classDef evid fill:#FEF3C7,stroke:#D97706,color:#451A03,stroke-width:1.5px
     classDef result fill:#FFE4E6,stroke:#E11D48,color:#4C0519,stroke-width:2.5px
-    classDef vision fill:#F8FAFC,stroke:#64748B,color:#0F172A,stroke-width:1.5px,stroke-dasharray:5 4
 
-    class input io
-    class agent agentNode
+    class patient io
     class vlm model
-    class framework tool
+    class his db
     class evidence evid
     class diagnosis result
-    class training,evaluation,evolution vision
 
-    style adaptation fill:#F8FAFC,stroke:#64748B,stroke-width:2px,stroke-dasharray:6 4,color:#334155
+    style agent fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#14532D
+    style caresmcp fill:#FFFBEB,stroke:#D97706,stroke-width:2px,color:#451A03
 ```
 
-![framework overview](CaresMCP.png)
+## Quick start
 
-## Architecture
-
-We support over 100 models or tools with dedicated end-to-end workflow function APIs,
-and generic adapters to popular libraries.
-
-```mermaid
-flowchart LR
-    S["CaresMCP server<br/>(MedToolLib)"]
-    S --> W[("Workflow APIs<br/>(50+ tools)")]
-    S --> G[("Framework adapters")]
-    W --> M1["Segmentation"]
-    W --> M2["Classification"]
-    W --> M3["Localization"]
-    W --> M4["..."]
-    G --> F1["transformers"]
-    G --> F2["monai"]
-    G --> F3["..."]
-    style S fill:#FEF3C7,stroke:#D97706,color:#451A03,stroke-width:3px
+```console
+uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+caresmcp list xray
+caresmcp debug xray torchxrayvision_classify \
+  '{"image_or_dicom": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
 ```
 
-## Coverage by Body-Part and Modality
+The first model-backed call downloads its checkpoint. To serve the tools over
+MCP:
 
-```mermaid
-mindmap
-  root((CaresMCP))
-    Brain: 2
-      MRI tumor, BraTS
-      Stroke lesion
-    Chest and lungs: 9
-      CXR classify
-      CXR localize
-      CXR segment
-      CXR embed
-      Chest CT embed
-    Heart: 9
-      Echo EF
-      LV segmentation
-      PanEcho
-      Cardiac MRI seg
-    Any anatomy: 22
-      CT
-      MRI
-      TotalSegmentator
-      Image utilities
-    Microscopic tissue: 11
-      Pathology encoders
-      Zero-shot classifiers
-      Cellpose
-    Breast: 2
-      Mammographic density
-      Mammogram patch classify
-    Musculoskeletal
-      Pediatric wrist findings
-      Anatomical masks
-      Reconstruction-error maps
-    Gap: 0
-      Abdomen
+```console
+caresmcp mcp
+claude mcp add --transport http caresmcp http://127.0.0.1:8000/mcp
 ```
 
-```mermaid
-pie showData title Tools by task type
-    "Segmentation" : 13
-    "Embedding" : 11
-    "Classification" : 5
-    "Image-text (CLIP)" : 6
-    "Analysis and utilities" : 20
-```
+Full walkthrough, output examples, and troubleshooting:
+[Getting started](https://caresmcp.readthedocs.io/en/latest/quick-start.html).
 
-## Example workflow: chest X-ray with expert-tool calibration
+## Documentation
 
-A VLM alone can be unsure or distracted by spurious findings. CaresMCP lets the agent call an expert classifier, then verify visually, and use the result to calibrate its own probabilities (test-time calibration).
+- [Capabilities](https://caresmcp.readthedocs.io/en/latest/capabilities/) —
+  browse tools by task or modality; the catalog is generated from the registry.
+- [Concepts](https://caresmcp.readthedocs.io/en/latest/concepts.html) — tools,
+  categories, tasks, models, and the input/output contract.
+- [Model coverage](https://caresmcp.readthedocs.io/en/latest/coverage/) —
+  integrated, deferred, and out-of-scope models with access terms.
+- [Installation](https://caresmcp.readthedocs.io/en/latest/installation.html) —
+  extras and source installs.
+- [Limitations and safety](https://caresmcp.readthedocs.io/en/latest/limitations.html) —
+  research use, checkpoint licenses, and privacy.
+- [CaresAgentBench (WIP)](https://caresmcp.readthedocs.io/en/latest/caresagentbench.html) —
+  the agent benchmark pilot and its work-in-progress status.
+- [Contributing](https://caresmcp.readthedocs.io/en/latest/contributing.html) —
+  add a tool or update a model survey.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant V as VLM agent
-    participant M as CaresMCP
-    participant C as vit_classify()
-    participant L as vit_localize()
-
-    V->>V: Initial read of CXR (VLM probs)
-    Note over V: Hernia 0.62, Emphysema 0.13, others low
-    V->>M: Call expert classifier
-    M->>C: Run ViT on image
-    C-->>V: ViT probs (14+ labels)
-    Note over C,V: Hernia 0.9897, Mass 0.5351, Infiltration 0.5139, Fibrosis 0.503 ...
-    V->>M: Visual evidence check
-    M->>L: Localize top finding
-    L-->>V: Attention heatmap (lower abdomen / diaphragm region)
-    V->>V: Combine VLM + ViT + heatmap
-    Note over V: Agent probs: Hernia 0.96, others suppressed (3 FP labels removed)
-```
-
-- The expert classifier raises confidence in the true label (0.62 to 0.96 after calibration).
-- The visual-evidence step filters out distractors, removing 3 false-positive labels and improving accuracy.
-- The agent output acts as test-time calibration of the VLM using tool evidence.
-
-## CXR Benchmark Pilot Study
-
-```mermaid
-xychart-beta
-    title "Chest X-ray accuracy (%)"
-    x-axis ["GPT-6-Luna", "torchxrayvision", "GPT-6-Luna + tool"]
-    y-axis "Accuracy" 40 --> 70
-    bar [56.81, 51.14, 63.57]
-    bar [57.14, 61.90, 57.14]
-```
-
-Agent gives the best **soft** accuracy (63.57), while the standalone classifier is best on **hard** accuracy (61.90).
+CaresMCP is research software, not a medical device. Check each upstream
+checkpoint's license and access terms before use.

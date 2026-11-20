@@ -2,10 +2,13 @@
 ===========
 
 Function-level documentation for the registered tools, grouped by the same clinical or
-functional categories as :doc:`../tools/index`. Each page documents the modules and
+functional categories as :doc:`../coverage/index`. Each page documents the modules and
 functions behind a category, including their signatures, accepted inputs, and outputs.
-Survey-only categories (fluoroscopy, nuclear medicine) have no callable API; their tool
-pages record the candidate survey.
+For choosing a tool, start with :doc:`../capabilities/index`; use this section when you
+need the exact signature or return type.
+
+Survey-only categories (fluoroscopy, nuclear medicine) have no callable API; their
+coverage pages record the candidate survey.
 
 .. list-table::
    :header-rows: 1

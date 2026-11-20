@@ -2,7 +2,7 @@
 name: write-docs
 description: >-
   Write or update docs/ or docstring. Use when editing APIs, tool docstrings,
-  category survey docstrings, docs/api or docs/tools Sphinx pages, footcites,
+  category survey docstrings, docs/api or docs/coverage Sphinx pages, footcites,
   or when make docs fails.
 ---
 
@@ -30,7 +30,7 @@ it. Describe inputs in Pydantic `Field`s instead.
 
 ## Category survey (`src/caresmcp/<category>/__init__.py`)
 
-The module docstring is the category survey; `docs/tools/<category>.rst` renders
+The module docstring is the category survey; `docs/coverage/<category>.rst` renders
 it verbatim.
 
 - Mark integrated tools with `|x|`, deferred candidates with `|o|`.
@@ -53,7 +53,7 @@ Reference examples: `src/caresmcp/nuclearmed/__init__.py`,
 
 - `docs/api/<category>.rst` - per-module `automodule`/`autofunction` listings
   for the category's tool functions.
-- `docs/tools/<category>.rst` - tracking of implementation, status, links, citations.
+- `docs/coverage/<category>.rst` - tracking of implementation, status, links, citations.
 - `docs/sources/*.rst` - model distributors/loaders, e.g. hf, torchhub.
 - `docs/bib/<category>.bib` - per-category bib source to avoid git conflicts.
 

@@ -37,7 +37,7 @@ variables that are unset.
         - :doc:`torch-hub </sources/torch-hub>`
       * - :envvar:`TOTALSEG_HOME_DIR`
         - ``$CARESMCP_CACHE/models/totalseg``
-        - :doc:`medai </tools/medai>`
+        - :doc:`medai </coverage/medai>`
 
    ONNX Runtime and TorchXRayVision checkpoints have no dedicated variable; they write
    directly into ``$CARESMCP_CACHE/models``.

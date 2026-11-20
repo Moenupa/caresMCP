@@ -1,4 +1,4 @@
-🫀 Ultrasound API
+💓 Ultrasound API
 =================
 
 .. automodule:: caresmcp.ultrasound.echonet_dynamic

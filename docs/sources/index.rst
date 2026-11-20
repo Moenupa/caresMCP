@@ -1,4 +1,4 @@
-🗂️ Supported Sources
+🖇 Supported Sources
 ====================
 
 CaresMCP accesses model checkpoints through the loaders in ``caresmcp.api.models``

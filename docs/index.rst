@@ -1,42 +1,104 @@
-CaresMCP documentation
-======================
+CaresMCP
+========
 
-CaresMCP brings dedicated medical ML models and tools to agents through the Model
-Context Protocol (MCP). Every tool returns self-explanatory, traceable evidence — label
-probabilities, masks, heatmaps, or embeddings — that an agent can cite when reasoning
-about a medical image.
+Medical imaging tools for AI agents, served over the Model Context Protocol (MCP).
+CaresMCP wraps dedicated medical models behind 50+ callable tools and returns evidence
+an agent can cite: scores, masks, heatmaps, measurements, and embeddings.
 
-🧭 Getting Started Guide
-------------------------
+.. grid:: 2
+   :gutter: 3
 
-New to CaresMCP? Follow this path:
+   .. grid-item-card:: 🤖 Connect an agent
+      :link: quick-start
+      :link-type: doc
 
-- :doc:`intro` — understand what CaresMCP does and how its pieces fit together.
-- :doc:`installation` — install the package and the optional model backends.
-- :doc:`quick-start` — list tools, serve them over MCP, and run one directly.
-- :doc:`envvar` — relocate model caches and tune cache size and HTTP timeouts
-  (optional).
-- :doc:`faq` — find answers to common questions.
+      Install CaresMCP, start the MCP server, and add it to a client.
+
+   .. grid-item-card:: 🧰 Browse capabilities
+      :link: capabilities/index
+      :link-type: doc
+
+      Find a tool by task or modality. The catalog is generated from the
+      registry.
+
+   .. grid-item-card:: 🧪 Run one tool
+      :link: run-one-tool
+      :link-type: ref
+
+      Call a registered tool directly with JSON arguments and inspect its
+      output.
+
+   .. grid-item-card:: 🧩 Add a tool or model
+      :link: contributing
+      :link-type: doc
+
+      Register a new tool, add a model survey, and rebuild the docs.
+
+⚡ 60-Second Example
+--------------------
+
+.. code-block:: console
+
+   $ uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ caresmcp list xray
+   $ caresmcp debug image inspect \
+       '{"image": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
+   {
+     "format": "PNG",
+     "width": 1024,
+     "height": 1024,
+     "mode": "L"
+   }
+
+The tool name is the same one the MCP server exposes. See :doc:`quick-start` for the
+full install, serve, and client-configuration steps.
+
+🧰 What's Inside
+----------------
+
+- 🩻 **Clinical categories** — CT, DSA and catheter angiography, mammography, MRI,
+  pathology, ultrasound, X-ray, and generic medical-AI and image tools.
+- 🏷️ **Task-oriented tools** — classification, regression, segmentation, localization,
+  retrieval, embeddings, captioning, denoising, and evaluation.
+- 📤 **Agent-friendly evidence** — JSON scores and measurements, plus masks and heatmaps
+  with documented colors.
+- 🔌 **Shared model loaders** — checkpoint download, caching, and device placement are
+  handled once per model source; see :doc:`sources/index`.
+
+🧭 Where to Go Next
+-------------------
+
+- **New here?** Read :doc:`intro`, then :doc:`concepts`, then :doc:`quick-start`.
+- **Choosing a tool?** Start with :doc:`capabilities/index`.
+- **Checking provenance?** Use :doc:`coverage/index` and :doc:`sources/index`.
+- **Looking up a signature?** Use :doc:`api/index`.
+- **Tuning caches or timeouts?** See :doc:`envvar`.
+- **Running in production?** Read :doc:`limitations`.
 
 .. toctree::
    :hidden:
-   :caption: 🚀 Quick Start
+   :caption: 🚀 Start Here
 
    intro
+   concepts
    installation
    quick-start
    envvar
+   limitations
    faq
 
 .. toctree::
-   :caption: ℹ️ What's in the MCP?
+   :hidden:
+   :caption: 🧰 Capabilities
 
-   tools/index
+   capabilities/index
+   coverage/index
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: 🛠 API Reference
+   :caption: 🛠 Reference
 
+   contributing
    sources/index
    api/index

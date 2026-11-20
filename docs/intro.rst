@@ -12,13 +12,13 @@ agent workflows.
 🧰 What's Inside
 ----------------
 
-- 🧠 **Workflow APIs** — 50+ end-to-end tools for classification, segmentation,
+- 🧠 **Workflow tools** — 50+ end-to-end tools for classification, segmentation,
   localization, retrieval, embeddings, denoising, and image utilities.
-- 🔌 **Framework adapters** — unified loaders for
-  :external+transformers:doc:`transformers <index>`, :external+monai:doc:`MONAI
-  <index>`, :external+timm:doc:`timm <index>`, :external+torch:doc:`torch.hub <hub>`,
-  and more (see :doc:`sources/index`), so new models only need thin wrappers for
-  inference logic.
+- 🔌 **Model loaders** — shared loaders for :external+transformers:doc:`transformers
+  <index>`, :external+monai:doc:`MONAI <index>`, :external+timm:doc:`timm <index>`,
+  :external+torch:doc:`torch.hub <hub>`, and more (see :doc:`sources/index`). They
+  standardize how checkpoints are fetched, cached, and placed on a device, so a new
+  model needs only its preprocessing and inference logic.
 - 🩻 **Modality coverage** — DSA and catheter angiography, echocardiography and
   ultrasound, mammography, MRI, musculoskeletal imaging, pathology, and X-ray and CT.
 - 📤 **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and
@@ -44,11 +44,29 @@ These tasks compose into an evidence trail: an agent can denoise, score, inspect
 the score comes from, compare against references, and calibrate — so its conclusion
 stays tied to the tool result and image region supporting it.
 
-🗺️ Explore the Docs
+🗺️ How the Pieces Fit
+---------------------
+
+- 🛠️ A **tool** is one callable function with a stable name. The same name is used by
+  the MCP server and by ``caresmcp debug``.
+- 🗂️ A **category** groups tools for listing and CLI invocation, for example ``xray`` or
+  ``pathology``.
+- 🏷️ A **task** describes what a tool returns, such as classify, segment, or embed. The
+  :doc:`capabilities/catalog` is organized by task.
+- 🧠 A **model** or **checkpoint** is the upstream network behind a tool. The
+  :doc:`coverage/index` pages record provenance and access terms.
+- 📦 A **loader** standardizes checkpoint download, caching, and device placement across
+  a model source; see :doc:`sources/index`.
+
+The :doc:`concepts` page defines these terms in more detail, including how byte inputs
+and outputs behave.
+
+🧭 Explore the Docs
 -------------------
 
+- :doc:`concepts` — define the vocabulary and output contract.
+- :doc:`capabilities/index` — browse callable tools by task or modality.
+- :doc:`coverage/index` — check which models are integrated, deferred, or out of scope.
 - :doc:`installation` — set up CaresMCP and its optional model backends.
-- :doc:`quick-start` — list tools, start the MCP server, and run a tool.
-- :doc:`tools/index` — browse tools for each clinical category.
-- :doc:`sources/index` — learn how checkpoints are fetched and cached.
+- :doc:`quick-start` — go from install to a running MCP server and one tool call.
 - :doc:`api/index` — look up tool signatures and implementation details.

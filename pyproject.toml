@@ -1,7 +1,7 @@
 [project]
 name = "caresmcp"
 version = "0.1.0"
-description = "Medical MCP"
+description = "Medical imaging toolkit for AI agents, served over MCP"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
@@ -71,6 +71,12 @@ docs = [
     "sphinxawesome-theme",
     "sphinxcontrib-bibtex",
 ]
+
+[project.urls]
+Homepage = "https://caresmcp.readthedocs.io"
+Documentation = "https://caresmcp.readthedocs.io/"
+Repository = "https://github.com/Moenupa/caresMCP.git"
+Issues = "https://github.com/Moenupa/caresMCP/issues"
 
 [project.scripts]
 caresmcp = "caresmcp.cli:app"
