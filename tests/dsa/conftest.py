@@ -1,16 +1,41 @@
-"""Real coronary angiography example for the DSA tools."""
+"""Official Stenoz coronary angiography samples for the DSA tools."""
+
+import json
 
 import pytest
 
 from caresmcp.api.decorators.bytes_io import _read_bytes
 
-# ARCADE sample (CC0) shipped with the Stenoz release: a 512-square X-ray
-# coronary angiography frame with a cardiologist-annotated stenosis.
-CORONARY_ANGIOGRAM_URL = (
-    "https://raw.githubusercontent.com/uzbtrust/stenoz/main/samples/126.png"
+# The Stenoz release (MIT) ships ten ARCADE frames with cardiologist stenosis
+# boxes. Pin the repository revision so a moved branch cannot change the inputs.
+STENOZ_REVISION = "2c3df091c8ff7b035ec925fcd496c6402e6de8a3"
+STENOZ_SAMPLES_ROOT = (
+    f"https://cdn.jsdelivr.net/gh/uzbtrust/stenoz@{STENOZ_REVISION[:9]}/samples/"
+)
+CORONARY_SAMPLE_NAMES = (
+    "104",
+    "110",
+    "126",
+    "131",
+    "141",
+    "143",
+    "148",
+    "159",
+    "167",
+    "21",
 )
 
 
 @pytest.fixture(scope="session")
-def coronary_angiogram() -> bytes:
-    return _read_bytes(CORONARY_ANGIOGRAM_URL)
+def coronary_samples() -> dict[str, bytes]:
+    """Read every released sample frame from the revision-pinned snapshot."""
+    return {
+        name: _read_bytes(f"{STENOZ_SAMPLES_ROOT}{name}.png")
+        for name in CORONARY_SAMPLE_NAMES
+    }
+
+
+@pytest.fixture(scope="session")
+def coronary_annotations() -> dict[str, dict[str, list[list[float]]]]:
+    """Read the released cardiologist boxes keyed by sample file name."""
+    return json.loads(_read_bytes(f"{STENOZ_SAMPLES_ROOT}annotations.json"))
