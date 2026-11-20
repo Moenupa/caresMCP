@@ -7,40 +7,53 @@ import pydicom
 import pytest
 from pydicom.pixels import apply_modality_lut
 
-from caresmcp.api.decorators.bytes_io import _read_bytes
+from caresmcp.api.decorators import download_bytes
 from caresmcp.api.io import decode_dicom, is_dicom
 
 pytestmark = pytest.mark.slow
 
+# pydicom's released CQ500 head CT slice: 512x512, HU rescaling, axial PL.
+# Pinned to a pydicom-data commit, the same release the CT tool tests use.
 CT_DICOM_URL = (
-    "https://saga-it.com/dicom/samples/files/ct-lung-screening-nlst/instance.dcm"
+    "https://cdn.jsdelivr.net/gh/pydicom/pydicom-data@"
+    "abc42b90985fb6cf385aa4af766d2c9c94a257a4/data_store/data/693_UNCR.dcm"
 )
+CT_DICOM_SHA256 = "cc4cdd599231922ecf63de2ddacf03d51c4588805c9154c2eef1ff49c23b32be"
+# The 1024x1024 PA chest radiograph shipped in TorchXRayVision's tests at the
+# 1.5.7 tag. jsDelivr mirrors the same Git blob more reliably than
+# raw.githubusercontent.com.
 CHEST_DICOM_URL = (
-    "https://raw.githubusercontent.com/mlmed/torchxrayvision/1.5.7/tests/"
+    "https://cdn.jsdelivr.net/gh/mlmed/torchxrayvision@1.5.7/tests/"
     "1.2.276.0.7230010.3.1.4.8323329.6904.1517875201.850819.dcm"
 )
+CHEST_DICOM_SHA256 = "13d378bfe1af0724e8cbe51adde36882cfdc6a69361c8a48ac30f688c3af7613"
+# pydicom's released two-frame RGB secondary capture with RLE pixel data at
+# the v3.0.1 tag.
 MULTIFRAME_DICOM_URL = (
-    "https://raw.githubusercontent.com/pydicom/pydicom/v3.0.1/"
+    "https://cdn.jsdelivr.net/gh/pydicom/pydicom@v3.0.1/"
     "src/pydicom/data/test_files/SC_rgb_rle_2frame.dcm"
+)
+MULTIFRAME_DICOM_SHA256 = (
+    "cc9cd098ab099b5f7a18c4599f2858d2f3f3471590ff8a14d4cf7c834692d9f0"
 )
 
 
 @pytest.fixture(scope="module")
 def ct_dicom() -> bytes:
     """A real CT slice with HU rescaling and acquisition geometry."""
-    return _read_bytes(CT_DICOM_URL)
+    return download_bytes(CT_DICOM_URL, checksum=CT_DICOM_SHA256)
 
 
 @pytest.fixture(scope="module")
 def chest_dicom() -> bytes:
     """A real 1024x1024 PA chest radiograph DICOM."""
-    return _read_bytes(CHEST_DICOM_URL)
+    return download_bytes(CHEST_DICOM_URL, checksum=CHEST_DICOM_SHA256)
 
 
 @pytest.fixture(scope="module")
 def multiframe_dicom() -> bytes:
     """A real two-frame RGB secondary-capture DICOM with RLE pixel data."""
-    return _read_bytes(MULTIFRAME_DICOM_URL)
+    return download_bytes(MULTIFRAME_DICOM_URL, checksum=MULTIFRAME_DICOM_SHA256)
 
 
 def test_is_dicom(ct_dicom: bytes, chest_dicom: bytes, dummy_jpeg: bytes) -> None:

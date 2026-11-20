@@ -6,11 +6,16 @@ description: >-
 
 # Write tests
 
+The sole purpose of tests is to check the correctness of our implementation.
+
 Prefer end-to-end, tool-level tests with real inputs: reproducing a claimed
 result beats checking shapes. Test `api/` helpers shared by several tools, but
 skip private helpers local to one tool, the MCP server, and tests that are
 obvious or could not pass type checking. Never fake or synthesize inputs to make
 a test pass.
+
+If public score reproduction is not possible, fallback to check the code.
+Avoid self-reported scores.
 
 ## Layout
 
@@ -31,6 +36,9 @@ def pathology_image() -> bytes:
     # reduce github urls, as they can be rate-limited
     return _read_bytes("https://example.org/real-slide-region.png")
 ```
+
+Avoid full dataset downloading or checking. Our tests should be minimal,
+but tests the core functionalities.
 
 ## Test tools
 
