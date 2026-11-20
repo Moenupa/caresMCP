@@ -1,6 +1,27 @@
 ❓ FAQ
 ======
 
+🗂️ Where can I find the tool list?
+----------------------------------
+
+Use :doc:`capabilities/index` for callable tools grouped by task or modality,
+:doc:`coverage/index` for the model surveys behind each category, and :doc:`api/index`
+for exact signatures and return types. ``caresmcp list`` prints the same registry from
+the command line.
+
+🧠 What do the task tags mean?
+------------------------------
+
+Task tags describe the evidence a tool returns: classification, regression,
+segmentation, localization, retrieval, embeddings, captioning, denoising, or evaluation.
+See :doc:`concepts` for the full vocabulary.
+
+📊 What is CaresAgentBench?
+---------------------------
+
+CaresAgentBench is the agent evaluation effort alongside CaresMCP. The pilot study and
+its work-in-progress status are on :doc:`caresagentbench`.
+
 📦 Do I need to install every model backend?
 --------------------------------------------
 
@@ -25,7 +46,7 @@ as FleXray, MONAI, UMAIR, and the BioViL image encoder build a fresh model per c
 
 Run ``caresmcp debug <category> <tool> <kwargs>``; pass ``help`` as the last argument to
 print the tool's signature. See :doc:`quick-start` for accepted input formats and how
-outputs are saved.
+outputs are saved, and :doc:`concepts` for the CLI-versus-MCP input differences.
 
 🤖 Does CaresMCP run LLMs or VLMs?
 ----------------------------------

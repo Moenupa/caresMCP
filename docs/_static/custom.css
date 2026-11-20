@@ -3,10 +3,63 @@
   font-size: 0.875em;
 }
 
+/* Keep long registry names inside the content column instead of letting
+   generated capability tables run under the right-hand page ToC. */
+#content table.capability-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+#content table.capability-table th,
+#content table.capability-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+#content table.capability-table code,
+#content table.capability-table code .pre {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Smaller names in the tool and category columns so more characters fit. */
+#content table.capability-table td:first-child code {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+#content table.tool-catalog-table td:nth-child(2) a .doc {
+  font-family: var(--font-stack--monospace);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+#content table.tool-catalog-table td:nth-child(3) {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+#content table.tool-catalog-table td:nth-child(3) code {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+#content table.tool-summary-table td:nth-child(4) {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+#content table.tool-summary-table td:nth-child(4) code {
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .bibliography-footnotes::before {
   content: "";
   display: block;
   width: 5rem;
-  border-top: 1px solid var(--color-foreground-border);
+  border-top: 1px solid #99999999;
   margin-bottom: 1rem;
 }

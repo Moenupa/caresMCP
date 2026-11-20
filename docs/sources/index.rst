@@ -1,5 +1,5 @@
-🗂️ Supported Sources
-====================
+🖇 Supported Sources
+===================
 
 CaresMCP accesses model checkpoints through the loaders in ``caresmcp.api.models``
 (TotalSegmentator manages its own weights under :envvar:`TOTALSEG_HOME_DIR`). Each

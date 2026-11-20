@@ -139,7 +139,13 @@ html_permalinks_icon = "<span>#</span>"
 theme_options = ThemeOptions(
     show_scrolltop=True,
     awesome_external_links=True,
-    main_nav_links={"Docs": "index"},
+    main_nav_links={
+        "Docs": "index",
+        "Capabilities": "capabilities/index",
+        "Models": "coverage/index",
+        "API": "api/index",
+        "CaresAgentBench (WIP)": "caresagentbench",
+    },
     extra_header_link_icons={
         "GitHub": {
             "link": "https://github.com/Moenupa/caresMCP/",

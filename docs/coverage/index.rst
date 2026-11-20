@@ -1,10 +1,13 @@
-🧰 Tools by Modality
-====================
+🗂️ Model Coverage
+=================
 
-All tools are grouped by the clinical or functional category they serve. Each page
-summarizes the models behind the registered tools and their input and output formats;
-see :doc:`../api/index` for function-level reference. Pages without integrated tools
-record the candidate model survey instead.
+These pages survey the models behind each category: what is integrated, what is deferred
+and why, and which checkpoints are out of scope. They are the reference for provenance,
+access terms, and model-selection decisions.
+
+For the list of callable tools, use :doc:`../capabilities/index` instead. A survey page
+can list deferred candidates that have no registered tool, and a registered tool can
+accept checkpoints that the survey describes only as examples.
 
 - :doc:`medai` — generic Hugging Face classification, embedding, segmentation, and
   TotalSegmentator anatomy segmentation.

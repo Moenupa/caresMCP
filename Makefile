@@ -1,6 +1,6 @@
-.PHONY: all help format-check format check test test-slow list docs
+.PHONY: all help format-check format check test test-slow list catalog catalog-check docs
 
-check_dirs := src tests
+check_dirs := src tests scripts
 
 # uvx with fallback, e.g.: 1. `uvx ruff check` 2. `ruff check`
 TOOL := $(shell command -v uv >/dev/null 2>&1 && echo "uvx" || echo "")
@@ -18,6 +18,8 @@ help:
 	@echo "  check:         Run type checker"
 	@echo "  test:          Run quick tests"
 	@echo "  test-slow:     Run tests with real examples (slow)"
+	@echo "  catalog:       Regenerate the capability catalog pages"
+	@echo "  catalog-check: Verify the generated catalog pages are current"
 	@echo "  docs:          Build documentation in docs/_build/html"
 
 format-check:
@@ -42,6 +44,12 @@ test-slow:
 list:
 	$(RUN) caresmcp list
 
-docs: format
+catalog:
+	$(RUN) --no-dev scripts/generate_catalog.py
+
+catalog-check:
+	$(RUN) --no-dev scripts/generate_catalog.py --check
+
+docs: catalog format
 	rm -r $(DOCS_OUT)
 	$(RUN) --extra docs sphinx-build $(SPHINXOPTS) $(DOCS_SRC) $(DOCS_OUT)
