@@ -12,6 +12,8 @@
 
 .. autofunction:: caresmcp.medai.hf.hf_segment_image
 
+.. autofunction:: caresmcp.medai.hf.hf_segment_semantic
+
 .. automodule:: caresmcp.medai.totalsegmentator
    :no-members:
 

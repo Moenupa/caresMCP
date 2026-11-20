@@ -11,6 +11,7 @@ MonaiModels = Literal[
     "MONAI/pathology_tumor_detection",
     "MONAI/pathology_nuclei_classification",
     "MONAI/pathology_nuclei_segmentation_classification",
+    "MONAI/ventricular_short_axis_3label",
 ]
 
 MONAI_MODEL_REVISIONS: dict[MonaiModels, str] = {
@@ -18,12 +19,18 @@ MONAI_MODEL_REVISIONS: dict[MonaiModels, str] = {
     "MONAI/pathology_tumor_detection": "0.6.3",
     "MONAI/pathology_nuclei_classification": "0.2.1",
     "MONAI/pathology_nuclei_segmentation_classification": "0.2.7",
+    "MONAI/ventricular_short_axis_3label": "0.3.5",
 }
 
 
 def _build_monai_model(model_id: MonaiModels) -> "Module":
     """Instantiate the architecture released for a MONAI model-zoo checkpoint."""
-    from monai.networks.nets import DenseNet121, HoVerNet, TorchVisionFCModel
+    from monai.networks.nets import (
+        DenseNet121,
+        HoVerNet,
+        TorchVisionFCModel,
+        UNet,
+    )
 
     match model_id:
         case "MONAI/breast_density_classification":
@@ -47,6 +54,15 @@ def _build_monai_model(model_id: MonaiModels) -> "Module":
         case "MONAI/pathology_nuclei_segmentation_classification":
             return HoVerNet(
                 mode="fast", adapt_standard_resnet=True, in_channels=3, out_classes=5
+            )
+        case "MONAI/ventricular_short_axis_3label":
+            return UNet(
+                spatial_dims=2,
+                in_channels=1,
+                out_channels=4,
+                channels=(16, 32, 64, 128, 256),
+                strides=(2, 2, 2, 2),
+                num_res_units=2,
             )
         case _:
             raise ValueError("Unsupported MONAI model")

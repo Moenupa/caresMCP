@@ -16,6 +16,8 @@ record the candidate model survey instead.
 - :doc:`fluoroscopy` — model survey for fluoroscopic examinations; no licensed, servable
   model is integrated.
 - :doc:`mammography` — breast-density and mammogram-patch classification.
+- :doc:`mri` — task-specific cardiac, stroke, and brain-tumor segmentation and slice
+  registration.
 - :doc:`nuclearmed` — FDG PET/CT tumor segmentation and PET/CT anatomical-context
   candidates; no checkpoint integrated yet.
 - :doc:`pathology` — nuclei and tumor analysis, pathology embeddings, PRISM/PRISM2
@@ -34,6 +36,7 @@ record the candidate model survey instead.
    dsa
    fluoroscopy
    mammography
+   mri
    nuclearmed
    pathology
    ultrasound
