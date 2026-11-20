@@ -28,6 +28,9 @@ pages record the candidate survey.
    - - :doc:`mammography`
      - ``mammography``
      - ``caresmcp.mammography``
+   - - :doc:`mri`
+     - ``mri``
+     - ``caresmcp.mri``
    - - :doc:`nuclearmed`
      - ``nuclearmed``
      - ``caresmcp.nuclearmed``
@@ -49,6 +52,7 @@ pages record the candidate survey.
    ct
    dsa
    mammography
+   mri
    nuclearmed
    pathology
    ultrasound

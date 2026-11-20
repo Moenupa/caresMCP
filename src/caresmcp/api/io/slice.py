@@ -1,4 +1,4 @@
-"""Decode encoded raster slices into validated numeric arrays.
+"""Decode encoded raster slices and encode processed intensities.
 
 These helpers form the shared raster path for modality adapters. Pixel modes
 and dtypes stay explicit so calibrated decoders (for example CT HU) and
@@ -12,7 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from .image import decode_as, is_grayscale
+from .image import decode_as, encode_as, is_grayscale
 
 
 def decode_single_frame(image: bytes) -> Image.Image:
@@ -99,6 +99,45 @@ def normalize_minmax(
     if maximum == minimum:
         return np.zeros(values.shape, dtype=np.float32), minimum, maximum
     return (values - minimum) / (maximum - minimum), minimum, maximum
+
+
+def encode_intensity_slice(
+    pixels: NDArray[Any],
+    minimum: float,
+    maximum: float,
+    source_dtype: Any,
+) -> bytes:
+    """Restore normalized pixels to source intensities and encode losslessly.
+
+    Processing tools normalize intensities to ``[0, 1]``; this helper maps the
+    result back onto the observed source range. Unsigned 8- and 16-bit sources
+    become grayscale PNGs, while signed and floating-point sources become TIFFs
+    so their value range survives the round trip.
+
+    Args:
+        pixels: Processed slice normalized to ``[0, 1]``.
+        minimum: Original slice minimum.
+        maximum: Original slice maximum.
+        source_dtype: NumPy dtype of the decoded source slice.
+
+    Returns:
+        Encoded grayscale PNG or TIFF bytes.
+
+    Raises:
+        ValueError: If ``pixels`` is not a finite 2D slice.
+    """
+    values = float_slice(pixels)
+    dtype = np.dtype(source_dtype)
+    restored = minimum + np.clip(values, 0.0, 1.0) * (maximum - minimum)
+    if np.issubdtype(dtype, np.unsignedinteger) and dtype.itemsize <= 2:
+        upper = float((1 << (8 * dtype.itemsize)) - 1)
+        output = np.rint(np.clip(restored, 0.0, upper)).astype(dtype)
+        return encode_as(Image.fromarray(output))
+    if np.issubdtype(dtype, np.integer):
+        output = np.rint(restored).astype(np.int32)
+    else:
+        output = restored.astype(np.float32)
+    return encode_as(Image.fromarray(output), format="TIFF")
 
 
 def rgb8_slice(pixels: NDArray[np.uint8]) -> NDArray[np.uint8]:

@@ -78,6 +78,43 @@ def check_bbox(
     return (x_min, y_min, x_max, y_max)
 
 
+def check_points(
+    points: Sequence[Sequence[float]],
+    point_labels: Sequence[int] | None,
+    width: int,
+    height: int,
+) -> tuple[list[tuple[float, float]], list[int]]:
+    """Validate point prompts in original-image pixel coordinates.
+
+    Args:
+        points: ``(x, y)`` pairs in pixels.
+        point_labels: One label per point: 1 foreground, 0 background.
+        width: Image width in pixels.
+        height: Image height in pixels.
+
+    Returns:
+        The validated points and labels.
+    """
+    if not points:
+        raise ValueError("points must contain at least one coordinate pair")
+    if point_labels is None or len(points) != len(point_labels):
+        raise ValueError("points and point_labels must have equal, non-zero lengths")
+    checked_points: list[tuple[float, float]] = []
+    for point in points:
+        if len(point) != 2:
+            raise ValueError("each point must contain two coordinates")
+        x, y = (float(value) for value in point)
+        if not (np.isfinite(x) and np.isfinite(y)):
+            raise ValueError("point coordinates must be finite")
+        if not (0 <= x < width and 0 <= y < height):
+            raise ValueError("point coordinates must lie within the image")
+        checked_points.append((x, y))
+    checked_labels = [int(label) for label in point_labels]
+    if any(label not in (0, 1) for label in checked_labels):
+        raise ValueError("point labels must be 0 or 1")
+    return checked_points, checked_labels
+
+
 def draw_legends(
     image: Image.Image,
     labels: Sequence[str],

@@ -6,6 +6,7 @@ from . import (  # noqa: F401
     fluoroscopy,
     mammography,
     medai,
+    mri,
     pathology,
     prompts,
     tools,
