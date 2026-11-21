@@ -15,44 +15,49 @@ examinations, calls medical imaging tools on the studies, and grounds its
 diagnosis in the evidence:
 
 ```mermaid
+---
+config:
+  markdownAutoWrap: false
+---
 flowchart TD
-    patient(["<b>Patient</b><br/><i>demographics · symptoms</i>"])
-
-    subgraph agent["<b>Agent</b> · <i>orchestrator</i>"]
-        direction TB
-        vlm[["<b>VLM</b><br/><i>perception · reasoning</i>"]]
-    end
-
-    his[("<b>HIS</b> <i>(simulated)</i><br/>records · lab tests · images")]
+    patient(["`<b>Patient</b><br/>demographics · symptoms`"])
+    agent["`<b>Agent</b> · <i>orchestrator</i><br/>perception · reasoning`"]
+    his[("`<b>HIS</b> <i>(simulated)</i><br/>records · reports · images`")]
 
     subgraph caresmcp["<b>CaresMCP</b> · <i>diagnostic toolkit</i>"]
         direction TB
-        evidence[/"<b>Evidence</b><br/><i>scores · masks · measurements</i>"/]
+        evidence(["`<b>Evidence</b><br/>scores · masks · measurements`"])
     end
 
-    diagnosis(["<b>Diagnosis</b><br/><i>grounded in evidence</i>"])
+    diagnosis(["`<b>Diagnosis</b><br/>grounded in evidence`"])
+    human["<b>Human<br/>Clinician</b>"]
 
     patient -->|"① presents"| agent
-    agent <-->|"② orders exam → images"| his
-    agent ==>|"③ calls tools"| caresmcp
-    caresmcp ==>|"④ returns evidence"| agent
-    caresmcp -.->|"<i>traceability</i>"| diagnosis
-    agent -->|"⑤ concludes"| diagnosis
+    his <-->|"② orders exam → images"| agent
+    agent <-.->|"④ if uncertain"| human
+    agent <==>|"③ calls tools → evidence"| caresmcp
+    caresmcp -.-|"<i>traceability</i>"| diagnosis
+    agent -->|"④ concludes"| diagnosis
+    human <-.->|"⑤ reviews"| diagnosis
 
-    classDef io fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B,stroke-width:1.5px
-    classDef model fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.5px
-    classDef db fill:#CCFBF1,stroke:#0D9488,color:#042F2E,stroke-width:1.5px
-    classDef evid fill:#FEF3C7,stroke:#D97706,color:#451A03,stroke-width:1.5px
-    classDef result fill:#FFE4E6,stroke:#E11D48,color:#4C0519,stroke-width:2.5px
+    %% Semantic color classes
+    classDef patient fill:#EFF6FF,stroke:#3B82F6,color:#1E40AF,stroke-width:1.5px
+    classDef agent fill:#ECFDF5,stroke:#059669,color:#065F46,stroke-width:2px
+    classDef his fill:#F1F5F9,stroke:#64748B,color:#334155,stroke-width:1.5px
+    classDef evidence fill:#FFFBEB,stroke:#D97706,color:#92400E,stroke-width:1.5px
+    classDef human fill:#F5F3FF,stroke:#8B5CF6,color:#5B21B6,stroke-width:1.5px
+    classDef result fill:#EEF2FF,stroke:#4F46E5,color:#312E81,stroke-width:2.5px
 
-    class patient io
-    class vlm model
-    class his db
-    class evidence evid
+    class patient patient
+    class agent agent
+    class his his
+    class evidence evidence
+    class human human
     class diagnosis result
 
-    style agent fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#14532D
-    style caresmcp fill:#FFFBEB,stroke:#D97706,stroke-width:2px,color:#451A03
+    style caresmcp fill:#FFFCF5,stroke:#D97706,stroke-width:1.5px,color:#92400E
+
+    linkStyle default stroke:#64748B,stroke-width:1.5px
 ```
 
 ## Quick start
