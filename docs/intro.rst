@@ -12,16 +12,16 @@ agent workflows.
 🧰 What's Inside
 ----------------
 
-- 🧠 **Workflow tools** — 50+ end-to-end tools for classification, segmentation,
+- **Workflow tools** — 50+ end-to-end tools for classification, segmentation,
   localization, retrieval, embeddings, denoising, and image utilities.
-- 🔌 **Model loaders** — shared loaders for :external+transformers:doc:`transformers
+- **Model loaders** — shared loaders for :external+transformers:doc:`transformers
   <index>`, :external+monai:doc:`MONAI <index>`, :external+timm:doc:`timm <index>`,
   :external+torch:doc:`torch.hub <hub>`, and more (see :doc:`sources/index`). They
   standardize how checkpoints are fetched, cached, and placed on a device, so a new
   model needs only its preprocessing and inference logic.
-- 🩻 **Modality coverage** — DSA and catheter angiography, echocardiography and
-  ultrasound, mammography, MRI, musculoskeletal imaging, pathology, and X-ray and CT.
-- 📤 **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and
+- **Modality coverage** — DSA and catheter angiography, echocardiography and ultrasound,
+  mammography, MRI, musculoskeletal imaging, pathology, and X-ray and CT.
+- **Agent-friendly outputs** — JSON-serializable results, with masks, heatmaps, and
   other image outputs accompanied by legends or descriptions that explain their colors.
 
 🔍 Why Traceable Evidence?
@@ -47,16 +47,16 @@ stays tied to the tool result and image region supporting it.
 🗺️ How the Pieces Fit
 ---------------------
 
-- 🛠️ A **tool** is one callable function with a stable name. The same name is used by
-  the MCP server and by ``caresmcp debug``.
-- 🗂️ A **category** groups tools for listing and CLI invocation, for example ``xray`` or
+- A **tool** is one callable function with a stable name. The same name is used by the
+  MCP server and by ``caresmcp debug``.
+- A **category** groups tools for listing and CLI invocation, for example ``xray`` or
   ``pathology``.
-- 🏷️ A **task** describes what a tool returns, such as classify, segment, or embed. The
+- A **task** describes what a tool returns, such as classify, segment, or embed. The
   :doc:`capabilities/catalog` is organized by task.
-- 🧠 A **model** or **checkpoint** is the upstream network behind a tool. The
+- A **model** or **checkpoint** is the upstream network behind a tool. The
   :doc:`coverage/index` pages record provenance and access terms.
-- 📦 A **loader** standardizes checkpoint download, caching, and device placement across
-  a model source; see :doc:`sources/index`.
+- A **loader** standardizes checkpoint download, caching, and device placement across a
+  model source; see :doc:`sources/index`.
 
 The :doc:`concepts` page defines these terms in more detail, including how byte inputs
 and outputs behave.

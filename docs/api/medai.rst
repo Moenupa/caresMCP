@@ -16,3 +16,7 @@
    :no-members:
 
 .. autofunction:: caresmcp.medai.totalsegmentator.totalsegmentator_segment_anatomy
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

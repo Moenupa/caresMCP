@@ -1,8 +1,8 @@
-"""Generate the task- and modality-oriented tool catalog pages.
+"""Generate the capability catalog and tool API reference pages.
 
-The registry is the source of truth for tool names, categories, task tags, and
-model choices. Run this script after changing the registry, then commit the
-generated pages:
+The registry is the source of truth for tool names, categories, task tags, model
+choices, and the functions documented by the API reference. Run this script after
+changing the registry, then commit the generated pages:
 
     uv run python scripts/generate_catalog.py
     uv run python scripts/generate_catalog.py --check
@@ -42,11 +42,9 @@ API_DIR = DOCS_DIR / "api"
 CAPABILITIES_DIR = DOCS_DIR / "capabilities"
 CATALOG_PATH = CAPABILITIES_DIR / "catalog.rst"
 BY_MODALITY_PATH = CAPABILITIES_DIR / "by-modality.rst"
+API_INDEX_PATH = API_DIR / "index.rst"
 
-GENERATED_NOTICE = (
-    "*Generated from the tool registry by ``scripts/generate_catalog.py``; "
-    "do not edit by hand.*"
-)
+GENERATED_NOTICE = "Auto-generated."
 FOOTER_NOTE = (
     "See :doc:`../installation` for extras and :doc:`../quick-start` for "
     "the first call."
@@ -71,6 +69,16 @@ PROSE_WIDTH = 88
 def count_label(count: int) -> str:
     """Return a tool count with the correctly pluralized noun."""
     return f"{count} interface" if count == 1 else f"{count} interfaces"
+
+
+def title_icon(
+    icon: str,
+    size: str = "1em",
+    color: str = "sd-text-primary",
+    src: str = "material-twotone",
+) -> str:
+    """Return a Material icon role and escaped space for a page title."""
+    return rf":{src}:`{icon};{size};{color} sd-mr-1`\ "
 
 
 def display_width(text: str) -> int:
@@ -152,6 +160,8 @@ class Category:
     slug: str
     label: str
     api_page: str | None = None
+    api_intro: str | None = None
+    api_empty: str | None = None
     empty: ClassVar[str] = "No interface currently falls in this category."
 
     @property
@@ -163,17 +173,38 @@ class Category:
     def anchor(self) -> str:
         return f"capabilities-category-{self.slug}"
 
+    @property
+    def api_heading(self) -> str:
+        """Return the title of the category's API page."""
+        return f"{self.label} API"
+
     def heading(self, count: int) -> str:
         return f"{self.label} ({count_label(count)})"
 
 
 CATEGORIES = (
     Category("medai", "🤖 Medical AI"),
-    Category("image", "📐 Generic Image Tools", "tools"),
+    Category(
+        "image",
+        "📐 Generic Tools",
+        "tools",
+        api_intro=(
+            "Registry category: ``image`` — use ``caresmcp debug image <tool> ...`` "
+            "to run a function directly."
+        ),
+    ),
     Category("ct", "🖥️ CT"),
     Category("dsa", "🫀 DSA and Catheter Angiography"),
     Category("mammography", "🩺 Mammography"),
     Category("mri", "🧲 MRI"),
+    Category(
+        "nuclearmed",
+        "☢️ Nuclear Medicine",
+        api_empty=(
+            "No nuclear-medicine tool functions are registered. See "
+            ":doc:`../coverage/nuclearmed` for the candidate model survey."
+        ),
+    ),
     Category("pathology", "🔬 Pathology"),
     Category("ultrasound", "💓 Ultrasound"),
     Category("xray", "🩻 X-ray"),
@@ -184,6 +215,11 @@ CATEGORY_BY_SLUG = {category.slug: category for category in CATEGORIES}
 def category_spec(slug: str) -> Category:
     """Return metadata for a category, defaulting to its slug as the label."""
     return CATEGORY_BY_SLUG.get(slug, Category(slug, slug))
+
+
+def function_target(function: FunctionType) -> str:
+    """Return the fully qualified autodoc target for a registered function."""
+    return f"{function.__module__}.{function.__qualname__}"
 
 
 @dataclass(frozen=True)
@@ -210,7 +246,7 @@ class Tool:
             category=category,
             tasks=tuple(task for task in TASKS if task.registers(name)),
             models=tuple(unpack_literal(function)),
-            api=f"{function.__module__}.{function.__qualname__}",
+            api=function_target(function),
             description=description,
         )
 
@@ -271,6 +307,66 @@ class Catalog:
         return (*known, *extra)
 
 
+def api_categories() -> tuple[Category, ...]:
+    """Return every registry category, including those without tools."""
+    known = [category for category in CATEGORIES if category.slug in REGISTRIES]
+    extra = [
+        category_spec(slug)
+        for slug in sorted(REGISTRIES.keys() - CATEGORY_BY_SLUG.keys())
+    ]
+    return (*known, *extra)
+
+
+@dataclass(frozen=True)
+class ApiEntry:
+    """A registered function and the autodoc target that documents it."""
+
+    name: str
+    module: str
+    target: str
+
+
+class ApiReference:
+    """Registered functions grouped into per-category API reference pages."""
+
+    def __init__(
+        self,
+        categories: Sequence[Category],
+        entries: dict[str, tuple[ApiEntry, ...]],
+    ) -> None:
+        self.categories = tuple(categories)
+        self._entries = entries
+
+    @classmethod
+    def from_registry(cls) -> "ApiReference":
+        """Collect every registered function, including TODO placeholders."""
+        entries = {
+            slug: tuple(
+                ApiEntry(
+                    name=name,
+                    module=function.__module__,
+                    target=function_target(function),
+                )
+                for name, function in registry.get_all().items()
+            )
+            for slug, registry in REGISTRIES.items()
+        }
+        return cls(api_categories(), entries)
+
+    def entries_in(self, category: Category) -> tuple[ApiEntry, ...]:
+        """Return a category's functions in registration order."""
+        return self._entries.get(category.slug, ())
+
+    def modules_in(
+        self, category: Category
+    ) -> tuple[tuple[str, tuple[ApiEntry, ...]], ...]:
+        """Return modules alphabetically with functions in registration order."""
+        grouped: dict[str, list[ApiEntry]] = {}
+        for entry in self.entries_in(category):
+            grouped.setdefault(entry.module, []).append(entry)
+        return tuple((module, tuple(grouped[module])) for module in sorted(grouped))
+
+
 type Cell = Callable[[Tool], str]
 
 
@@ -324,11 +420,11 @@ def representative_cell(tools: Sequence[Tool]) -> str:
 
 @dataclass(frozen=True)
 class TableSpec:
-    """The headers, column widths, and CSS class of an RST list-table."""
+    """The headers, optional column widths, and CSS class of an RST list-table."""
 
     headers: Sequence[str]
-    widths: Sequence[int]
-    class_name: str = TABLE_CLASS
+    widths: Sequence[int] | None = None
+    class_name: str | None = TABLE_CLASS
 
 
 class RstDocument:
@@ -353,19 +449,23 @@ class RstDocument:
             )
         )
 
+    def generated_note(self, text: str) -> None:
+        """Append a small, muted note marking the page as generated."""
+        self._blocks.append(f".. rst-class:: generated-page-note\n\n{text}")
+
     def heading(self, anchor: str, text: str) -> None:
         """Append an anchored section heading."""
         self._blocks.append(f".. _{anchor}:\n\n{text}\n{'-' * display_width(text)}")
 
     def table(self, spec: TableSpec, rows: Sequence[Sequence[str]]) -> None:
         """Append a list-table with a header row and the given body rows."""
-        lines = [
-            ".. list-table::",
-            f"   :class: {spec.class_name}",
-            "   :header-rows: 1",
-            f"   :widths: {' '.join(str(width) for width in spec.widths)}",
-            "",
-        ]
+        lines = [".. list-table::"]
+        if spec.class_name:
+            lines.append(f"   :class: {spec.class_name}")
+        lines.append("   :header-rows: 1")
+        if spec.widths:
+            lines.append(f"   :widths: {' '.join(str(width) for width in spec.widths)}")
+        lines.append("")
         for row in [spec.headers, *rows]:
             for index, cell in enumerate(row):
                 marker = "- -" if index == 0 else "  -"
@@ -388,6 +488,22 @@ class RstDocument:
             break_on_hyphens=False,
         ).replace("\n", "\n   ")
         self._blocks.append(f".. note::\n\n   {body}")
+
+    def autodoc(self, module: str, functions: Sequence[str]) -> None:
+        """Append a module heading and one autofunction per target."""
+        lines = [f".. automodule:: {module}", "   :no-members:"]
+        for function in functions:
+            lines.extend(("", f".. autofunction:: {function}"))
+        self._blocks.append("\n".join(lines))
+
+    def toctree(self, entries: Sequence[str], hidden: bool = False) -> None:
+        """Append a toctree directive."""
+        lines = [".. toctree::"]
+        if hidden:
+            lines.append("   :hidden:")
+        lines.append("")
+        lines.extend(f"   {entry}" for entry in entries)
+        self._blocks.append("\n".join(lines))
 
     def render(self) -> str:
         """Return the assembled document with a trailing newline."""
@@ -426,7 +542,6 @@ class Page(ABC):
         """Render the complete RST page."""
         rst = RstDocument()
         rst.title(self.title)
-        rst.paragraph(GENERATED_NOTICE)
         rst.paragraph(self.intro(catalog))
         rst.table(self.summary, self.summary_rows(catalog))
         for section in self.sections(catalog):
@@ -439,6 +554,7 @@ class Page(ABC):
             else:
                 rst.paragraph(section.empty)
         rst.note(FOOTER_NOTE)
+        rst.generated_note(GENERATED_NOTICE)
         return rst.render()
 
     @abstractmethod
@@ -458,7 +574,7 @@ class CatalogPage(Page):
     """The task-first catalog page."""
 
     path = CATALOG_PATH
-    title = "Tool Catalog"
+    title = "🗃 Tool Catalog"
     summary = TableSpec(("Task", "Interfaces", "Typical output"), TASK_SUMMARY_WIDTHS)
     table = TableSpec(
         ("Interface", "Category", "Models", "Description"),
@@ -496,7 +612,7 @@ class ModalityPage(Page):
     """The modality-first catalog page."""
 
     path = BY_MODALITY_PATH
-    title = "Tools by Modality"
+    title = "📁 Tools by Modality"
     summary = TableSpec(
         ("Category", "Interfaces", "Tasks", "Representative interfaces"),
         MODALITY_SUMMARY_WIDTHS,
@@ -535,12 +651,96 @@ class ModalityPage(Page):
         ]
 
 
+class ApiPage:
+    """A generated API reference page for one registry category."""
+
+    def __init__(self, category: Category) -> None:
+        self.category = category
+        self.path = API_DIR / f"{category.page}.rst"
+
+    @property
+    def title(self) -> str:
+        """Return the page title."""
+        return self.category.api_heading
+
+    def render(self, reference: ApiReference) -> str:
+        """Render the module and function documentation for the category."""
+        rst = RstDocument()
+        rst.title(self.title)
+        if self.category.api_intro is not None:
+            rst.paragraph(self.category.api_intro)
+        modules = reference.modules_in(self.category)
+        if not modules:
+            rst.paragraph(self.category.api_empty or self._empty_text())
+        for module, entries in modules:
+            rst.autodoc(module, tuple(entry.target for entry in entries))
+        rst.generated_note(GENERATED_NOTICE)
+        return rst.render()
+
+    def _empty_text(self) -> str:
+        """Return the fallback message for a category without functions."""
+        return (
+            "No tool functions are registered in this category. See "
+            f":doc:`../coverage/{self.category.page}` for the category survey."
+        )
+
+
+class ApiIndexPage:
+    """The generated index of API reference pages."""
+
+    path = API_INDEX_PATH
+    title = "🔧 Tool API"
+    intro = (
+        "Function-level documentation for the registered tools, grouped by the "
+        "same clinical or functional categories as :doc:`../coverage/index`. "
+        "Each page documents the modules and functions behind a category, "
+        "including their signatures, accepted inputs, and outputs. For choosing "
+        "a tool, start with :doc:`../capabilities/index`; use this section when "
+        "you need the exact signature or return type."
+    )
+    survey = (
+        "Survey-only categories (fluoroscopy, nuclear medicine) have no callable "
+        "API; their coverage pages record the candidate survey."
+    )
+    table = TableSpec(("Page", "CLI category", "Package"), class_name=None)
+
+    def render(self, reference: ApiReference) -> str:
+        """Render the index table and hidden toctree."""
+        rst = RstDocument()
+        rst.title(self.title)
+        rst.paragraph(self.intro)
+        rst.paragraph(self.survey)
+        rst.table(
+            self.table,
+            [
+                [
+                    f":doc:`{category.page}`",
+                    f"``{category.slug}``",
+                    f"``caresmcp.{category.page}``",
+                ]
+                for category in reference.categories
+            ],
+        )
+        rst.toctree([category.page for category in reference.categories], hidden=True)
+        rst.generated_note(GENERATED_NOTICE)
+        return rst.render()
+
+
 PAGES: tuple[Page, ...] = (CatalogPage(), ModalityPage())
+API_INDEX = ApiIndexPage()
 
 
-def render_pages(catalog: Catalog, pages: Sequence[Page] = PAGES) -> dict[Path, str]:
-    """Render every page to its output path."""
-    return {page.path: page.render(catalog) for page in pages}
+def render_pages(
+    catalog: Catalog,
+    reference: ApiReference,
+    pages: Sequence[Page] = PAGES,
+) -> dict[Path, str]:
+    """Render every generated page to its output path."""
+    rendered = {page.path: page.render(catalog) for page in pages}
+    api_pages = tuple(ApiPage(category) for category in reference.categories)
+    rendered.update({page.path: page.render(reference) for page in api_pages})
+    rendered[API_INDEX.path] = API_INDEX.render(reference)
+    return rendered
 
 
 def write_pages(pages: dict[Path, str]) -> None:
@@ -560,15 +760,15 @@ def check_pages(pages: dict[Path, str]) -> None:
     ]
     if not stale:
         return
-    print("Catalog pages are out of date; run `make catalog`.")
+    print("Generated pages are out of date; run `make catalog`.")
     for path in stale:
         print(f"  {path.relative_to(ROOT)}")
     raise typer.Exit(1)
 
 
 def main(check: bool = False) -> None:
-    """Write the catalog pages, or verify that checked-in copies are current."""
-    pages = render_pages(Catalog.from_registry())
+    """Write the generated pages, or verify that checked-in copies are current."""
+    pages = render_pages(Catalog.from_registry(), ApiReference.from_registry())
     if check:
         check_pages(pages)
     else:

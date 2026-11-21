@@ -42,15 +42,16 @@ Use ``feat/xxx``, ``fix/xxx``, or ``doc/xxx`` for branch names.
    interpret the output. Put full citations in a Google-style ``References:`` section
    and repository or model links in ``See Also:``.
 5. Add a test under ``tests/<category>/`` that exercises the public contract.
-6. Add the function to ``docs/api/<category>.rst`` with ``autofunction``.
-7. Regenerate the capability catalog:
+6. Register the function under its category; the API page is generated from the
+   registry, so do not edit ``docs/api/<category>.rst`` by hand.
+7. Regenerate the catalog and API reference pages:
 
    .. code-block:: console
 
       $ make catalog
 
-   Commit the regenerated ``docs/capabilities/catalog.rst`` and
-   ``docs/capabilities/by-modality.rst`` with the code change.
+   Commit the regenerated pages under ``docs/capabilities/`` and ``docs/api/`` with the
+   code change.
 
 🔬 Add or Update a Model Survey
 -------------------------------
@@ -83,9 +84,9 @@ formatting:
 
    $ uv run --extra docs sphinx-build -T -W -b html docs docs/_build/html
 
-The capability pages are generated from the registry. ``make catalog-check`` verifies
-that the checked-in copies are current; run it before opening a pull request if you
-changed a registry entry.
+The capability pages and API reference are generated from the registry. ``make
+catalog-check`` verifies that the checked-in copies are current; run it before opening a
+pull request if you changed a registry entry.
 
 🧪 Tests and Formatting
 -----------------------

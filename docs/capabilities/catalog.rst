@@ -1,8 +1,5 @@
-Tool Catalog
-============
-
-*Generated from the tool registry by ``scripts/generate_catalog.py``; do not edit by
-hand.*
+🗃 Tool Catalog
+==============
 
 CaresMCP registers **52 interfaces** across **9 categories**. An interface appears under
 each task it declares, so task counts overlap. Interfaces whose docstring is still a
@@ -479,3 +476,7 @@ before serving it over MCP.
 .. note::
 
    See :doc:`../installation` for extras and :doc:`../quick-start` for the first call.
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

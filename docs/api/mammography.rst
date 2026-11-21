@@ -10,3 +10,7 @@
    :no-members:
 
 .. autofunction:: caresmcp.mammography.umair.classify_mammogram_patch
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

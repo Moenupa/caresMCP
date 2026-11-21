@@ -56,13 +56,13 @@ full install, serve, and client-configuration steps.
 🧰 What's Inside
 ----------------
 
-- 🩻 **Clinical categories** — CT, DSA and catheter angiography, mammography, MRI,
+- **Clinical categories** — CT, DSA and catheter angiography, mammography, MRI,
   pathology, ultrasound, X-ray, and generic medical-AI and image tools.
-- 🏷️ **Task-oriented tools** — classification, regression, segmentation, localization,
+- ️**Task-oriented tools** — classification, regression, segmentation, localization,
   retrieval, embeddings, captioning, denoising, and evaluation.
-- 📤 **Agent-friendly evidence** — JSON scores and measurements, plus masks and heatmaps
+- **Agent-friendly evidence** — JSON scores and measurements, plus masks and heatmaps
   with documented colors.
-- 🔌 **Shared model loaders** — checkpoint download, caching, and device placement are
+- **Shared model loaders** — checkpoint download, caching, and device placement are
   handled once per model source; see :doc:`sources/index`.
 
 🧭 Where to Go Next

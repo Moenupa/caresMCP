@@ -18,8 +18,8 @@ help:
 	@echo "  check:         Run type checker"
 	@echo "  test:          Run quick tests"
 	@echo "  test-slow:     Run tests with real examples (slow)"
-	@echo "  catalog:       Regenerate the capability catalog pages"
-	@echo "  catalog-check: Verify the generated catalog pages are current"
+	@echo "  catalog:       Regenerate the catalog and API reference pages"
+	@echo "  catalog-check: Verify the generated catalog and API pages are current"
 	@echo "  docs:          Build documentation in docs/_build/html"
 
 format-check:
