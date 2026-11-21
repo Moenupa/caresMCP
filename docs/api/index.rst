@@ -60,3 +60,7 @@ coverage pages record the candidate survey.
    pathology
    ultrasound
    xray
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

@@ -19,3 +19,7 @@ directly.
    :no-members:
 
 .. autofunction:: caresmcp.tools.skimage.denoise
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

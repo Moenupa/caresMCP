@@ -3,6 +3,14 @@
   font-size: 0.875em;
 }
 
+/* Keep the provenance marker of generated pages faint and out of the way. */
+.generated-page-note {
+  margin-top: 3rem;
+  font-size: 0.7rem;
+  color: var(--color-muted-foreground);
+  text-align: right;
+}
+
 /* Keep long registry names inside the content column instead of letting
    generated capability tables run under the right-hand page ToC. */
 #content table.capability-table {

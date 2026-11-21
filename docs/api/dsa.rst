@@ -9,3 +9,7 @@
 .. autofunction:: caresmcp.dsa.coronary.segment_coronary_stenosis
 
 .. autofunction:: caresmcp.dsa.coronary.segment_coronary_vessels
+
+.. rst-class:: generated-page-note
+
+Auto-generated.

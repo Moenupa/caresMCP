@@ -1,8 +1,5 @@
-Tools by Modality
-=================
-
-*Generated from the tool registry by ``scripts/generate_catalog.py``; do not edit by
-hand.*
+📁 Tools by Modality
+====================
 
 CaresMCP registers **52 interfaces** across **9 categories**. Categories with no
 servable interfaces are documented in :doc:`../coverage/index`.
@@ -113,8 +110,8 @@ servable interfaces are documented in :doc:`../coverage/index`.
 
 .. _capabilities-category-image:
 
-📐 Generic Image Tools (5 interfaces)
--------------------------------------
+📐 Generic Tools (5 interfaces)
+-------------------------------
 
 .. list-table::
    :class: capability-table
@@ -388,3 +385,7 @@ servable interfaces are documented in :doc:`../coverage/index`.
 .. note::
 
    See :doc:`../installation` for extras and :doc:`../quick-start` for the first call.
+
+.. rst-class:: generated-page-note
+
+Auto-generated.
