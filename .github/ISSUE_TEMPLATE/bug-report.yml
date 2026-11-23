@@ -1,0 +1,101 @@
+name: "🐛 Bug report"
+description: Report a problem with a tool, the CLI, or the MCP server
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please search
+        [existing issues](https://github.com/Moenupa/caresMCP/issues) and the
+        [FAQ](https://caresmcp.readthedocs.io/en/latest/faq.html) first.
+
+        **Never include real patient data.** Use public or de-identified images,
+        and remove paths and identifiers that could identify a patient.
+
+  - type: input
+    id: version
+    attributes:
+      label: CaresMCP version
+      description: Release tag, commit hash, or the output of `uv pip show caresmcp`.
+      placeholder: "1.0.0 (abc1234)"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, GPU, and the extras you installed.
+      placeholder: "Python 3.12.8, Ubuntu 24.04, CUDA 12.6, caresmcp[xray]"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - image / tools
+        - medai
+        - ct
+        - dsa
+        - mammography
+        - mri
+        - nuclearmed
+        - pathology
+        - ultrasound
+        - xray
+        - CLI or MCP server
+        - documentation
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        The tool or command you called, what you expected, and what happened
+        instead. Put the full traceback in a `<details>` block.
+      placeholder: |
+        I called `caresmcp debug xray torchxrayvision_classify ...` and
+        expected ..., but got ...
+
+        <details>
+        <summary>Traceback</summary>
+
+        ```
+        ...
+        ```
+
+        </details>
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        A minimal, self-contained command or script using a public image and a
+        released checkpoint. Reports without a runnable reproducer are hard to
+        triage. Paste commands and tracebacks as text rather than screenshots.
+      render: shell
+      placeholder: |
+        uv tool install "caresmcp[xray]"
+        caresmcp debug xray torchxrayvision_classify \
+          '{"image_or_dicom": "<public image URL>"}'
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and the documentation.
+          required: true
+        - label: This report contains no patient data or other sensitive information.
+          required: true

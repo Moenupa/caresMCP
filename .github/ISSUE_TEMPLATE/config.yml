@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://caresmcp.readthedocs.io/
+    about: Installation, concepts, capabilities, and model coverage.
+  - name: ⚡ Quick start
+    url: https://caresmcp.readthedocs.io/en/latest/quick-start.html
+    about: Run your first tool and connect the MCP server.
+  - name: ❓ FAQ
+    url: https://caresmcp.readthedocs.io/en/latest/faq.html
+    about: Common setup and runtime problems, including checkpoint downloads.
