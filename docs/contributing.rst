@@ -2,7 +2,10 @@
 ===============
 
 CaresMCP is built from small, registered tools and one model survey per category. This
-page covers the development loop for both.
+page covers the development loop for both. The repository's CONTRIBUTING.md_ covers the
+issue and pull-request workflow, including the checks expected before a pull request.
+
+.. _contributing.md: https://github.com/Moenupa/caresMCP/blob/main/CONTRIBUTING.md
 
 🛠️ Set Up the Development Environment
 -------------------------------------

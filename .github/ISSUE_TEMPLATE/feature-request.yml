@@ -1,0 +1,43 @@
+name: "🚀 Feature request"
+description: Propose a new tool, capability, or workflow
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the medical task and the evidence a tool would return. To
+        propose a specific model, use the **New model** template instead.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: |
+        What should CaresMCP do? Name the inputs an agent provides and the
+        outputs it would cite.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: |
+        The clinical or research workflow this unblocks, and why the existing
+        tools do not cover it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing tools, models, or workarounds you evaluated.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this.

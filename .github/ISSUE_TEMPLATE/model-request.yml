@@ -1,0 +1,100 @@
+name: "🧠 New model"
+description: Propose a model for integration or the coverage survey
+title: "[model] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a model you want integrated or tracked in the
+        [model coverage survey](https://caresmcp.readthedocs.io/en/latest/coverage/).
+        Integrated models need released code, obtainable weights, and a license
+        that permits the intended use.
+
+  - type: input
+    id: model
+    attributes:
+      label: Model family
+      description: One family per request; note versioned siblings in the details.
+      placeholder: "MedSAM / MedSAM2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - image / tools
+        - medai
+        - ct
+        - dsa
+        - mammography
+        - mri
+        - nuclearmed
+        - pathology
+        - ultrasound
+        - xray
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: task
+    attributes:
+      label: Task and outputs
+      description: |
+        The clinical task it serves, and the evidence a tool should return:
+        scores, masks, measurements, heatmaps, or embeddings.
+    validations:
+      required: true
+
+  - type: input
+    id: paper
+    attributes:
+      label: Paper
+      placeholder: "https://..."
+
+  - type: input
+    id: code
+    attributes:
+      label: Code
+      placeholder: "https://github.com/..."
+    validations:
+      required: true
+
+  - type: input
+    id: weights
+    attributes:
+      label: Weights
+      description: A public checkpoint URL or access instructions.
+      placeholder: "https://huggingface.co/..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: license
+    attributes:
+      label: License and access terms
+      description: |
+        The license, any gated or registration requirement, and whether use is
+        limited to research. State what the license permits.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Implementation notes
+      description: |
+        Dependencies, input requirements, and known blockers such as gated
+        weights or an incompatible stack.
+
+  - type: checkboxes
+    id: availability
+    attributes:
+      label: Availability
+      options:
+        - label: The implementation is publicly available.
+        - label: The weights are publicly obtainable.
+        - label: I have read the upstream license and noted any restrictions above.
