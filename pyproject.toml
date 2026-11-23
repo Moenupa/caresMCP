@@ -3,8 +3,20 @@ name = "caresmcp"
 version = "1.0.0"
 description = "Medical diagnostic toolkit for agents, served over MCP."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
     { name = "Moenupa", email = "49304833+Moenupa@users.noreply.github.com" }
+]
+keywords = [
+    "medical-imaging",
+    "model-context-protocol",
+    "mcp",
+    "radiology",
+    "diagnostic-imaging",
+    "deep-learning",
+    "healthcare",
+    "ai-agents",
 ]
 requires-python = ">=3.12,<3.14"
 classifiers = [
@@ -28,7 +40,7 @@ dependencies = [
     "catalogue>=2,<3",
     "rapidfuzz>=3,<4",
     # processing
-    "opencv-python-headless",
+    "opencv-python-headless>=5,<6",
     "seaborn",                # incl pillow, numpy
     "filetype>=1,<2",
     "pydicom>=3,<4",
