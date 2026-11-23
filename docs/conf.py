@@ -147,6 +147,10 @@ theme_options = ThemeOptions(
         "CaresAgentBench (WIP)": "caresagentbench",
     },
     extra_header_link_icons={
+        "PyPI": {
+            "link": "https://pypi.org/project/caresmcp/",
+            "icon": get_octicon("package"),
+        },
         "GitHub": {
             "link": "https://github.com/Moenupa/caresMCP/",
             "icon": get_octicon("mark-github"),

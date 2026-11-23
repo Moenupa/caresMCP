@@ -1,35 +1,35 @@
 📦 Installation
 ===============
 
-CaresMCP requires **Python 3.12** and uses `uv <https://docs.astral.sh/uv/>`_ for
-dependency management. The package is installed from Git while the PyPI release is
-pending.
+CaresMCP requires **Python 3.12** and is published on `PyPI
+<https://pypi.org/project/caresmcp/>`_ as the ``caresmcp`` package. Install it with `uv
+<https://docs.astral.sh/uv/>`_; a source install is also available for development.
 
 🧰 Install as a uv tool
 -----------------------
 
-Install CaresMCP as a `uv tool <https://docs.astral.sh/uv/concepts/tools/>`_. This adds
-the ``caresmcp`` executable to your ``PATH`` in an isolated environment, without cloning
-the repository:
+Install CaresMCP from `PyPI <https://pypi.org/project/caresmcp/>`_ as a `uv tool
+<https://docs.astral.sh/uv/concepts/tools/>`_. This adds the ``caresmcp`` executable to
+your ``PATH`` in an isolated environment, without cloning the repository:
 
 .. code-block:: console
 
-   $ uv tool install git+https://github.com/Moenupa/caresMCP.git
+   $ uv tool install caresmcp
 
 The base install provides the CLI, the MCP server, and the PIL-based image utilities.
 Model backends are optional and grouped into extras:
 
 .. code-block:: console
 
-   $ uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
-   $ uv tool install "caresmcp[xray,ct] @ git+https://github.com/Moenupa/caresMCP.git"
-   $ uv tool install "caresmcp[all] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ uv tool install "caresmcp[xray]"
+   $ uv tool install "caresmcp[xray,ct]"
+   $ uv tool install "caresmcp[all]"
 
-Reinstall to update the tool to the latest commit:
+Upgrade to the latest release:
 
 .. code-block:: console
 
-   $ uv tool upgrade caresmcp --reinstall
+   $ uv tool upgrade caresmcp
 
 🧩 Choose an extra
 ------------------
@@ -65,28 +65,29 @@ extra directly when you want a smaller environment:
 
 .. code-block:: console
 
-   $ uv tool install "caresmcp[hf] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ uv tool install "caresmcp[hf]"
 
 See ``pyproject.toml`` for the full dependency tree behind each extra.
 
 ⏬ Install from Source
 ----------------------
 
-1. Clone the repository and install the base dependencies:
+To work on the latest development code, clone the repository and install the base
+dependencies:
 
-   .. code-block:: console
+.. code-block:: console
 
-      $ git clone https://github.com/Moenupa/caresMCP.git
-      $ cd caresMCP
-      $ uv sync
+   $ git clone https://github.com/Moenupa/caresMCP.git
+   $ cd caresMCP
+   $ uv sync
 
-2. 🧩 Install the model backends you need. Pass one ``--extra`` flag per group, or
-   install them all:
+Install the model backends you need. Pass one ``--extra`` flag per group, or install
+them all:
 
-   .. code-block:: console
+.. code-block:: console
 
-      $ uv sync --extra xray --extra ct
-      $ uv sync --all-extras
+   $ uv sync --extra xray --extra ct
+   $ uv sync --all-extras
 
 ✅ Verify Installation
 ----------------------
@@ -124,5 +125,5 @@ and ``HF_TOKEN`` for gated Hugging Face repositories; see :doc:`envvar`.
 
 .. note::
 
-   🚧 Installation from `PyPI <https://pypi.org/>`_ is coming soon. Until then, use the
-   Git URL shown above.
+   📦 Every release is archived on `PyPI <https://pypi.org/project/caresmcp/#history>`_.
+   Pin a version with ``uv tool install "caresmcp[xray]==1.0.0"``.

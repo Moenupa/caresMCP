@@ -39,7 +39,7 @@ an agent can cite: scores, masks, heatmaps, measurements, and embeddings.
 
 .. code-block:: console
 
-   $ uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ uv tool install "caresmcp[xray]"
    $ caresmcp list xray
    $ caresmcp debug image inspect \
        '{"image": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'

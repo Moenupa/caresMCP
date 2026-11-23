@@ -1,5 +1,6 @@
 # CaresMCP
 
+[![PyPI](https://img.shields.io/pypi/v/caresmcp)](https://pypi.org/project/caresmcp/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Docs](https://img.shields.io/readthedocs/caresmcp)](https://caresmcp.readthedocs.io/)
 
@@ -8,6 +9,7 @@ Medical imaging tools for AI agents, served over the Model Context Protocol
 returns evidence an agent can cite: scores, masks, heatmaps, measurements, and
 embeddings.
 
+**Package:** <https://pypi.org/project/caresmcp/> ·
 **Documentation:** <https://caresmcp.readthedocs.io/>
 
 Starting from the patient's presentation, an agent proactively orders
@@ -63,7 +65,7 @@ flowchart TD
 ## Quick start
 
 ```console
-uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+uv tool install "caresmcp[xray]"
 caresmcp list xray
 caresmcp debug xray torchxrayvision_classify \
   '{"image_or_dicom": "https://nih-chest-x-rays.s3.us-east-2.amazonaws.com/images_1024x1024/00000003_001.png"}'
@@ -89,7 +91,7 @@ Full walkthrough, output examples, and troubleshooting:
 - [Model coverage](https://caresmcp.readthedocs.io/en/latest/coverage/) —
   integrated, deferred, and out-of-scope models with access terms.
 - [Installation](https://caresmcp.readthedocs.io/en/latest/installation.html) —
-  extras and source installs.
+  PyPI, extras, and source installs.
 - [Limitations and safety](https://caresmcp.readthedocs.io/en/latest/limitations.html) —
   research use, checkpoint licenses, and privacy.
 - [CaresAgentBench (WIP)](https://caresmcp.readthedocs.io/en/latest/caresagentbench.html) —
