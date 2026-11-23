@@ -17,12 +17,13 @@ category.
 📦 Install
 ----------
 
-Install CaresMCP as a `uv tool <https://docs.astral.sh/uv/concepts/tools/>`_ with the
-extra for the category you want to try:
+Install CaresMCP from `PyPI <https://pypi.org/project/caresmcp/>`_ as a `uv tool
+<https://docs.astral.sh/uv/concepts/tools/>`_ with the extra for the category you want
+to try:
 
 .. code-block:: console
 
-   $ uv tool install "caresmcp[xray] @ git+https://github.com/Moenupa/caresMCP.git"
+   $ uv tool install "caresmcp[xray]"
 
 Use ``caresmcp[all]`` to install every backend, or pass several extras. See
 :doc:`installation` for the extra list and the source-install path.

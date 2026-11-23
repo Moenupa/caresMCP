@@ -105,10 +105,11 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://caresmcp.readthedocs.io"
+Homepage = "https://caresmcp.readthedocs.io/"
 Documentation = "https://caresmcp.readthedocs.io/"
-Repository = "https://github.com/Moenupa/caresMCP.git"
+Repository = "https://github.com/Moenupa/caresMCP"
 Issues = "https://github.com/Moenupa/caresMCP/issues"
+PyPI = "https://pypi.org/project/caresmcp/"
 
 [project.scripts]
 caresmcp = "caresmcp.cli:app"
