@@ -69,7 +69,7 @@ pathology = [
     "cellpose>=4,<5",
     "environs",
     "sacremoses",
-    "conch @ git+https://github.com/Mahmoodlab/CONCH.git", # incl timm
+    "conch-fork", # incl timm
 ]
 ultrasound = ["caresmcp[hf,monai,timm]"]
 xray = [
