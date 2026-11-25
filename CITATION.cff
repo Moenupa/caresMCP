@@ -1,0 +1,31 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: CaresMCP
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Meng
+    family-names: WANG
+    affiliation: cair-cas.org.hk
+  - name: 'CAIR, HKISI, CAS'
+    website: 'https://cair-cas.org.hk'
+    country: HK
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24521705
+repository-code: 'https://github.com/Moenupa/CaresMCP'
+url: 'https://caresmcp.readthedocs.io'
+repository-artifact: 'https://pypi.org/project/caresmcp'
+abstract: 'Medical diagnostic toolkit for agents, served over MCP.'
+keywords:
+  - deep-learning
+  - healthcare-ai
+  - mcp
+  - medical-ai
+  - monai
+  - transformers
+license: Apache-2.0
